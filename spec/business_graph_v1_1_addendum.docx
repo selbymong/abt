@@ -1,0 +1,76 @@
+**Enterprise Business Graph**
+
+Data Model & Architecture Specification
+
+*Version 1.1  ·  AI-Native Design*
+
+*Changelog v1.1: Added WorkforceAsset intermediary node (Section 3.5), cross-asset CONTRIBUTES_TO edge to CustomerRelationshipAsset (Section 4.1), updated Cypher examples (Section 11).*
+
+# **3.5  WorkforceAsset  (new in v1.1)**
+
+An intermediary node structurally parallel to CustomerRelationshipAsset: high fan-out to all three outcome types, plus a cross-asset CONTRIBUTES_TO edge to CustomerRelationshipAsset representing the empirically observed link between engaged staff and customer experience quality.
+
+*WorkforceAsset is NOT a fourth outcome type, a hard constraint, or a new social constraint class. The hard floor (minimum wage, workplace safety, labour law) is already covered by Obligation nodes. WorkforceAsset tracks wellbeing above that floor, where the mode-2 soft preference mechanism (tolerance_band_pct) already applies.*
+
+## **3.5.1  Node properties**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| enps | float? | Employee Net Promoter Score — LEADING. Intent-to-stay and internal advocacy signal. |
+| engagement_score | float? | COINCIDENT — present and actively contributing. |
+| turnover_rate | float? | LAGGING — already left. Replacement cost typically 50–150% of annual salary per head. |
+| absenteeism_rate | float? | COINCIDENT — present but disengaged. Early warning signal before turnover materialises. |
+| internal_fill_rate | float? | LEADING — % of open roles filled from internal promotion. Proxy for career growth health. |
+
+## **3.5.2  CONTRIBUTES_TO edges and contribution functions**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| WorkforceAsset → Improve Revenue | LOGARITHMIC | Productivity and output quality. Diminishing returns above high engagement threshold. lag_days: 30–90. |
+| WorkforceAsset → New Revenue | THRESHOLD | Innovation capacity and capability building. Requires minimum engagement floor before contribution activates. lag_days: 90–180. |
+| WorkforceAsset → Mitigate Expense | EXPONENTIAL | Turnover cost avoidance. Each retained senior hire saves disproportionately more. lag_days: 0–30 (immediate cost avoided). |
+| WorkforceAsset → CustomerRelationshipAsset | LINEAR | Engaged staff deliver better customer experiences. lag_days: 60–180. This is the only inter-asset CONTRIBUTES_TO edge in the model. |
+
+*The cross-asset edge (WorkforceAsset → CustomerRelationshipAsset) creates a two-hop path to all three outcomes. The AI must carry the full lag on this path: lag_days on the cross-asset edge stacks with lag_days on the CustomerRelationshipAsset → Outcome edges. Do not double-count: if workforce improvements are already captured through direct Outcome edges, weight the cross-asset edge conservatively to avoid attribution overlap.*
+
+## **3.5.3  Key Cypher query — full workforce impact paths**
+
+MATCH path = (w:WorkforceAsset)-[:CONTRIBUTES_TO*1..3]->(o:Outcome)
+
+WITH path, relationships(path) AS edges
+
+RETURN path,
+
+  REDUCE(w = 1.0, e IN edges |
+
+    w * e.weight * e.temporal_value_pct
+
+  ) AS path_contribution,
+
+  REDUCE(d = 0, e IN edges | d + e.lag_days) AS total_lag_days
+
+ORDER BY path_contribution DESC
+
+## **3.5.4  Detect cross-asset attribution overlap**
+
+MATCH (wa:WorkforceAsset)-[e1:CONTRIBUTES_TO]->(cr:CustomerRelationshipAsset)
+
+-[e2:CONTRIBUTES_TO]->(o:Outcome)
+
+MATCH (wa)-[e3:CONTRIBUTES_TO]->(o)
+
+WHERE e1.weight > 0 AND e3.weight > 0
+
+RETURN wa.id, o.id,
+
+  e3.weight AS direct_weight,
+
+  e1.weight * e2.weight AS indirect_weight,
+
+  e3.weight + (e1.weight * e2.weight) AS combined
+
+ORDER BY combined DESC
+
+*If combined weight **>** 0.80 for a single source-outcome pair, the AI should flag potential double-counting and recommend reducing either the direct or indirect weight during the next calibration cycle.*
+
+*Enterprise Business Graph Model · v1.1 · WorkforceAsset addition*

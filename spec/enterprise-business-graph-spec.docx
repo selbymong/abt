@@ -1,0 +1,382 @@
+**Enterprise Business Graph**
+
+Complete System Specification
+
+*AI-Native Enterprise Management Platform*
+
+*Version 1.1  ·  Includes WorkforceAsset  ·  Graph-Native GL  ·  Full Accounting Coverage*
+
+# **1. Executive Summary**
+
+The Enterprise Business Graph is an AI-native enterprise management platform built on a Labeled Property Graph (LPG). Every business activity, investment, asset, and financial event is connected through weighted, learnable edges to one of three terminal financial outcomes: improve a revenue stream, introduce a new revenue stream, or mitigate an expense.
+
+A graph-native General Ledger sits on top of this model. Journal entries post to graph nodes rather than Chart of Accounts codes, enabling attribution-based financial reporting without allocation rules. Financial statements are traversal queries. The ledger is an append-only semantic record.
+
+## **1.1 The three terminal outcomes (closed set)**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| IMPROVE_REVENUE | Outcome | Improve quality, reliability, or volume of an existing revenue stream |
+| NEW_REVENUE | Outcome | Introduce a new revenue stream |
+| MITIGATE_EXPENSE | Outcome | Reduce or avoid a cost |
+
+*Customer satisfaction, employee engagement, social contribution, and brand equity are intermediary nodes or constraint/preference layers — not terminal outcomes. Elevating them to terminal outcomes severs their measurable financial connections and makes the AI blind to them.*
+
+## **1.2 Two core innovations**
+
+- Graph as semantic layer: every transaction posts to a graph node, preserving its full contribution path to outcomes. Attribution is structural, not estimated.
+
+- Learnable edge weights: CONTRIBUTES_TO weights are continuously updated by the AI as realized outcomes are observed. The system compounds in value with every period close.
+
+# **2. System Architecture**
+
+## **2.1 Six-tier design**
+
+| **Tier** | **Responsibility** |
+| --- | --- |
+| Client tier | Web/Mobile UI, Claude AI Assistant, Admin/Reporting dashboards |
+| API + Orchestration | GraphQL/REST API Gateway, session context, workflow routing |
+| AI Engine Services | Weight learner, path traversal, epistemic scorer, scenario engine (Monte Carlo), cashflow optimizer, Claude assistant |
+| GL Services | Journal entry posting, period close, recognition engine, tax computation, bank reconciliation, consolidation engine |
+| Event Bus (Kafka) | All graph mutations, GL events, outcome realizations, obligation alerts |
+| Data Stores | Neo4j (graph + ledger), TimescaleDB (metrics + GL projection), PostgreSQL (audit + config), pgvector (embeddings) |
+
+## **2.2 CQRS — mandatory architecture pattern**
+
+The write model is Neo4j: all mutations go here first with full semantic context, optimized for graph traversals. The read model is TimescaleDB: a pre-aggregated gl_period_balances projection table for all financial reporting queries. These two models must never be mixed.
+
+*Non-negotiable: at 500k LedgerLines/year, Neo4j accumulates 5M+ nodes in 10 years. Live traversal for P**&**L requests degrades linearly. TimescaleDB makes financial reporting O(1) in the number of distinct account groups per period. Every financial reporting query reads from TimescaleDB. Every semantic/contribution query reads from Neo4j.*
+
+## **2.3 Bi-temporal data model — required from day one**
+
+Every JournalEntry and LedgerLine carries two independent time axes. Without both, point-in-time audit queries are impossible.
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| valid_time_start | date | When the economic event occurred (accounting date) |
+| valid_time_end | date? | Null = open-ended; set for reversal entries to close the valid period |
+| transaction_time_start | timestamp | When recorded in the system — IMMUTABLE, set by database on insert |
+| transaction_time_end | timestamp? | Set when superseded by a correcting entry; record is never deleted |
+
+*Auditors require the balance sheet **"**as it was known on December 31**"** — excluding late-posted entries even if they relate to that date. This is a regulatory requirement in most jurisdictions. Cannot be retrofitted after data exists.*
+
+## **2.4 Cross-store saga pattern**
+
+A journal entry posting must atomically update Neo4j + PostgreSQL + TimescaleDB + Kafka. If any step fails, compensating transactions roll back all prior steps.
+
+| **Step** | **Action** |
+| --- | --- |
+| Step 1 | Write JournalEntry + LedgerLine nodes to Neo4j. Compensating: delete by idempotency_token. |
+| Step 2 | Write audit_log row to PostgreSQL. Compensating: delete the audit row. |
+| Step 3 | Update gl_period_balances in TimescaleDB. Compensating: subtract the amounts added. |
+| Step 4 | Emit JOURNAL_LINE_POSTED to Kafka. LAST step — if all others succeeded, retry until success. Idempotency key prevents duplicate consumer processing. |
+
+## **2.5 Technology stack**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| Neo4j 5.x Enterprise | Graph DB | Primary semantic store. All nodes, edges, traversal queries. Append-only ledger. |
+| TimescaleDB | TS DB | GL period balance projections + metric time-series. All financial reporting reads here. |
+| PostgreSQL 16 | Relational | Users, audit log, calibration history, StatutoryMapping rules, config. |
+| pgvector | Extension | Node embeddings for AI-inferred CONTRIBUTES_TO edge discovery. |
+| Apache Kafka | Event bus | All graph mutations drive CQRS projections and AI engine components. |
+| Python microservices | AI/GL services | Weight learner, epistemic scorer, cashflow optimizer, tax engine (separate). |
+| React + TypeScript | Frontend | Management dashboards, journal entry UI, reporting. |
+| Anthropic API | AI assistant | claude-sonnet-4-20250514. Natural language → graph traversal. |
+
+# **3. Core Business Graph Model**
+
+## **3.1 Node layers**
+
+| **Layer** | **Contents** |
+| --- | --- |
+| Investment layer | Resource, Activity/Task, Project, Initiative. Cost rolls up without duplication. |
+| Intermediary layer | Metric/KPI, Capability, Asset/Product, CustomerRelationshipAsset, WorkforceAsset. Accumulate value from investments and propagate to outcomes. |
+| Outcome layer | Improve Revenue, New Revenue, Mitigate Expense. Terminal sinks. Every path ends here. |
+| Special nodes | Obligation (mandatory, PROTECTS edges), EpistemicActivity (meta-graph), CashFlowEvent, FloatWindow. |
+| Social layer | SocialConstraint (PROHIBITS), StakeholderAsset (preference weight + tolerance band). |
+| GL nodes | JournalEntry, LedgerLine, AccountingPeriod, TemporalClaim, Provision, FixedAsset, Goodwill, and more. |
+| Multi-entity nodes | Entity, ConsolidationGroup, OwnershipInterest, BusinessCombination, CurrencyTranslation. |
+
+## **3.2 CONTRIBUTES_TO — primary value-flow edge**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| weight | float 0–1 | AI-learned contribution strength. Back-propagated on every REALIZATION_RECORDED event. |
+| confidence | float 0–1 | Uncertainty in the weight itself. Propagated in allocation recommendations. |
+| lag_days | int | Days before contribution materialises. Critical for attribution and temporal discounting. |
+| temporal_value_pct | float | 1 − (rate × lag_days / 365). Discount factor. Implements DCF logic across the entire graph. |
+| ai_inferred | bool | True = discovered by vector similarity. False = declared by human. |
+| contribution_function | enum | LINEAR │ LOGARITHMIC │ EXPONENTIAL │ THRESHOLD │ BIMODAL │ S_CURVE |
+| threshold_value | float? | For THRESHOLD: investment level at which contribution activates |
+| elasticity | float? | For LOGARITHMIC/EXPONENTIAL: rate of diminishing or increasing returns |
+
+Effective contribution formula used by the AI for resource allocation:
+
+effective_contribution = weight × temporal_value_pct × control_score × measurement_confidence
+
+## **3.3 Epistemic properties (on every node)**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| value_state | enum | FORECASTED → ESTIMATED → VALIDATED → REALIZED. Transitions require epistemic_activity_id. |
+| state_discount | float | FORECASTED=0.30, ESTIMATED=0.45, VALIDATED=0.80, REALIZED=1.00 |
+| calibration_factor | float | Learned from ESTIMATED→REALIZED history by outcome_type. Corrects org-level optimism/pessimism bias. |
+| epistemic_priority | float | AI-computed EVOI: expected value of information if this node were validated today. |
+| ci_point_estimate | float | The planning number — not the AI's bet. Effective stake may be substantially lower. |
+
+Effective stake formula:
+
+effective_stake = ci_point_estimate × state_discount × calibration_factor × ci_width_penalty × measurement_confidence
+
+*When effective_stake / ci_point_estimate **<** 0.30 (allocation_block_threshold), the AI blocks capital commitment and recommends the epistemic investment needed to raise the ratio instead.*
+
+## **3.4 Control model**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| DIRECT (0.8–1.0) | Optimize actively | Real-time feedback loop, reallocate budget, update weights continuously. |
+| DELEGATED (0.3–0.8) | Select + SLAs | Rigorous vendor selection. Engineer observability into the engagement contractually. |
+| PROXIMATE_EXT | Monitor + respond | Alert thresholds on observability signals. Pre-built contingency paths. |
+| DISTAL_EXT | Scenario plan | Monte Carlo simulation. Resilience buffers sized to scenario variance. |
+| FORCE_MAJEURE (~0) | Buffer + diversify | No path should depend entirely on a single FORCE_MAJEURE node. |
+
+child.effective_control = parent.control_score × (1 − DELEGATES_TO.control_attenuation)
+
+# **4. WorkforceAsset (v1.1)**
+
+WorkforceAsset is an intermediary node structurally parallel to CustomerRelationshipAsset: high fan-out to all three outcome types plus a unique cross-asset CONTRIBUTES_TO edge to CustomerRelationshipAsset.
+
+*WorkforceAsset is NOT a fourth outcome type, a hard constraint, or a social constraint class. Labour law minimums are covered by Obligation nodes. WorkforceAsset tracks wellbeing above that floor, where the tolerance_band_pct soft preference mechanism already applies.*
+
+## **4.1 Metric sub-nodes**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| enps | float? | Employee NPS — LEADING. Intent-to-stay and internal advocacy signal. |
+| engagement_score | float? | COINCIDENT — actively present and contributing. |
+| turnover_rate | float? | LAGGING — already left. Replacement cost 50–150% of annual salary per head. |
+| absenteeism_rate | float? | COINCIDENT — present but disengaged. Early warning before turnover materialises. |
+| internal_fill_rate | float? | LEADING — % open roles filled internally. Career growth health proxy. |
+
+## **4.2 CONTRIBUTES_TO edges**
+
+| **Edge** | **Function** | **Rationale** | **Lag** |
+| --- | --- | --- | --- |
+| WorkforceAsset → Improve Revenue | LOGARITHMIC | Diminishing returns above high engagement | lag 30–90 days |
+| WorkforceAsset → New Revenue | THRESHOLD | Engagement > 0.55 required to activate | lag 90–180 days |
+| WorkforceAsset → Mitigate Expense | EXPONENTIAL | Senior attrition disproportionately costly | lag 0–30 days |
+| WorkforceAsset → CustomerRelAsset | LINEAR | Only cross-asset CONTRIBUTES_TO in model | lag 60–180 days |
+
+*The cross-asset edge creates a two-hop path to all three outcomes. Stacked lag applies. Monitor combined weight (direct + indirect) per outcome: if **>** 0.80, flag for calibration review to prevent double-counting attribution.*
+
+# **5. Social Contribution Layer**
+
+Social contribution is a three-mode decision layer orthogonal to the financial outcome structure. It is not a fourth outcome type.
+
+| **Mode** | **Description** |
+| --- | --- |
+| Mode 1: Hard constraint | SocialConstraint + PROHIBITS edge. Pre-filter before financial optimization. Unconditional — no ROI test can override. Activity is invisible to the optimizer. |
+| Mode 2: Soft preference | tolerance_band_pct on StakeholderAsset. Within the equivalence band, socially preferred option wins. Outside the band, financial outcome prevails and the premium is surfaced explicitly. |
+| Mode 3: Genuine intermediary | StakeholderAsset + CONTRIBUTES_TO edges. ESG → cost of capital. Brand → retention/acquisition. Governance → measurement confidence (unique: governance feeds back into epistemic layer). |
+
+*governance_score is the only social property that feeds back into the epistemic layer. Low governance = unreliable reporting = lower measurement_confidence.freshness and .validity across all Metric nodes graph-wide. Treat governance investment as partly epistemic, not purely social.*
+
+# **6. Graph-Native General Ledger**
+
+## **6.1 Core innovation**
+
+Journal entries post to graph nodes (Activity, Outcome, CashFlowEvent, etc.) via node_ref_id rather than account codes. The COA code (statutory_code) is a derived property from StatutoryMapping rules — a regulatory reporting artifact, not the primary ledger reference.
+
+| **Approach** | **Example** |
+| --- | --- |
+| Traditional entry | DR 5210 Advertising Expense $50,000 / CR 2000 Accounts Payable $50,000. Meaning lost. Cannot attribute to outcomes without allocation rules. |
+| Graph-native entry | DR Activity("Q3 Google Campaign") $50,000 / CR CashFlowEvent("Google Invoice") $50,000. Full contribution path to Outcome nodes immediately available. |
+
+## **6.2 JournalEntry node**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| id | UUID | Immutable after posting. Never updated or deleted. |
+| valid_time_start | date | When economic event occurred. REQUIRED for bi-temporal queries. |
+| transaction_time_start | timestamp | When recorded in system. IMMUTABLE, set by database. |
+| entry_type | enum | OPERATIONAL │ ACCRUAL │ DEFERRAL │ REVERSAL │ ADJUSTMENT │ ELIMINATION │ IMPAIRMENT |
+| total_debit / total_credit | numeric | MUST BE EQUAL. Enforced before write. Never relaxed. |
+| idempotency_key | UUID | Prevents duplicate posting on network retry. |
+| sequence_number | int | Monotonically increasing within period×entity. Ensures event ordering. |
+
+## **6.3 LedgerLine node**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| node_ref_id | UUID | THE KEY FIELD. The graph node this LedgerLine posts to — replaces COA code. |
+| node_ref_type | enum | ACTIVITY │ PROJECT │ INITIATIVE │ OUTCOME │ CASHFLOWEVENT │ TEMPORAL_CLAIM │ FIXED_ASSET │ GOODWILL │ PROVISION │ WORKFORCE_ASSET │ CUSTOMER_RELATIONSHIP_ASSET │ and more |
+| economic_category | enum | ASSET │ LIABILITY │ EQUITY │ REVENUE │ EXPENSE |
+| statutory_code | string? | From StatutoryMapping (traditional COA code). Reporting artifact only. |
+| functional_amount | numeric | In entity functional currency. Used for all reporting. |
+
+## **6.4 TemporalClaim node — accrual accounting**
+
+One node type handles all four accrual cases. claim_type distinguishes them.
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| claim_type | enum | ACCRUED_REVENUE │ DEFERRED_REVENUE │ PREPAID_EXPENSE │ ACCRUED_LIABILITY |
+| direction | enum | RECEIVABLE (we are owed) │ PAYABLE (we owe) |
+| recognition_schedule | array | [{period_id, amount, recognized_at}]. Machine-readable contract terms. AI processes at period close. |
+| auto_reverse | bool | True for pure timing accruals (e.g. month-end wages). System reverses automatically on day 1 of next period. |
+| ecl_allowance | float | Expected credit loss provision. Required on all RECEIVABLE claims under IFRS 9. |
+| ecl_stage | enum | STAGE_1 (12-month ECL) │ STAGE_2 (lifetime ECL) │ STAGE_3 (credit-impaired) |
+
+*CRITICAL: Do not use TemporalClaim for warranty provisions, restructuring costs, or legal claims. These are Provision nodes (uncertain amount, uncertain timing, may never materialise). Using TemporalClaim for provisions produces incorrect balance sheet measurement.*
+
+## **6.5 Period close sequence**
+
+| **Step** | **Name** | **Description** |
+| --- | --- | --- |
+| 1 | Soft close | Set AccountingPeriod.status = SOFT_CLOSED. New postings require approval. |
+| 2 | Reconciliation scan | Find CashFlowEvents with no matching LedgerLine in period. |
+| 3 | Recognition engine | Process all TemporalClaim recognition_schedule entries due. |
+| 4 | Obligation verification | Confirm all due Obligations have a JournalEntry. |
+| 5 | Realized delta writes | Sum CREDIT LedgerLines to each Outcome node. |
+| 6 | Back-propagation | Weight learner updates all ancestor CONTRIBUTES_TO edges. |
+| 7 | Calibration update | Compare realized_delta to ci_point_estimate; update factors. |
+| 8 | Effective stake recompute | Recompute across all ESTIMATED/FORECASTED nodes. |
+| 9 | Statutory mapping run | Generate trial balance per jurisdiction (IFRS, GAAP, tax). |
+| 10 | Hard close | Status = HARD_CLOSED. Immutable. No further postings permitted. |
+
+*Steps 6–8 are the learning event — the AI updates its model of the world based on what actually happened. In traditional systems, period close is a reporting event. Here it is the mechanism through which the graph becomes progressively more accurate over time.*
+
+# **7. Multi-Entity Consolidation**
+
+## **7.1 Consolidation as a perspective**
+
+Consolidation is not a process of posting elimination journal entries. It is a traversal query that spans entity subgraphs while structurally filtering out INTERCOMPANY_MATCH edges. Eliminations cannot be forgotten because they are pre-identified at transaction origination.
+
+## **7.2 New node types**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| Entity | Multi-entity | Legal entity. Carries functional_currency, consolidation_method, ownership_pct. entity_id partitions all other nodes. |
+| ConsolidationGroup | Multi-entity | Group definition: parent entity, included entities, functional currency, NCI method. |
+| OwnershipInterest | Multi-entity | Parent's investment in subsidiary. Eliminated against subsidiary equity in consolidation. Carries goodwill. |
+| CurrencyTranslation | Multi-entity | Holds translation adjustment per entity per period. cumulative_cta recycles to P&L on subsidiary disposal. |
+
+## **7.3 INTERCOMPANY_MATCH edge**
+
+Created at transaction origination — not at period close. Both LedgerLines of any intercompany transaction are linked immediately. Consolidation eliminates them as a WHERE clause filter, not as journal entries.
+
+## **7.4 Goodwill and impairment**
+
+The IAS 36 value-in-use DCF calculation IS a contribution path traversal using temporal_value_pct as the discount factor and ci_point_estimate × path_contribution as projected cash flows. No separate DCF spreadsheet model required.
+
+*Goodwill impairment is permanent and never reversed. Enforce structurally: the posting service blocks any JournalEntry that would decrease Goodwill.accumulated_impairment. The ImpairmentTest node records each annual test as a durable historical event.*
+
+# **8. Tax Engine Architecture**
+
+The tax engine is a separate Python microservice. The data model lives in the core graph; the computation logic is isolated, jurisdiction-specific, and independently deployable when tax law changes.
+
+## **8.1 Core schema additions — add to existing nodes before Phase 1**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| FixedAsset.tax_base | float | Tax depreciation base. May differ from accounting carrying amount. |
+| FixedAsset.tax_base_method | enum | CCA_CLASS │ MACRS_CLASS │ STRAIGHT_LINE_TAX │ POOLED |
+| Goodwill.tax_deductible | bool | False in most jurisdictions. Drives whether DTL arises on the goodwill temporary difference. |
+| TemporalClaim.tax_recognition_basis | enum | CASH_BASIS (deductible when paid) │ ACCRUAL_BASIS (deductible when accrued) |
+| RightOfUseAsset.tax_base | float | Usually 0 — lease payments deductible when made, not when ROU is recognized. |
+| LeaseLiability.tax_base | float | Usually 0. |
+| any_node.temporary_difference_flag | bool | Set by tax engine when accounting carrying amount ≠ tax base. |
+
+## **8.2 Service interface contract**
+
+| **Interface** | **Specification** |
+| --- | --- |
+| Reads from core graph | All nodes with temporary_difference_flag = true. Entity.jurisdiction → TaxJurisdiction rules. Period close trigger from AccountingPeriod status. |
+| Writes to core graph | DeferredTaxPosition nodes. TaxProvision node. Draft TaxProvision JournalEntry (requires CFO approval before posting). Updates recognition_criteria_met on DTA nodes. |
+| Emits to Kafka | TAX_PROVISION_COMPUTED event after computation. |
+| Does NOT do | Post journal entries automatically. The CFO/controller reviews and approves the draft provision before it is posted. |
+
+# **9. Accounting Standards Coverage**
+
+## **9.1 Fully modeled**
+
+| **Standard** | **Coverage** |
+| --- | --- |
+| Double-entry GL | JournalEntry + LedgerLine, append-only, bi-temporal, immutable |
+| Accrual accounting | TemporalClaim (4 types), recognition engine, auto-reversal, ECL on receivables |
+| Multi-entity consolidation | Entity, ConsolidationGroup, INTERCOMPANY_MATCH elimination as query filter |
+| Foreign currency (IAS 21) | CurrencyTranslation, average/closing rates, OCI accumulation, disposal recycling |
+| Business combinations (IFRS 3) | BusinessCombination, Goodwill, PurchasePriceAdjustment nodes |
+| Goodwill impairment (IAS 36) | ImpairmentTest, CashGeneratingUnit, VIU from contribution path traversal |
+| Provisions (IAS 37) | Provision node schema, distinct from TemporalClaim |
+| Fixed assets | FixedAsset + DepreciationSchedule, all depreciation methods |
+| Cashflow optimization | FloatWindow scoring, AR discount vs borrowing rate comparison, 60-day forecast |
+| Obligation scheduling | Obligation nodes, 30/14/7-day alert cascade |
+| Social constraints | SocialConstraint + PROHIBITS pre-filter, StakeholderAsset tolerance band |
+
+## **9.2 Must address before building core (coupling ****>**** 70%)**
+
+| **Gap** | **Action** |
+| --- | --- |
+| Bi-temporal schema (CRITICAL) | Add valid_time_start/end + transaction_time_start/end to JournalEntry and LedgerLine NOW. Cannot retrofit. |
+| CQRS architecture (CRITICAL) | TimescaleDB gl_period_balances projection must exist before any GL feature is built. |
+| Financial instruments (HIGH) | Add ecl_allowance, ecl_stage to TemporalClaim; add transaction_currency and fx_gain_loss_to_date to CashFlowEvent NOW. |
+| OCI equity destination (HIGH) | OtherComprehensiveIncome node needed — model already creates OCI amounts (CTA, hedge reserves) with no destination node. |
+| Tax base properties (HIGH) | Add tax_base, tax_base_method to FixedAsset, Goodwill, TemporalClaim, RightOfUseAsset, LeaseLiability NOW. |
+
+## **9.3 Not yet modeled (Phase 2+)**
+
+| **Standard** | **What is needed** |
+| --- | --- |
+| Full IFRS 15 revenue recognition | ContractAsset, PerformanceObligation, VariableConsideration for multi-element contracts (SaaS bundle + services) |
+| Inventory accounting (IAS 2) | InventoryItem, InventoryLot, FIFO/Weighted Average, NRV testing. Cost flow method must be decided before first inventory transaction. |
+| Equity structure | ShareClass, RetainedEarnings, OCI components (separate tracking required for recycling) |
+| Share-based compensation (IFRS 2) | EquityAward, Black-Scholes valuation, vesting schedule amortization |
+| Pension (IAS 19) | DefinedBenefitObligation, actuarial valuation inputs, remeasurements to OCI |
+| EPS (IAS 33) | ShareCapital + dilutive instruments for diluted EPS. Requires equity structure first. |
+
+# **10. Build Sequence and Open Decisions**
+
+## **10.1 Phase 0 — Foundation (before any feature code)**
+
+| **Task** | **Description** |
+| --- | --- |
+| Cypher DDL | Apply all files in cypher/ directory to Neo4j in order |
+| Bi-temporal schema | Add valid_time and transaction_time to JournalEntry + LedgerLine |
+| TimescaleDB tables | Create gl_period_balances + metric_observations hypertable |
+| Saga coordinator | Cross-store consistency for Neo4j + PostgreSQL + TimescaleDB + Kafka |
+| Kafka projector | Consumer: JOURNAL_LINE_POSTED → TimescaleDB gl_period_balances update |
+| Immutability enforcement | Neo4j user permissions: deny UPDATE/DELETE on JournalEntry + LedgerLine labels |
+| Invariant tests | All 7 invariants must pass before Phase 1 begins |
+
+## **10.2 Open decisions required before building**
+
+| **Decision** | **What is needed** |
+| --- | --- |
+| D1: Inventory cost flow method | FIFO vs Weighted Average. Cannot change after transactions begin. Decide before Phase 2. |
+| D2: NCI goodwill method | PROPORTIONATE vs FULL_GOODWILL. IFRS allows both; US GAAP requires FULL_GOODWILL. Decide before BusinessCombination nodes. |
+| D3: Functional currency per entity | Required for FX translation. Cannot change retrospectively. Decide before Entity nodes created. |
+| D4: Tax jurisdictions | Which jurisdictions does the business operate in? Drives TaxJurisdiction node configuration. Decide before Phase 5. |
+| D5: Lease discount rate | Incremental borrowing rate for IFRS 16 when implicit rate unavailable. Decide before LeaseContract nodes. |
+| D6: ECL provision matrix rates | Historical loss rates per aging bucket for trade receivables. Decide before bank reconciliation goes live. |
+| D7: Materiality threshold | Below this amount, aggregate transactions rather than individual nodes. Suggest: 0.5% of gross revenue or $5,000. |
+| D8: Approval thresholds | Dollar amounts requiring controller vs CFO vs board approval. Decide before ApprovalWorkflow nodes. |
+| D9: Transfer pricing policy | Arm's length methodology for intercompany transactions. Decide before intercompany workflows. |
+| D10: Chart of accounts codes | The statutory_code values that map to each node_ref_type × economic_category for each jurisdiction. Essentially: design the traditional COA as a derived view. |
+
+# **11. Critical Invariants**
+
+These tests must pass at all times. Build them before feature development begins.
+
+| **Invariant** | **Condition** |
+| --- | --- |
+| GL_INVARIANT_1 | For any closed AccountingPeriod: SUM(DEBIT LedgerLines) == SUM(CREDIT LedgerLines) |
+| GL_INVARIANT_2 | For any JournalEntry: total_debit == total_credit |
+| GL_INVARIANT_3 | No JournalEntry with status=POSTED has been mutated since posting (verify via document hash or audit log) |
+| GL_INVARIANT_4 | TimescaleDB gl_period_balances totals match Neo4j LedgerLine sums for every (entity_id, period_id) combination |
+| GL_INVARIANT_5 | Every open TemporalClaim with remaining > 0 has at least one unprocessed entry in its recognition_schedule |
+| GRAPH_INVARIANT_1 | Every IN_PROGRESS or PLANNED Activity has a CONTRIBUTES_TO path to at least one Outcome node |
+| GRAPH_INVARIANT_2 | For any HARD_CLOSED period, back-propagation has completed on all Outcome nodes with realized_delta written |
+
+*Enterprise Business Graph · v1.1 · AI-Native Architecture · Complete System Specification*

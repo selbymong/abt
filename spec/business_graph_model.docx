@@ -1,0 +1,529 @@
+**Enterprise Business Graph**
+
+Data Model & Architecture Specification
+
+*Version 1.0  ·  AI-Native Design*
+
+**Design Principles**
+
+- Every business activity ultimately contributes — directly or through intermediaries — to one of three financial outcomes: improve a revenue stream, introduce a new revenue stream, or mitigate an expense.
+
+- Relationships between nodes are learnable parameters, not static declarations. The AI continuously updates contribution weights as realized outcomes are observed.
+
+- Control, uncertainty, and measurement confidence are orthogonal dimensions. Conflating them produces wrong recommendations.
+
+- Epistemic activities (research, pilots, audits) are first-class investments with computable ROI: the expected value of the information they produce.
+
+- Social contribution operates as a constraint layer and intermediary asset — not a fourth outcome type — preserving both the financial model's integrity and the organization's values.
+
+# **1. Outcome Node Types**
+
+Terminal sinks in the graph — every value-creating path leads to one of these three nodes. The set is closed: all financial results reduce to one of these categories.
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| outcome_type | enum | IMPROVE_REVENUE │ NEW_REVENUE │ MITIGATE_EXPENSE |
+| stream_id | string? | P&L line reference linking to financial system |
+| target_delta | float | Expected monetary impact. Revenue = positive; expense reduction = positive (savings) |
+| realized_delta | float | Actuals written on period close. Triggers AI back-propagation of edge weights |
+| currency | string | ISO 4217 currency code |
+| period_start | date | Start of measurement window |
+| period_end | date | End of measurement window |
+
+*realized_delta is the most important write in the system. When it lands, the AI computes realized/estimated ratio, updates calibration_factor for the relevant outcome_type, and back-propagates weight updates through all ancestor CONTRIBUTES_TO edges.*
+
+# **2. Investment Layer Nodes**
+
+Four node types form a hierarchy: Resource supplies capacity to Activity; Activities roll up into Projects; Projects are grouped under Initiatives. Cost rolls up without duplication.
+
+## **2.1 Resource**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| resource_type | enum | CAPITAL │ HEADCOUNT │ TOOL │ TIME_BUDGET |
+| available | float | Current allocatable balance |
+| allocated | float | Currently committed to activities |
+| unit | string | Currency, FTE, licence count, hours |
+| replenishment_rate | float? | Per-period inflow (for recurring budgets) |
+
+## **2.2 Activity / Task  |  Project  |  Initiative**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| id | UUID | Unique identifier |
+| label | string | Human-readable name |
+| cost_monetary | float | Allocated monetary spend |
+| cost_time_hours | float | Allocated human-hours |
+| status | enum | PLANNED │ IN_PROGRESS │ COMPLETED │ BLOCKED │ CANCELLED |
+| responsible_team | [string] | Team IDs accountable for delivery |
+| tags | [string] | Free-form classification used by AI for grouping and edge discovery |
+| parent_id | UUID? | Hierarchical reference: Task → Project → Initiative |
+| created_at | timestamp | Audit timestamp |
+| updated_at | timestamp | Audit timestamp |
+
+# **3. Intermediary Layer Nodes**
+
+The middle of the graph — nodes that accumulate value from investment activities and propagate it toward outcomes. The AI discovers and weights the edges connecting these nodes.
+
+## **3.1 Metric / KPI**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| metric_type | enum | LEADING │ LAGGING │ COINCIDENT — determines monitoring vs. reaction strategy |
+| current_value | float | Latest observed value |
+| target_value | float | Goal value for AI optimization targeting |
+| unit | string | Currency, %, count, NPS points, etc. |
+| timeseries_ref | string | Pointer to TimescaleDB hypertable partition |
+| measurement_confidence | composite | validity × precision × coverage × freshness — see Section 5 |
+
+## **3.2 Capability**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| capability_level | float 0–1 | Graduated maturity. Below threshold: ENABLES edges are inactive. |
+| threshold_value | float? | Level at which the capability unlocks downstream activities |
+| build_cost | float | Investment required to reach threshold |
+
+## **3.3 Asset / Product**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| asset_type | enum | PRODUCT │ BRAND │ IP │ INFRASTRUCTURE │ DATA |
+| book_value | float | Current assessed value |
+| depreciation_rate | float? | Value decay per period — AI reduces contribution weight over time |
+| growth_rate | float? | For assets that appreciate (brand equity, data assets) |
+
+## **3.4 CustomerRelationshipAsset**
+
+High fan-out intermediary connecting to all three outcome types. Tracks five metrics with distinct lag profiles.
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| nps | float? | Net Promoter Score — LEADING indicator. Most actionable signal. |
+| csat | float? | Customer satisfaction — COINCIDENT. Current state. |
+| churn_rate | float? | LAGGING. Already lost — act on NPS before this moves. |
+| retention_rate | float? | LAGGING. Complement of churn. |
+| expansion_rate | float? | COINCIDENT. Current upsell/cross-sell velocity. |
+
+*CustomerRelationshipAsset is NOT a fourth outcome type. Its CONTRIBUTES_TO edges map as follows: retention_rate → Improve Revenue (sustained MRR); nps/referral → New Revenue (acquisition); retention cheaper than CAC → Mitigate Expense. Elevating it to a terminal outcome would sever these measurable financial connections.*
+
+# **4. Edge Type Schemas**
+
+## **4.1 CONTRIBUTES_TO — primary value-flow edge**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| weight | float 0–1 | AI-learned contribution strength. Updated on every REALIZED event via back-propagation. |
+| confidence | float 0–1 | Uncertainty in the weight itself |
+| lag_days | int | Days before contribution materialises — critical for attribution |
+| temporal_value_pct | float | Computed: 1 − (rate × lag_days / 365). Discounts deferred contributions. |
+| ai_inferred | bool | True if edge was discovered by AI (vector similarity), not declared by a human |
+| contribution_function | enum | LINEAR │ LOGARITHMIC │ EXPONENTIAL │ THRESHOLD │ BIMODAL │ S_CURVE |
+| threshold_value | float? | For THRESHOLD type: investment level at which contribution activates |
+| elasticity | float? | For LOGARITHMIC / EXPONENTIAL: rate of diminishing / increasing returns |
+
+## **4.2 DEPENDS_ON — prerequisite / blocker**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| dependency_class | enum | HARD_BLOCK (downstream produces zero until resolved) │ SOFT_PREREQUISITE (degrades output) |
+| blocking_risk | float 0–1 | Probability that this dependency will block before resolution |
+
+## **4.3 DELEGATES_TO — control attenuation**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| control_attenuation | float 0–1 | child.effective_control = parent.control_score × (1 − attenuation) |
+| sla_ref | UUID? | Reference to SLA definition on the delegated node |
+
+## **4.4 Epistemic meta-graph edges**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| REDUCES_UNCERTAINTY_OF | EpistemicActivity → Any | Carries: expected_uncertainty_delta, actual_uncertainty_delta (on completion), target_property |
+| VALIDATES | EpistemicActivity → Initiative/Project | Transitions value_state ESTIMATED → VALIDATED. Carries new CI bounds. |
+| IMPROVES_COVERAGE_OF | EpistemicActivity → Metric | Improves measurement_confidence.coverage. Carries coverage_delta. |
+| CALIBRATES | QuarterlyReview → Initiative | Compares realized_delta to original estimate. Updates calibration_factor. |
+
+## **4.5 Cashflow edges**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| GENERATES | Activity → CashFlowEvent | Links operational activity to its cash transaction |
+| CREATES | CashFlowEvent → FloatWindow | AI-computed when exploitable date gap exists |
+| FINANCES | CreditFacility → CashFlowEvent | Records facility draw to cover gap. Carries draw_amount, rate, repayment_date. |
+| GOVERNED_BY | CashFlowEvent → PaymentTerm | Links event to its contractual payment terms |
+
+## **4.6 Social layer edges**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| PROHIBITS | SocialConstraint → Activity | Hard pre-filter. AI rules out path before financial optimization. Carries violation_risk_score, rationale. |
+| PROTECTS | Obligation → All outcomes | Inverse semantic: absence creates penalty risk. Carries penalty_exposure, non_compliance_risk. |
+
+# **5. Epistemic Properties**
+
+Every node in the graph carries these properties. They govern how the AI weights node values when making resource allocation recommendations.
+
+## **5.1 Value state machine**
+
+Transitions are gated — each requires a recorded epistemic activity ID to authorize the move.
+
+**FORECASTED  →  ESTIMATED  →  VALIDATED  →  REALIZED**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| FORECASTED | 0.30 discount | Model-projected. No expert input. Widest CI. |
+| ESTIMATED | 0.45 discount | Expert judgment. No empirical test. Most common — and most dangerous state. |
+| VALIDATED | 0.80 discount | Pilot, A/B test, or empirical gate completed. CI has narrowed. |
+| REALIZED | 1.00 discount | Actuals recorded. measurement_confidence applied for Metric nodes. |
+
+## **5.2 Confidence interval properties**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| point_estimate | float | The planning number. Not the same as effective_stake. |
+| lower_bound | float | Pessimistic scenario bound |
+| upper_bound | float | Optimistic scenario bound |
+| confidence_pct | float | e.g. 0.70 = "70% confident true value is within this range" |
+| distribution | enum | NORMAL │ SKEWED_HIGH │ SKEWED_LOW │ BIMODAL — shape affects expected value calculation |
+| estimation_method | enum | ANALOGICAL │ DELPHI │ PARAMETRIC │ BOTTOM_UP |
+| expires_at | timestamp? | After this date, ESTIMATED downgrades to STALE_ESTIMATED if no validation recorded |
+| calibration_factor | float | Learned from historical ESTIMATED→REALIZED deltas by outcome_type. Applied multiplicatively. |
+| epistemic_priority | float | AI-computed EVOI: expected value of information if this node were validated today |
+
+## **5.3 Measurement confidence — Metric nodes only**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| validity | float 0–1 | Does this metric actually measure what we think it measures? |
+| precision | float 0–1 | Signal-to-noise. Low = high variance in observations. |
+| coverage | float 0–1 | Fraction of the true phenomenon captured. 4 of 7 boards tracked = 0.57 |
+| freshness | float 0–1 | Staleness penalty. Daily data near 1.0; monthly data lower. |
+| composite | float | Computed: validity × precision × coverage × freshness. AI discounts contribution weight by this factor. |
+
+## **5.4 Effective stake formula**
+
+The number the AI bets on — not the headline point estimate.
+
+effective_stake = point_estimate
+
+× state_discount         // 0.30 / 0.45 / 0.80 / 1.00
+
+× calibration_factor     // learned from historical accuracy
+
+× ci_width_penalty       // max(0, 1 − CI_width_pct × 0.18)
+
+× measurement_confidence // REALIZED nodes only
+
+*When effective_stake / point_estimate falls below the allocation_block_threshold (default 0.30), the AI will not approve capital commitment. It recommends the epistemic activity needed to raise the ratio instead.*
+
+# **6. Control and Uncertainty Properties**
+
+Control and uncertainty are orthogonal axes — not the same thing. A node can have high control with high uncertainty (new owned product), or low control with low uncertainty (predictable inflation).
+
+## **6.1 Node-level control properties**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| control_class | enum | DIRECT │ DELEGATED │ PROXIMATE_EXT │ DISTAL_EXT │ FORCE_MAJEURE |
+| control_score | float 0–1 | Raw controllability. DIRECT: 0.8–1.0. FORCE_MAJEURE: ~0. |
+| effective_control | float 0–1 | Computed: product of control_score along delegation chain |
+| observability_score | float 0–1 | How early can changes be detected? Determines monitor vs. buffer strategy. |
+| response_window_days | int | Days between observable signal and downstream impact |
+| volatility | float | Rate of change. Drives monitoring frequency. |
+| scenario_set_id | [UUID] | For DISTAL_EXT / FORCE_MAJEURE: Monte Carlo scenario definitions |
+
+## **6.2 Control attenuation through delegation**
+
+Each DELEGATES_TO hop multiplies a loss factor onto cumulative effective control:
+
+child.effective_control = parent.control_score × (1 − control_attenuation)
+
+*The highest-leverage intervention is almost always the last DIRECT node before a delegation hop — it sets the ceiling on everything downstream. The AI should surface this explicitly when effective_control falls below 0.40.*
+
+## **6.3 AI strategy by control class**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| DIRECT + high observability | → | Optimize actively. Real-time feedback loop, reallocate budget, update weights. |
+| DELEGATED + low observability | → | Select rigorously + SLAs. Engineer observability into the engagement contractually. |
+| PROXIMATE_EXT + high observability | → | Monitor + respond. Alert thresholds, pre-built contingency paths within response_window_days. |
+| DISTAL_EXT + low observability | → | Scenario plan. Monte Carlo simulation, resilience buffers sized to scenario variance. |
+| FORCE_MAJEURE | → | Buffer + diversify. No path should depend entirely on a node in this class. |
+
+# **7. Cashflow Optimization Nodes**
+
+A temporal extension of the core model. Cash events have exploitable windows between their earliest and latest settlement dates. The AI scores these FloatWindows and recommends actions.
+
+## **7.1 CashFlowEvent**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| direction | enum | INFLOW │ OUTFLOW |
+| amount | float | Transaction amount in org currency |
+| scheduled_date | date | Contractually agreed settlement date |
+| earliest_date | date | Earliest possible settlement (with discount if offered) |
+| latest_date | date | Latest settlement before penalty applies |
+| discount_offered_pct | float? | INFLOW: discount offered to accelerate receipt |
+| penalty_rate_daily | float? | Daily penalty rate after latest_date |
+| counterparty_id | UUID | Customer or vendor node reference |
+| relationship_sensitivity | float 0–1 | Risk of relationship damage if timing is pushed aggressively |
+
+## **7.2 FloatWindow (AI-computed node)**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| opportunity_type | enum | DELAY_PAYABLE │ ACCELERATE_RECEIVABLE │ INVEST_SURPLUS |
+| window_days | int | Exploitable float gap in days |
+| float_amount | float | Cash amount involved |
+| opportunity_value | float | Computed: window_days × float_amount × rate / 365 |
+| discount_cost | float? | Cost of offering early payment discount (for AR acceleration) |
+| net_value | float | Computed: opportunity_value − discount_cost. Positive = activate. |
+| annualized_discount_rate | float? | Annualized cost of the AR discount. Benchmark against facility rate. |
+
+*Key insight: AR discounts are almost always more expensive than borrowing when annualized. A **"**2% discount for 10 days early**"** = 73% annualized. The AI should compare annualized_discount_rate against CreditFacility.rate_annual before recommending AR discounts — in most cases, drawing on the facility is cheaper.*
+
+## **7.3 PaymentTerm and CreditFacility**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| net_days | int | Standard settlement days (e.g. 30 = net-30) |
+| discount_days | int? | Days within which early-payment discount applies |
+| discount_pct | float? | Discount rate for early payment |
+| facility_type | enum | REVOLVER │ LINE_OF_CREDIT │ FACTORING │ TERM_LOAN |
+| available | float | Currently undrawn balance |
+| rate_annual | float | Annual rate — benchmark for FloatWindow decisions |
+| draw_trigger | string | AI rule: draw when no FloatWindow closes gap at lower annualized cost |
+
+## **7.4 Temporal discount on all edges**
+
+Applied universally to every CONTRIBUTES_TO edge — not just cashflow paths:
+
+temporal_value_pct = 1 − (rate × lag_days / 365)
+
+This gives the AI a financially grounded, discount-rate-consistent basis for comparing near-term and long-term contributions — effectively implementing DCF logic across the entire business graph.
+
+# **8. Special Node Types**
+
+## **8.1 Obligation node**
+
+Mandatory activities with no CONTRIBUTES_TO edges. Their semantic is inverted: absence creates penalty risk against all outcomes simultaneously.
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| must_do | bool | Always true. Pre-filter flag — scheduled before any discretionary allocation. |
+| obligation_type | enum | REGULATORY │ TAX │ LEGAL │ SECURITY │ LICENCE |
+| due_date | date | Hard deadline. AI alerts at 30 / 14 / 7 days prior. |
+| recurrence | string | IANA recurrence rule (annual, quarterly, monthly, etc.) |
+| non_compliance_risk | float 0–1 | Probability of penalty if missed |
+| penalty_exposure | float | Expected monetary cost of non-compliance |
+
+*Obligation nodes use the PROTECTS edge type rather than CONTRIBUTES_TO. The AI treats them as mandatory spend with the ROI being the avoided penalty_exposure × non_compliance_risk.*
+
+## **8.2 EpistemicActivity node**
+
+Activities whose output is not a business outcome but an improvement to the graph's own confidence properties. Forms the meta-graph layer.
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| activity_type | enum | MARKET_RESEARCH │ PILOT │ AB_TEST │ MEASUREMENT_AUDIT │ QUARTERLY_REVIEW │ CUSTOMER_DISCOVERY │ EXPERT_PANEL |
+| target_node_id | UUID | Node whose properties this activity improves |
+| target_property | string | Specific property being improved (e.g. uncertainty_score, measurement_confidence.coverage) |
+| estimated_cost | float | Cost of running the activity |
+| epistemic_roi | float | AI-computed: Δ(uncertainty_reduction × stake) − estimated_cost |
+| transition_to | enum? | For VALIDATES type: value_state the target moves to on completion |
+
+# **9. Social Contribution Layer**
+
+Social contribution is not a fourth outcome type. It operates as a three-mode decision layer orthogonal to the financial outcome structure.
+
+## **9.1 The three modes**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| Mode 1: Hard constraint | SocialConstraint + PROHIBITS | Pre-filter applied before financial optimization. Unconditional — no ROI test can override. |
+| Mode 2: Soft preference | preference_weight + tolerance_band_pct | Tie-breaker when paths are within tolerance_band_pct of equal financial value. Outside band: financial outcome prevails, delta surfaced explicitly. |
+| Mode 3: Intermediary | StakeholderAsset + CONTRIBUTES_TO | Measurable financial pathways that are genuinely present. |
+
+## **9.2 SocialConstraint node**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| constraint_type | enum | ENVIRONMENTAL │ LABOUR │ GOVERNANCE │ COMMUNITY │ SUPPLY_CHAIN |
+| rationale | string | Why this is a hard constraint — recorded for audit and stakeholder reporting |
+| violation_risk_score | float 0–1 | Probability that a given activity crosses this constraint |
+| penalty_exposure | float | Expected cost if violated |
+
+## **9.3 StakeholderAsset node**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| environmental_score | float 0–1 | Carbon intensity, waste, biodiversity impact |
+| social_score | float 0–1 | Labour practices, community, supply chain ethics |
+| governance_score | float 0–1 | Transparency, board structure, anti-corruption. Also multiplies measurement_confidence graph-wide. |
+| preference_weight | float 0–1 | How heavily social preference tips tie-breakers (org-defined) |
+| tolerance_band_pct | float | Financial equivalence window. Explicit org commitment, e.g. 0.04 = "accept up to 4% cost premium." |
+
+*governance_score is the only social property that feeds back into the epistemic layer. Low governance = unreliable reporting = lower measurement_confidence.freshness and .validity across all Metric nodes. The AI should treat governance investment as partly epistemic, not purely social.*
+
+# **10. Technology Stack**
+
+## **10.1 Graph database — Neo4j**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| Purpose |  | Primary graph store. All nodes, edges, and traversal queries. |
+| Query language |  | Cypher. Key query patterns: impact path traversal, control attenuation walk, epistemic priority scan, orphan detection. |
+| Indexes |  | CREATE INDEX ON :Activity(status); ON :Outcome(outcome_type); ON :CashFlowEvent(scheduled_date); ON :Obligation(due_date) |
+| Constraints |  | CREATE CONSTRAINT ON (n:Node) ASSERT n.id IS UNIQUE |
+| Alternative |  | Amazon Neptune (AWS-native deployments) |
+
+## **10.2 Time-series database — TimescaleDB**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| Purpose |  | Dense time-series data for Metric / KPI nodes. Neo4j is not optimized for this. |
+| Schema |  | metric_observations(time TIMESTAMPTZ, node_id UUID, value FLOAT, unit TEXT) — partitioned by node_id |
+| Retention |  | Raw data: 3 years. Continuous aggregates: daily/weekly/monthly rollups retained indefinitely. |
+
+## **10.3 Relational database — PostgreSQL**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| Purpose |  | Users, teams, audit log, obligation schedules, social constraint registry, scenario set definitions, calibration history |
+| Key table |  | audit_log(id, timestamp, user_id, mutation_type, node_id, old_value, new_value) — append-only |
+| Calibration table |  | calibration_history(outcome_type, estimated_value, realized_value, ratio, period_end) — drives calibration_factor updates |
+
+## **10.4 Vector database — pgvector (PostgreSQL extension)**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| Purpose |  | Node embeddings for AI-inferred edge discovery |
+| Embedding input |  | Concatenation of: label, tags, activity type, cost range bucket, connected outcome types |
+| Discovery query |  | cosine_similarity(embedding_a, embedding_b) > 0.82 AND no existing CONTRIBUTES_TO edge — AI surfaces as suggested edge |
+| Update schedule |  | Re-embed on any mutation to label, tags, or outcome connections |
+
+## **10.5 Event bus — Kafka**
+
+All graph mutations emit events. Key event types:
+
+- REALIZATION_RECORDED — triggers weight back-propagation and calibration update
+
+- VALUE_STATE_TRANSITION — triggers effective_stake recalculation across portfolio
+
+- EDGE_WEIGHT_UPDATED — triggers dependent path revaluation
+
+- FLOAT_WINDOW_CREATED — triggers cashflow optimizer comparison against facility rate
+
+- OBLIGATION_DUE — triggers 30/14/7-day alert cascade
+
+- SCENARIO_FIRED — triggers contingency path activation assessment
+
+## **10.6 AI engine components**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| Weight learner | Python service | Subscribes to REALIZATION_RECORDED events. Implements gradient-descent-style weight update. Updates calibration_factor by outcome_type. |
+| Path traversal | Cypher + Python | Computes effective_contribution per path: control_score × edge_weight × temporal_value_pct × measurement_confidence. Detects orphans and HARD_BLOCK stalls. |
+| Epistemic scorer | Python service | Computes epistemic_priority (EVOI) for every ESTIMATED node. Produces ranked queue of recommended epistemic investments. |
+| Scenario engine | Python + NumPy | Monte Carlo simulation on DISTAL_EXT / FORCE_MAJEURE nodes. Outputs path survival rates, revenue floor at p5/p50/p95. |
+| Cashflow optimizer | Python service | Scores FloatWindows, compares annualized rates, forecasts 60-day cash position, produces ranked action list. |
+| Claude assistant | Anthropic API | Natural-language interface. Translates queries into graph traversals and engine calls. Presents recommendations in context. |
+
+# **11. Key Cypher Query Patterns**
+
+## **11.1 Full impact path — activity to outcomes**
+
+MATCH path = (a:Activity)-[:CONTRIBUTES_TO*1..6]->(o:Outcome)
+
+WHERE a.id = $activity_id
+
+WITH path, relationships(path) AS edges
+
+RETURN path,
+
+  REDUCE(w = 1.0, e IN edges |
+
+    w * e.weight * e.temporal_value_pct
+
+  ) AS path_contribution
+
+ORDER BY path_contribution DESC
+
+## **11.2 Epistemic priority queue**
+
+MATCH (n)
+
+WHERE n.value_state IN ["ESTIMATED", "FORECASTED"]
+
+  AND n.epistemic_priority > 0
+
+RETURN n.id, n.label, n.value_state,
+
+  n.epistemic_priority,
+
+  n.confidence_interval.point_estimate AS headline,
+
+  n.calibration_factor * n.confidence_interval.point_estimate AS adj_estimate
+
+ORDER BY n.epistemic_priority DESC
+
+LIMIT 20
+
+## **11.3 Detect stalled HARD_BLOCK paths**
+
+MATCH (a:Activity)-[:DEPENDS_ON {dependency_class: "HARD_BLOCK"}]->(b)
+
+WHERE b.status <> "COMPLETED"
+
+  AND a.status = "IN_PROGRESS"
+
+MATCH downstream = (a)-[:CONTRIBUTES_TO*1..4]->(o:Outcome)
+
+RETURN a.id, a.label, b.id AS blocker, b.label AS blocker_label,
+
+  COUNT(downstream) AS blocked_outcome_paths
+
+ORDER BY blocked_outcome_paths DESC
+
+## **11.4 Control attenuation walk**
+
+MATCH path = (root:Activity)-[:DELEGATES_TO*1..4]->(leaf)
+
+WITH path, relationships(path) AS edges, leaf
+
+RETURN leaf.id, leaf.label,
+
+  REDUCE(c = 1.0, e IN edges | c * (1 - e.control_attenuation)) AS effective_control
+
+ORDER BY effective_control ASC
+
+## **11.5 Orphaned activities (no path to any outcome)**
+
+MATCH (a:Activity)
+
+WHERE NOT (a)-[:CONTRIBUTES_TO*1..6]->(:Outcome)
+
+  AND a.status NOT IN ["COMPLETED", "CANCELLED"]
+
+RETURN a.id, a.label, a.cost_monetary, a.status
+
+ORDER BY a.cost_monetary DESC
+
+# **12. Key Concept Glossary**
+
+| **Property** | **Type** | **Description** |
+| --- | --- | --- |
+| Effective stake |  | The value the AI actually uses for resource allocation decisions — point_estimate discounted by value_state, calibration history, CI width, and measurement confidence. |
+| Calibration factor |  | Learned ratio of realized/estimated outcomes by category. Corrects for organizational optimism or pessimism bias. |
+| Epistemic priority (EVOI) |  | Expected Value of Information: how much would effective_stake increase if this node were validated, net of validation cost. |
+| Control attenuation |  | Multiplicative loss of effective control through delegation chains. Last DIRECT node before a hop sets the ceiling for everything downstream. |
+| FloatWindow |  | AI-computed node representing exploitable gap between earliest and latest cash event settlement dates. |
+| Temporal value pct |  | Discount factor on CONTRIBUTES_TO edges: 1 − (rate × lag_days / 365). Implements DCF logic across the graph. |
+| Tolerance band pct |  | Explicit organizational commitment: the financial cost premium acceptable to choose the socially preferred option. |
+| Obligation node |  | Mandatory activity with PROTECTS (not CONTRIBUTES_TO) edges. Scheduled before discretionary allocation; ROI is avoided penalty. |
+| HARD_BLOCK |  | DEPENDS_ON edge class where downstream node produces zero output until the dependency is resolved, regardless of investment level. |
+| contribution_function |  | Shape of the investment-to-output relationship on a CONTRIBUTES_TO edge: LINEAR, LOGARITHMIC, EXPONENTIAL, THRESHOLD, BIMODAL, or S_CURVE. |
+
+*Enterprise Business Graph Model · v1.0 · AI-Native Architecture*
