@@ -200,3 +200,41 @@ See `docs/06-build-plan.md` for the complete integrated timeline.
 | ONTOLOGY_INVARIANT_2 | CONTRIBUTES_TO paths terminate at matching ontology |
 | ONTOLOGY_INVARIANT_3 | No back-propagation crosses ontology boundary |
 | EQUITY_INVARIANT_1 | Equity nodes match LedgerLine equity totals |
+
+---
+
+## Long-Running Agent Workflow
+
+This project uses a structured workflow for incremental, cross-session development.
+Follow these steps at the start of every coding session:
+
+### 1. Get Bearings
+- Read `CLAUDE.md` (this file) to understand the project
+- Read `claude-progress.txt` to see what has been done and what's next
+- Read `feature_list.json` to find the highest-priority incomplete feature (`"passes": false`)
+
+### 2. Work Incrementally
+- Pick ONE feature at a time — the highest-priority incomplete feature
+- Make small, testable changes
+- Run `npx tsc --noEmit` after each meaningful change to catch errors early
+- Run regression tests before committing
+
+### 3. Commit Workflow
+When committing:
+1. Update `claude-progress.txt` with what was done and what's next
+2. Run regression tests (`npx tsc --noEmit` and `npm test` if databases are running)
+3. Create the git commit
+4. Push to remote
+
+### 4. Update Feature Status
+After a feature passes all tests, update `feature_list.json`:
+- Set `"passes": true` for the completed feature
+- This is the canonical record of build progress
+
+### Key Files
+| File | Purpose |
+|------|---------|
+| `claude-progress.txt` | Running log of what's been done, blockers, next steps |
+| `feature_list.json` | Structured feature list with pass/fail status |
+| `init.sh` | One-command environment setup (Docker, migrations, seeds) |
+| `CLAUDE.md` | Project context and build instructions (this file) |

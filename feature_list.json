@@ -1,0 +1,276 @@
+{
+  "project": "Enterprise Business Graph (EBG) v1.2",
+  "updated": "2026-03-24",
+  "features": [
+    {
+      "id": "P0-SCHEMA-NEO4J",
+      "phase": 0,
+      "name": "Neo4j schema DDL (constraints, indexes, nodes, edges, traversals, v1.2 seeds)",
+      "passes": true
+    },
+    {
+      "id": "P0-SCHEMA-SQL",
+      "phase": 0,
+      "name": "PostgreSQL + TimescaleDB schema (configuration_settings, projections)",
+      "passes": true
+    },
+    {
+      "id": "P0-TYPES",
+      "phase": 0,
+      "name": "TypeScript type system (all enums, interfaces, error types)",
+      "passes": true
+    },
+    {
+      "id": "P0-INFRA-DOCKER",
+      "phase": 0,
+      "name": "Docker Compose infrastructure (Neo4j, TimescaleDB, Kafka)",
+      "passes": true
+    },
+    {
+      "id": "P0-LIB-DRIVERS",
+      "phase": 0,
+      "name": "Database drivers and Kafka client library layer",
+      "passes": true
+    },
+    {
+      "id": "P0-SAGA",
+      "phase": 0,
+      "name": "Cross-store saga coordinator with compensating rollback",
+      "passes": true
+    },
+    {
+      "id": "P0-PROJECTOR",
+      "phase": 0,
+      "name": "GL projector (Kafka → TimescaleDB gl_period_balances)",
+      "passes": true
+    },
+    {
+      "id": "P0-CONFIG-SERVICE",
+      "phase": 0,
+      "name": "ConfigurationService with 4-level cascade resolution",
+      "passes": true
+    },
+    {
+      "id": "P0-JOURNAL-POSTING",
+      "phase": 0,
+      "name": "Journal posting service (double-entry, period check, fund_id, 4-step saga)",
+      "passes": true
+    },
+    {
+      "id": "P0-GRAPH-CRUD",
+      "phase": 0,
+      "name": "Graph CRUD service (Entity, Outcome, Activity, Period, Fund, edges)",
+      "passes": true
+    },
+    {
+      "id": "P0-REST-API",
+      "phase": 0,
+      "name": "REST API routes (graph, GL, config)",
+      "passes": true
+    },
+    {
+      "id": "P0-INVARIANT-TESTS",
+      "phase": 0,
+      "name": "All 11 invariant test files (GL, Graph, Ontology, Equity)",
+      "passes": true
+    },
+    {
+      "id": "P0-INIT-SCRIPTS",
+      "phase": 0,
+      "name": "Init scripts (neo4j-init, pg-migrate, seed)",
+      "passes": true
+    },
+    {
+      "id": "P0-LIVE-VERIFY",
+      "phase": 0,
+      "name": "Live database verification (run init scripts, verify connectivity, seed data)",
+      "passes": false
+    },
+    {
+      "id": "P0-INVARIANTS-LIVE",
+      "phase": 0,
+      "name": "All 11 invariants pass against live databases",
+      "passes": false
+    },
+    {
+      "id": "P0-SAGA-VERIFY",
+      "phase": 0,
+      "name": "Saga rollback verification on simulated failure",
+      "passes": false
+    },
+    {
+      "id": "P0-NEO4J-PERMISSIONS",
+      "phase": 0,
+      "name": "Neo4j deny UPDATE/DELETE on JournalEntry and LedgerLine",
+      "passes": false
+    },
+    {
+      "id": "P1-GRAPH-CRUD-FULL",
+      "phase": 1,
+      "name": "Full graph node CRUD (Resource, Project, Initiative, Metric, Capability, Asset, etc.)",
+      "passes": false
+    },
+    {
+      "id": "P1-EDGE-MGMT",
+      "phase": 1,
+      "name": "Edge management (CONTRIBUTES_TO functions, DEPENDS_ON, DELEGATES_TO)",
+      "passes": false
+    },
+    {
+      "id": "P1-ONTOLOGY-VALIDATION",
+      "phase": 1,
+      "name": "Ontology validation on Outcome creation and edge paths",
+      "passes": false
+    },
+    {
+      "id": "P1-FUND-ACCOUNTING",
+      "phase": 1,
+      "name": "Fund accounting: fund_id on LedgerLine, fund CRUD for NFP entities",
+      "passes": false
+    },
+    {
+      "id": "P1-GL-CORE",
+      "phase": 1,
+      "name": "GL core: AccountingPeriod lifecycle, StatutoryMapping, P&L, balance sheet",
+      "passes": false
+    },
+    {
+      "id": "P1-SOCIAL-CONTROL",
+      "phase": 1,
+      "name": "Social constraints (PROHIBITS pre-filter), obligations, alerts",
+      "passes": false
+    },
+    {
+      "id": "P1-ADMIN-UI",
+      "phase": 1,
+      "name": "Admin UI: entity settings, approval thresholds, fund management",
+      "passes": false
+    },
+    {
+      "id": "P2-ACCRUALS",
+      "phase": 2,
+      "name": "Accruals engine: TemporalClaim, recognition, auto-reversal, ECL",
+      "passes": false
+    },
+    {
+      "id": "P2-FIXED-ASSETS",
+      "phase": 2,
+      "name": "Fixed assets + two-pass depreciation (accounting + tax CCA/MACRS)",
+      "passes": false
+    },
+    {
+      "id": "P2-LEASES",
+      "phase": 2,
+      "name": "Lease accounting: RightOfUseAsset, LeaseLiability, operating lease for ASPE",
+      "passes": false
+    },
+    {
+      "id": "P2-PROVISIONS",
+      "phase": 2,
+      "name": "Provision CRUD with IAS 37 recognition criteria",
+      "passes": false
+    },
+    {
+      "id": "P3-RELATED-PARTY",
+      "phase": 3,
+      "name": "Related party framework: transactions, arm's length, disclosures",
+      "passes": false
+    },
+    {
+      "id": "P3-CONSOLIDATION",
+      "phase": 3,
+      "name": "Consolidation: intercompany matching, FX translation, goodwill",
+      "passes": false
+    },
+    {
+      "id": "P3-EQUITY-CLOSE",
+      "phase": 3,
+      "name": "Equity close: RetainedEarnings, OCI components, recycling, EquitySection",
+      "passes": false
+    },
+    {
+      "id": "P4-WEIGHT-LEARNER",
+      "phase": 4,
+      "name": "AI weight learner with ontology-aware back-propagation",
+      "passes": false
+    },
+    {
+      "id": "P4-EPISTEMIC-SCORER",
+      "phase": 4,
+      "name": "Epistemic priority scorer (EVOI computation)",
+      "passes": false
+    },
+    {
+      "id": "P4-CASHFLOW-OPTIMIZER",
+      "phase": 4,
+      "name": "Cashflow optimizer (FloatWindow scoring, AR discount vs facility)",
+      "passes": false
+    },
+    {
+      "id": "P4-SCENARIO-ENGINE",
+      "phase": 4,
+      "name": "Scenario engine (Monte Carlo on distal/force majeure nodes)",
+      "passes": false
+    },
+    {
+      "id": "P4-CLAUDE-INTEGRATION",
+      "phase": 4,
+      "name": "Claude AI assistant (natural language → graph traversal)",
+      "passes": false
+    },
+    {
+      "id": "P5-TAX-ENGINE",
+      "phase": 5,
+      "name": "Tax engine core: DeferredTax, TaxProvision, current tax",
+      "passes": false
+    },
+    {
+      "id": "P5-TAX-MODULES",
+      "phase": 5,
+      "name": "Tax modules: CRA Corp, GST/HST, IRS Corp, CRA Charity, IRS Exempt, state tax, withholding",
+      "passes": false
+    },
+    {
+      "id": "P5-TAX-CREDITS",
+      "phase": 5,
+      "name": "Tax credit management: identification, computation, carryforward, filing",
+      "passes": false
+    },
+    {
+      "id": "P5-COMPLIANCE",
+      "phase": 5,
+      "name": "Compliance: approval workflows, document hashing, access audit",
+      "passes": false
+    },
+    {
+      "id": "P6-IFRS15",
+      "phase": 6,
+      "name": "IFRS 15 revenue recognition (contracts, performance obligations)",
+      "passes": false
+    },
+    {
+      "id": "P6-INVENTORY",
+      "phase": 6,
+      "name": "Inventory accounting (FIFO/WA/LIFO, NRV testing)",
+      "passes": false
+    },
+    {
+      "id": "P6-EQUITY-EXPAND",
+      "phase": 6,
+      "name": "Equity expansion: ShareClass, EquityAward, EPS computation",
+      "passes": false
+    },
+    {
+      "id": "P6-XBRL",
+      "phase": 6,
+      "name": "XBRL tagging on StatutoryMapping",
+      "passes": false
+    },
+    {
+      "id": "P6-BANK-REC",
+      "phase": 6,
+      "name": "Bank reconciliation service",
+      "passes": false
+    }
+  ]
+}
