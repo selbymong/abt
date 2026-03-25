@@ -138,7 +138,7 @@
       "id": "P1-SOCIAL-CONTROL",
       "phase": 1,
       "name": "Social constraints (PROHIBITS pre-filter), obligations, alerts",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P1-ADMIN-UI",

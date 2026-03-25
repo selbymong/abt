@@ -101,6 +101,14 @@ All Phase 0 "definition of done" criteria met:
   - REST endpoints: period lifecycle, P&L, balance sheet, fund balances, statutory mappings
   - 16 integration tests (gl-core.test.ts)
   - Total: 101 tests across 14 files all passing
+- [x] P1-SOCIAL-CONTROL: PROHIBITS pre-filter and obligation alerts
+  - checkProhibitions: single activity prohibition check with constraint details
+  - filterProhibitedActivities: batch pre-filter for optimizer
+  - getObligationAlerts: horizon-based alert generation
+  - getEntityObligations: full obligation listing with status filter
+  - REST endpoints for all social control operations
+  - 9 integration tests (social-control.test.ts)
+  - Total: 110 tests across 15 files all passing
 
 ## What Comes Next
 1. P1-EDGE-MGMT: CONTRIBUTES_TO function types, edge weight management

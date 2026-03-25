@@ -1,5 +1,11 @@
 import { Router, Request, Response } from 'express';
 import {
+  checkProhibitions,
+  filterProhibitedActivities,
+  getObligationAlerts,
+  getEntityObligations,
+} from '../../services/graph/social-control-service.js';
+import {
   getAllEntities,
   getEntity,
   // Outcome
@@ -321,4 +327,35 @@ graphRouter.get('/orphaned-activities/:entityId', async (req: Request, res: Resp
     { entityId: req.params.entityId },
   );
   res.json({ orphanedActivities: results });
+});
+
+// --- Social Control: PROHIBITS pre-filter ---
+
+graphRouter.get('/prohibitions/:activityId', async (req: Request, res: Response) => {
+  const result = await checkProhibitions(req.params.activityId as string);
+  res.json(result);
+});
+
+graphRouter.post('/prohibitions/filter', async (req: Request, res: Response) => {
+  const { activityIds } = req.body;
+  if (!Array.isArray(activityIds)) {
+    res.status(400).json({ error: 'Required: activityIds[]' });
+    return;
+  }
+  const result = await filterProhibitedActivities(activityIds);
+  res.json(result);
+});
+
+// --- Obligation Alerts ---
+
+graphRouter.get('/obligations/alerts/:entityId', async (req: Request, res: Response) => {
+  const horizonDays = parseInt(req.query.horizonDays as string) || 30;
+  const alerts = await getObligationAlerts(req.params.entityId as string, horizonDays);
+  res.json({ alerts });
+});
+
+graphRouter.get('/obligations/by-entity/:entityId', async (req: Request, res: Response) => {
+  const statusFilter = req.query.status as string | undefined;
+  const obligations = await getEntityObligations(req.params.entityId as string, statusFilter);
+  res.json({ obligations });
 });
