@@ -177,6 +177,44 @@ export interface IntercompanyMatchEdge {
   unrealized_profit_pct?: number;
 }
 
+// --- Equity close nodes ---
+
+export type OciSourceNodeType = 'CURRENCY_TRANSLATION' | 'HEDGE' | 'FINANCIAL_INSTRUMENT' | 'PENSION';
+
+export interface RetainedEarnings extends TimestampedNode {
+  entity_id: string;
+  fund_id?: string;
+  period_id: string;
+  opening_balance: number;
+  net_income: number;
+  dividends_declared: number;
+  other_adjustments: number;
+  closing_balance: number;
+}
+
+export interface OtherComprehensiveIncome extends TimestampedNode {
+  entity_id: string;
+  period_id: string;
+  component: OciComponent;
+  opening_balance: number;
+  current_period: number;
+  recycled_to_pnl: number;
+  closing_balance: number;
+  source_node_id?: string;
+  source_node_type?: OciSourceNodeType;
+}
+
+export interface EquitySection extends TimestampedNode {
+  entity_id: string;
+  period_id: string;
+  share_capital: number;
+  retained_earnings: number;
+  accumulated_oci: number;
+  total_equity: number;
+  nci_equity?: number;
+  total_equity_and_nci: number;
+}
+
 export interface Outcome extends TimestampedNode, Partial<EpistemicProperties>, Partial<ControlProperties> {
   label: string;
   entity_id: string;

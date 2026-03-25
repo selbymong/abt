@@ -1,6 +1,6 @@
 {
   "project": "Enterprise Business Graph (EBG) v1.2",
-  "updated": "2026-03-24",
+  "updated": "2026-03-25",
   "features": [
     {
       "id": "P0-SCHEMA-NEO4J",
@@ -186,7 +186,7 @@
       "id": "P3-EQUITY-CLOSE",
       "phase": 3,
       "name": "Equity close: RetainedEarnings, OCI components, recycling, EquitySection",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P4-WEIGHT-LEARNER",

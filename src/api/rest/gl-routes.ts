@@ -51,6 +51,17 @@ import {
   validateArmsLength,
   generateDisclosureSchedule,
 } from '../../services/gl/related-party-service.js';
+import {
+  computeRetainedEarnings,
+  getRetainedEarnings,
+  recordOCI,
+  recycleOCI,
+  getOCIComponents,
+  isRecyclable,
+  generateEquitySection,
+  getEquitySection,
+  getEquityBreakdown,
+} from '../../services/gl/equity-close-service.js';
 import { query } from '../../lib/pg.js';
 
 export const glRouter = Router();
@@ -443,4 +454,66 @@ glRouter.get('/related-party-transactions/disclosure/:entityId', async (req: Req
   if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
   const schedule = await generateDisclosureSchedule(req.params.entityId as string, periodId);
   res.json({ disclosures: schedule });
+});
+
+// --- Equity Close ---
+
+glRouter.post('/retained-earnings', async (req: Request, res: Response) => {
+  const id = await computeRetainedEarnings(req.body);
+  res.status(201).json({ id });
+});
+
+glRouter.get('/retained-earnings', async (req: Request, res: Response) => {
+  const { entityId, periodId, fundId } = req.query;
+  if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
+  const re = await getRetainedEarnings(entityId as string, periodId as string, fundId as string | undefined);
+  if (!re) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json(re);
+});
+
+glRouter.post('/oci', async (req: Request, res: Response) => {
+  const id = await recordOCI(req.body);
+  res.status(201).json({ id });
+});
+
+glRouter.post('/oci/:id/recycle', async (req: Request, res: Response) => {
+  const { amount } = req.body;
+  if (amount === undefined) { res.status(400).json({ error: 'Required: amount' }); return; }
+  const result = await recycleOCI(req.params.id as string, amount);
+  if (!result) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json({ success: true });
+});
+
+glRouter.get('/oci/by-entity/:entityId', async (req: Request, res: Response) => {
+  const periodId = req.query.periodId as string;
+  if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
+  const components = await getOCIComponents(req.params.entityId as string, periodId);
+  res.json({ components });
+});
+
+glRouter.get('/oci/recyclable/:component', async (req: Request, res: Response) => {
+  const recyclable = isRecyclable(req.params.component as any);
+  res.json({ component: req.params.component, recyclable });
+});
+
+glRouter.post('/equity-section', async (req: Request, res: Response) => {
+  const { entityId, periodId, nciEquity } = req.body;
+  if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
+  const id = await generateEquitySection(entityId, periodId, nciEquity);
+  res.status(201).json({ id });
+});
+
+glRouter.get('/equity-section', async (req: Request, res: Response) => {
+  const { entityId, periodId } = req.query;
+  if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
+  const es = await getEquitySection(entityId as string, periodId as string);
+  if (!es) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json(es);
+});
+
+glRouter.get('/equity-breakdown', async (req: Request, res: Response) => {
+  const { entityId, periodId } = req.query;
+  if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
+  const breakdown = await getEquityBreakdown(entityId as string, periodId as string);
+  res.json({ breakdown });
 });
