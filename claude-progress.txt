@@ -93,6 +93,14 @@ All Phase 0 "definition of done" criteria met:
   - All 4 fund types tested: UNRESTRICTED, TEMPORARILY_RESTRICTED, PERMANENTLY_RESTRICTED, ENDOWMENT
   - 11 integration tests (fund-accounting.test.ts)
   - Total: 85 tests across 13 files all passing
+- [x] P1-GL-CORE: GL core services — period lifecycle, reporting, statutory mappings
+  - Period service: OPEN → SOFT_CLOSED → HARD_CLOSED state machine with reopen
+  - Reporting service: P&L (revenue/expenses/net income), Balance Sheet (assets/liabilities/equity)
+  - Fund balance reporting for NFP entities
+  - StatutoryMapping CRUD: jurisdiction-based COA code resolution
+  - REST endpoints: period lifecycle, P&L, balance sheet, fund balances, statutory mappings
+  - 16 integration tests (gl-core.test.ts)
+  - Total: 101 tests across 14 files all passing
 
 ## What Comes Next
 1. P1-EDGE-MGMT: CONTRIBUTES_TO function types, edge weight management

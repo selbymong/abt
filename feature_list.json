@@ -132,7 +132,7 @@
       "id": "P1-GL-CORE",
       "phase": 1,
       "name": "GL core: AccountingPeriod lifecycle, StatutoryMapping, P&L, balance sheet",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P1-SOCIAL-CONTROL",
