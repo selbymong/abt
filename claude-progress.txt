@@ -260,12 +260,22 @@ All Phase 3 features implemented and tested:
   - 17 integration tests (weight-learner.test.ts)
   - Total: 240 tests across 19 files all passing
 
+- [x] P4-EPISTEMIC-SCORER: EVOI computation engine
+  - computeEVOI: expected value of information per node (Δ effective_stake on state advancement)
+  - computeEntityEVOIs: entity-wide EVOI ranking with optional threshold filter
+  - updateEpistemicPriorities: batch-update epistemic_priority on all FORECASTED/ESTIMATED nodes
+  - computeEpistemicROI: ROI = (information_value - cost) / cost for epistemic activities
+  - findStaleEstimates: detects nodes with expired estimates (past expires_at)
+  - downgradeStaleEstimates: batch downgrade to STALE_ESTIMATED
+  - REST endpoints for all epistemic scorer operations
+  - 12 integration tests (epistemic-scorer.test.ts)
+  - Total: 252 tests across 20 files all passing
+
 ## What Comes Next
-1. P4-EPISTEMIC-SCORER: EVOI computation engine
-2. P4-CASHFLOW-OPTIMIZER: FloatWindow scoring, AR discount vs facility
-3. P4-SCENARIO-ENGINE: Monte Carlo on distal/force majeure nodes
-4. P4-CLAUDE-INTEGRATION: Natural language → graph traversal
-5. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
+1. P4-CASHFLOW-OPTIMIZER: FloatWindow scoring, AR discount vs facility
+2. P4-SCENARIO-ENGINE: Monte Carlo on distal/force majeure nodes
+3. P4-CLAUDE-INTEGRATION: Natural language → graph traversal
+4. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container

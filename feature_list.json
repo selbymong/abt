@@ -198,7 +198,7 @@
       "id": "P4-EPISTEMIC-SCORER",
       "phase": 4,
       "name": "Epistemic priority scorer (EVOI computation)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P4-CASHFLOW-OPTIMIZER",

@@ -8,6 +8,14 @@ import {
   getCalibrationHistory,
   getCurrentCalibration,
 } from '../../services/ai/weight-learner-service.js';
+import {
+  computeEVOI,
+  computeEntityEVOIs,
+  updateEpistemicPriorities,
+  computeEpistemicROI,
+  findStaleEstimates,
+  downgradeStaleEstimates,
+} from '../../services/ai/epistemic-scorer-service.js';
 
 export const aiRouter = Router();
 
@@ -70,4 +78,43 @@ aiRouter.get('/calibration/:entityId/:outcomeType/current', async (req: Request,
     req.params.outcomeType as string,
   );
   res.json({ calibrationFactor: factor });
+});
+
+// --- Epistemic Scorer ---
+
+aiRouter.get('/evoi/:nodeId', async (req: Request, res: Response) => {
+  const result = await computeEVOI(req.params.nodeId as string);
+  if (!result) { res.status(404).json({ error: 'Not found or no ci_point_estimate' }); return; }
+  res.json(result);
+});
+
+aiRouter.get('/evoi/by-entity/:entityId', async (req: Request, res: Response) => {
+  const minEvoi = req.query.minEvoi ? Number(req.query.minEvoi) : undefined;
+  const evois = await computeEntityEVOIs(req.params.entityId as string, minEvoi);
+  res.json({ evois });
+});
+
+aiRouter.post('/epistemic-priorities/:entityId', async (req: Request, res: Response) => {
+  const updated = await updateEpistemicPriorities(req.params.entityId as string);
+  res.json({ updated });
+});
+
+aiRouter.post('/epistemic-roi', async (req: Request, res: Response) => {
+  const { nodeId, activityCost } = req.body;
+  if (!nodeId || activityCost === undefined) {
+    res.status(400).json({ error: 'Required: nodeId, activityCost' }); return;
+  }
+  const result = await computeEpistemicROI(nodeId, activityCost);
+  if (!result) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json(result);
+});
+
+aiRouter.get('/stale-estimates/:entityId', async (req: Request, res: Response) => {
+  const stale = await findStaleEstimates(req.params.entityId as string);
+  res.json({ staleEstimates: stale });
+});
+
+aiRouter.post('/stale-estimates/:entityId/downgrade', async (req: Request, res: Response) => {
+  const count = await downgradeStaleEstimates(req.params.entityId as string);
+  res.json({ downgraded: count });
 });
