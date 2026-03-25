@@ -102,7 +102,7 @@
       "id": "P0-NEO4J-PERMISSIONS",
       "phase": 0,
       "name": "Neo4j deny UPDATE/DELETE on JournalEntry and LedgerLine",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P1-GRAPH-CRUD-FULL",
