@@ -5,39 +5,35 @@
 // Run AFTER 07-v1.2-constraints-indexes.cypher
 // ============================================================
 
-// --- Four Entity Nodes ---
+// --- Four Entity Nodes (MERGE to be idempotent) ---
 
-CREATE (e:Entity {
-  id: randomUUID(), label: 'CA ForProfit Corp',
-  entity_type: 'FOR_PROFIT', tax_status: 'TAXABLE',
-  reporting_framework: 'ASPE', jurisdiction: 'CA',
-  functional_currency: 'CAD', outcome_ontology: 'FINANCIAL',
-  fund_accounting_enabled: false, fiscal_year_end: '12-31'
-});
+MERGE (e:Entity {label: 'CA ForProfit Corp'})
+ON CREATE SET e.id = randomUUID(), e.entity_type = 'FOR_PROFIT', e.tax_status = 'TAXABLE',
+  e.reporting_framework = 'ASPE', e.jurisdiction = 'CA',
+  e.functional_currency = 'CAD', e.outcome_ontology = 'FINANCIAL',
+  e.fund_accounting_enabled = false, e.fiscal_year_end = '12-31',
+  e.legal_name = 'CA ForProfit Corp';
 
-CREATE (e:Entity {
-  id: randomUUID(), label: 'CA NotForProfit',
-  entity_type: 'NOT_FOR_PROFIT', tax_status: 'EXEMPT',
-  reporting_framework: 'ASNFPO', jurisdiction: 'CA',
-  functional_currency: 'CAD', outcome_ontology: 'MISSION',
-  fund_accounting_enabled: true, fiscal_year_end: '12-31'
-});
+MERGE (e:Entity {label: 'CA NotForProfit'})
+ON CREATE SET e.id = randomUUID(), e.entity_type = 'NOT_FOR_PROFIT', e.tax_status = 'EXEMPT',
+  e.reporting_framework = 'ASNFPO', e.jurisdiction = 'CA',
+  e.functional_currency = 'CAD', e.outcome_ontology = 'MISSION',
+  e.fund_accounting_enabled = true, e.fiscal_year_end = '12-31',
+  e.legal_name = 'CA NotForProfit';
 
-CREATE (e:Entity {
-  id: randomUUID(), label: 'US ForProfit Corp',
-  entity_type: 'FOR_PROFIT', tax_status: 'TAXABLE',
-  reporting_framework: 'US_GAAP', jurisdiction: 'US',
-  functional_currency: 'USD', outcome_ontology: 'FINANCIAL',
-  fund_accounting_enabled: false, fiscal_year_end: '12-31'
-});
+MERGE (e:Entity {label: 'US ForProfit Corp'})
+ON CREATE SET e.id = randomUUID(), e.entity_type = 'FOR_PROFIT', e.tax_status = 'TAXABLE',
+  e.reporting_framework = 'US_GAAP', e.jurisdiction = 'US',
+  e.functional_currency = 'USD', e.outcome_ontology = 'FINANCIAL',
+  e.fund_accounting_enabled = false, e.fiscal_year_end = '12-31',
+  e.legal_name = 'US ForProfit Corp';
 
-CREATE (e:Entity {
-  id: randomUUID(), label: 'US NotForProfit',
-  entity_type: 'NOT_FOR_PROFIT', tax_status: 'EXEMPT',
-  reporting_framework: 'ASC_958', jurisdiction: 'US',
-  functional_currency: 'USD', outcome_ontology: 'MISSION',
-  fund_accounting_enabled: true, fiscal_year_end: '12-31'
-});
+MERGE (e:Entity {label: 'US NotForProfit'})
+ON CREATE SET e.id = randomUUID(), e.entity_type = 'NOT_FOR_PROFIT', e.tax_status = 'EXEMPT',
+  e.reporting_framework = 'ASC_958', e.jurisdiction = 'US',
+  e.functional_currency = 'USD', e.outcome_ontology = 'MISSION',
+  e.fund_accounting_enabled = true, e.fiscal_year_end = '12-31',
+  e.legal_name = 'US NotForProfit';
 
 // --- CCA Classes (Canada) ---
 

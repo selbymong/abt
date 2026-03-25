@@ -23,7 +23,7 @@ FOR (j:JournalEntry) ON (j.valid_time_start);
 CREATE INDEX je_transaction_time_idx IF NOT EXISTS
 FOR (j:JournalEntry) ON (j.transaction_time_start);
 
-CREATE INDEX je_idempotency_idx IF NOT EXISTS
+CREATE CONSTRAINT je_idempotency_unique IF NOT EXISTS
 FOR (j:JournalEntry) REQUIRE j.idempotency_key IS UNIQUE;
 
 // --- LedgerLine ---

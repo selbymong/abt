@@ -5,10 +5,12 @@
  */
 import 'dotenv/config';
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { getPool, closePg } from '../src/lib/pg.js';
 
-const SQL_DIR = join(import.meta.dirname, '..', 'sql');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SQL_DIR = join(__dirname, '..', 'sql');
 
 const FILES = [
   '01-configuration-settings.sql',

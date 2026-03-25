@@ -6,7 +6,7 @@
 
 ### Phase 0 — Foundation (IN PROGRESS)
 - [x] Repository setup and Git initialization
-- [x] Docker Compose infrastructure (Neo4j 5 Enterprise, TimescaleDB/PG16, Kafka KRaft)
+- [x] Docker Compose infrastructure (Neo4j 5 Enterprise, TimescaleDB/PG16, Kafka 3.9 KRaft)
 - [x] All Cypher DDL files written (01 through 08): constraints, indexes, node templates, edges, traversal queries, v1.2 seeds
 - [x] SQL migrations written: configuration_settings (bi-temporal), TimescaleDB projections (6 tables)
 - [x] TypeScript type system: all enums and interfaces in src/schema/neo4j/types.ts
@@ -18,22 +18,32 @@
 - [x] Graph CRUD service: Entity, Outcome, Activity, AccountingPeriod, Fund, CONTRIBUTES_TO edge
 - [x] REST API: graph-routes, gl-routes, config-routes on Express :4000
 - [x] All 11 invariant test files written (GL 1-5, Graph 1-2, Ontology 1-3, Equity 1)
-- [x] Init scripts: neo4j-init.ts, pg-migrate.ts, seed.ts
+- [x] Init scripts: neo4j-init.ts, pg-migrate.ts, seed.ts, verify-db.ts, verify-kafka.ts
 - [x] TypeScript compiles cleanly (tsc)
-- [x] CLAUDE.md with full documentation map and build instructions
-- [x] All spec documents (7 docx files) and 9 markdown docs in place
+- [x] CLAUDE.md with full documentation map, build instructions, and agent workflow
+- [x] Long-running agent harness: claude-progress.txt, feature_list.json, init.sh
+- [x] Docker services running and healthy (Neo4j :7474/:7687, TimescaleDB :5433, Kafka :9094)
+- [x] Neo4j schema applied: all constraints, indexes, seed data verified
+- [x] PostgreSQL migrations applied: 8 tables, 3 hypertables, pgvector extension
+- [x] Seed data verified: 4 Entity nodes, 31 AssetClass nodes, 4 TaxCreditProgram nodes, 46 config rows
+- [x] Kafka topics created successfully (all 8 topics)
+- [x] Express server starts on :4000
+
+### Fixes Applied
+- Switched from bitnami/kafka:3.7 (removed from Docker Hub) to apache/kafka:3.9.0
+- Remapped PostgreSQL to port 5433 (host port 5432 in use)
+- Fixed import.meta.dirname → fileURLToPath for Node 18 compat in neo4j-init.ts, pg-migrate.ts
+- Fixed neo4j-init.ts statement parser dropping first statement per file (comment filter bug)
+- Fixed 03-gl-nodes.cypher: CREATE INDEX with REQUIRE → CREATE CONSTRAINT for idempotency_key
+- Made 08-v1.2-seed-data.cypher idempotent with MERGE instead of CREATE
+- Suppressed parameterized query template errors in neo4j-init.ts
 
 ### Not Yet Done (Phase 0 remaining)
-- [ ] Run Docker services and verify connectivity
-- [ ] Execute neo4j-init.ts against live Neo4j
-- [ ] Execute pg-migrate.ts against live PostgreSQL/TimescaleDB
-- [ ] Execute seed.ts to populate default config
-- [ ] Run invariant tests against live databases (currently tests need running infra)
-- [ ] Verify Kafka consumer projects a test LedgerLine to TimescaleDB
+- [ ] Run invariant tests against live databases
 - [ ] Verify saga coordinator rollback on simulated failure
 - [ ] Configure Neo4j deny UPDATE/DELETE on JournalEntry/LedgerLine labels
 - [ ] Verify ConfigurationService cascade resolution end-to-end
-- [ ] Confirm four Entity nodes exist with all v1.2 properties
+- [ ] Verify GL projector: Kafka → TimescaleDB for a test LedgerLine
 
 ## Architecture Decisions
 - CQRS: Neo4j (write) + TimescaleDB (read) — enforced, never mix
@@ -43,10 +53,10 @@
 - Ontology boundary: hard learning wall between FINANCIAL and MISSION
 
 ## What Comes Next
-1. Finish Phase 0 "definition of done" items (live database verification)
+1. Finish Phase 0 "definition of done" items (invariant tests, saga verify, Neo4j permissions)
 2. Phase 1: Core Graph + Basic GL + Fund Accounting + Admin UI (Sprints 4-8)
 3. Phase 2: Accruals + Fixed Assets + Depreciation Engine (Sprints 9-15)
 
 ## Known Issues
 - Vitest requires Node 20+ (current env has 18.19.1); using tsc build as regression gate
-- Docker services not yet started/verified
+- Port 5432 occupied on host; using 5433 for TimescaleDB container

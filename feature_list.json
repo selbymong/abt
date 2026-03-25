@@ -84,7 +84,7 @@
       "id": "P0-LIVE-VERIFY",
       "phase": 0,
       "name": "Live database verification (run init scripts, verify connectivity, seed data)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P0-INVARIANTS-LIVE",

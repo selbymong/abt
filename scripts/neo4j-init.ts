@@ -5,10 +5,12 @@
  */
 import 'dotenv/config';
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { getSession, closeNeo4j } from '../src/lib/neo4j.js';
 
-const CYPHER_DIR = join(import.meta.dirname, '..', 'cypher');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const CYPHER_DIR = join(__dirname, '..', 'cypher');
 
 const FILES = [
   '01-constraints-indexes.cypher',
@@ -31,10 +33,6 @@ async function main() {
     // Split on semicolons, skip comments and empty statements
     const statements = content
       .split(';')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0)
-      .filter((s) => !s.startsWith('//'))
-      // Remove inline comments from statements
       .map((s) =>
         s
           .split('\n')
@@ -61,6 +59,10 @@ async function main() {
           const msg = err instanceof Error ? err.message : String(err);
           // Skip "already exists" errors for constraints/indexes
           if (msg.includes('already exists')) {
+            continue;
+          }
+          // Skip parameterized query templates (they need runtime params)
+          if (msg.includes('Expected parameter')) {
             continue;
           }
           console.error(`    ERROR in ${file}: ${msg}`);
