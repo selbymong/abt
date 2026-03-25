@@ -150,7 +150,7 @@
       "id": "P2-ACCRUALS",
       "phase": 2,
       "name": "Accruals engine: TemporalClaim, recognition, auto-reversal, ECL",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P2-FIXED-ASSETS",

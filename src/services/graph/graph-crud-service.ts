@@ -1,4 +1,4 @@
-import { v4 as uuid } from 'uuid';
+import { v4 as uuid, v7 as uuidv7 } from 'uuid';
 import { runCypher } from '../../lib/neo4j.js';
 import { OntologyBoundaryViolation, FundNotAllowedError } from '../../lib/errors.js';
 import type {
@@ -898,7 +898,8 @@ export async function createAccountingPeriod(params: {
   startDate: string;
   endDate: string;
 }): Promise<string> {
-  const id = uuid();
+  // UUIDv7 required for TimescaleDB hypertable time-based chunking
+  const id = uuidv7();
   await runCypher(
     `CREATE (p:AccountingPeriod {
       id: $id, entity_id: $entityId, label: $label,

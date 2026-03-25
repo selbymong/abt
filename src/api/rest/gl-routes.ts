@@ -10,6 +10,17 @@ import {
   deleteStatutoryMapping,
   resolveStatutoryCode,
 } from '../../services/gl/statutory-mapping-service.js';
+import {
+  createTemporalClaim,
+  getTemporalClaim,
+  listTemporalClaims,
+  updateTemporalClaim,
+  recognizeClaim,
+  recognizeAllClaims,
+  autoReverseClaims,
+  updateECL,
+  writeOffClaim,
+} from '../../services/gl/accruals-service.js';
 import { query } from '../../lib/pg.js';
 
 export const glRouter = Router();
@@ -164,6 +175,68 @@ glRouter.delete('/statutory-mappings/:id', async (req: Request, res: Response) =
   const deleted = await deleteStatutoryMapping(req.params.id as string);
   if (!deleted) { res.status(404).json({ error: 'Not found' }); return; }
   res.json({ success: true });
+});
+
+// --- TemporalClaim / Accruals ---
+
+glRouter.post('/temporal-claims', async (req: Request, res: Response) => {
+  const id = await createTemporalClaim(req.body);
+  res.status(201).json({ id });
+});
+
+glRouter.get('/temporal-claims/:id', async (req: Request, res: Response) => {
+  const claim = await getTemporalClaim(req.params.id as string);
+  if (!claim) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json(claim);
+});
+
+glRouter.get('/temporal-claims/by-entity/:entityId', async (req: Request, res: Response) => {
+  const status = req.query.status as string | undefined;
+  const claims = await listTemporalClaims(
+    req.params.entityId as string,
+    status as any,
+  );
+  res.json({ claims });
+});
+
+glRouter.patch('/temporal-claims/:id', async (req: Request, res: Response) => {
+  const updated = await updateTemporalClaim(req.params.id as string, req.body);
+  if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json({ success: true });
+});
+
+glRouter.post('/temporal-claims/:id/recognize', async (req: Request, res: Response) => {
+  const { periodId } = req.body;
+  if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
+  const result = await recognizeClaim(req.params.id as string, periodId);
+  res.json(result);
+});
+
+glRouter.post('/temporal-claims/recognize-all', async (req: Request, res: Response) => {
+  const { entityId, periodId } = req.body;
+  if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
+  const result = await recognizeAllClaims(entityId, periodId);
+  res.json(result);
+});
+
+glRouter.post('/temporal-claims/auto-reverse', async (req: Request, res: Response) => {
+  const { entityId, currentPeriodId, previousPeriodId } = req.body;
+  if (!entityId || !currentPeriodId || !previousPeriodId) {
+    res.status(400).json({ error: 'Required: entityId, currentPeriodId, previousPeriodId' }); return;
+  }
+  const result = await autoReverseClaims(entityId, currentPeriodId, previousPeriodId);
+  res.json(result);
+});
+
+glRouter.post('/temporal-claims/:id/ecl', async (req: Request, res: Response) => {
+  const { collectabilityScore, eclAllowance } = req.body;
+  const result = await updateECL(req.params.id as string, collectabilityScore, eclAllowance);
+  res.json(result);
+});
+
+glRouter.post('/temporal-claims/:id/write-off', async (req: Request, res: Response) => {
+  const result = await writeOffClaim(req.params.id as string);
+  res.json({ success: result });
 });
 
 glRouter.get('/statutory-mappings/resolve', async (req: Request, res: Response) => {

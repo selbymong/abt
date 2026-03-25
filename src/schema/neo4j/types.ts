@@ -27,6 +27,11 @@ export type Side = 'DEBIT' | 'CREDIT';
 export type EntryType = 'OPERATIONAL' | 'ACCRUAL' | 'DEFERRAL' | 'REVERSAL' | 'ADJUSTMENT' | 'ELIMINATION' | 'IMPAIRMENT';
 export type PeriodStatus = 'OPEN' | 'SOFT_CLOSED' | 'HARD_CLOSED';
 export type ClaimType = 'ACCRUED_REVENUE' | 'DEFERRED_REVENUE' | 'PREPAID_EXPENSE' | 'ACCRUED_LIABILITY';
+export type ClaimDirection = 'RECEIVABLE' | 'PAYABLE';
+export type TemporalClaimStatus = 'OPEN' | 'PARTIALLY_RECOGNIZED' | 'FULLY_RECOGNIZED' | 'WRITTEN_OFF';
+export type RecognitionMethod = 'STRAIGHT_LINE' | 'PERCENTAGE_COMPLETE' | 'MILESTONE' | 'USAGE_BASED';
+export type ECLStage = 'STAGE_1' | 'STAGE_2' | 'STAGE_3';
+export type TaxRecognitionBasis = 'CASH_BASIS' | 'ACCRUAL_BASIS';
 export type ObligationStatus = 'PENDING' | 'COMPLETED' | 'OVERDUE';
 export type CashFlowDirection = 'INFLOW' | 'OUTFLOW';
 export type CashFlowStatus = 'PENDING' | 'SETTLED' | 'CANCELLED';
@@ -169,6 +174,37 @@ export interface Fund extends TimestampedNode {
   restriction_description?: string;
   restriction_expiry?: string;
   restriction_purpose?: string;
+}
+
+export interface RecognitionScheduleEntry {
+  period_id: string;
+  amount: number;
+  recognized_at?: string;
+}
+
+export interface TemporalClaim extends TimestampedNode {
+  entity_id: string;
+  claim_type: ClaimType;
+  direction: ClaimDirection;
+  original_amount: number;
+  recognized_to_date: number;
+  remaining: number;
+  currency: string;
+  recognition_method: RecognitionMethod;
+  recognition_schedule: RecognitionScheduleEntry[];
+  source_node_id: string;
+  source_node_type: NodeRefType;
+  settlement_node_id?: string;
+  outcome_node_id?: string;
+  period_id_opened: string;
+  period_id_closed?: string;
+  status: TemporalClaimStatus;
+  auto_reverse: boolean;
+  collectability_score: number;
+  ecl_allowance: number;
+  ecl_stage: ECLStage;
+  tax_recognition_basis: TaxRecognitionBasis;
+  materiality_flag: boolean;
 }
 
 // --- Edge types ---

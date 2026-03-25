@@ -79,6 +79,26 @@ export class SagaRollbackError extends EBGError {
   }
 }
 
+export class ClaimFullyRecognizedError extends EBGError {
+  constructor(claimId: string) {
+    super(
+      `TemporalClaim ${claimId} is already fully recognized`,
+      'CLAIM_FULLY_RECOGNIZED',
+      400,
+    );
+  }
+}
+
+export class ClaimWrittenOffError extends EBGError {
+  constructor(claimId: string) {
+    super(
+      `TemporalClaim ${claimId} has been written off`,
+      'CLAIM_WRITTEN_OFF',
+      400,
+    );
+  }
+}
+
 export class ConfigNotFoundError extends EBGError {
   constructor(key: string, scope: string) {
     super(

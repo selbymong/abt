@@ -221,13 +221,13 @@ export async function postJournalEntry(input: PostJournalEntryInput): Promise<st
                 net_balance, transaction_count)
              VALUES ($1, $2,
                COALESCE($3, '00000000-0000-0000-0000-000000000000'::uuid),
-               $4, $5, $6, $7, $8, $7 - $8, 1)
+               $4, $5, $6, $7::numeric, $8::numeric, $7::numeric - $8::numeric, 1)
              ON CONFLICT (entity_id, period_id, fund_id, node_ref_id, economic_category)
              DO UPDATE SET
-               debit_total = gl_period_balances.debit_total + $7,
-               credit_total = gl_period_balances.credit_total + $8,
-               net_balance = (gl_period_balances.debit_total + $7) -
-                             (gl_period_balances.credit_total + $8),
+               debit_total = gl_period_balances.debit_total + $7::numeric,
+               credit_total = gl_period_balances.credit_total + $8::numeric,
+               net_balance = (gl_period_balances.debit_total + $7::numeric) -
+                             (gl_period_balances.credit_total + $8::numeric),
                transaction_count = gl_period_balances.transaction_count + 1,
                last_updated = now()`,
             [
@@ -247,9 +247,9 @@ export async function postJournalEntry(input: PostJournalEntryInput): Promise<st
 
           await query(
             `UPDATE gl_period_balances SET
-               debit_total = debit_total - $5,
-               credit_total = credit_total - $6,
-               net_balance = (debit_total - $5) - (credit_total - $6),
+               debit_total = debit_total - $5::numeric,
+               credit_total = credit_total - $6::numeric,
+               net_balance = (debit_total - $5::numeric) - (credit_total - $6::numeric),
                transaction_count = transaction_count - 1,
                last_updated = now()
              WHERE entity_id = $1 AND period_id = $2
