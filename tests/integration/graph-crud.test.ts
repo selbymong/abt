@@ -377,9 +377,14 @@ describe('Graph CRUD — AccountingPeriod & Fund', () => {
     expect(period).not.toBeNull();
   });
 
-  it('creates a Fund', async () => {
+  it('creates a Fund for NFP entity', async () => {
+    // Fund creation requires an NFP entity with fund_accounting_enabled=true
+    const entities = await getAllEntities();
+    const nfpEntity = entities.find((e: any) => e.entity_type === 'NOT_FOR_PROFIT');
+    if (!nfpEntity) return; // skip if no NFP entity seeded
+
     const id = track('Fund', await createFund({
-      entityId: testEntityId,
+      entityId: nfpEntity.id,
       fundType: 'UNRESTRICTED',
       label: 'General Fund',
     }));

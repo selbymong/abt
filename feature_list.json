@@ -126,7 +126,7 @@
       "id": "P1-FUND-ACCOUNTING",
       "phase": 1,
       "name": "Fund accounting: fund_id on LedgerLine, fund CRUD for NFP entities",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P1-GL-CORE",

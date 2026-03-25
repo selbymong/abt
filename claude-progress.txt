@@ -87,6 +87,12 @@ All Phase 0 "definition of done" criteria met:
   - createOutcome already validates ontology match (from Phase 0)
   - 2 integration tests (cross-ontology rejection + same-ontology acceptance)
   - Total: 74 tests across 12 files all passing
+- [x] P1-FUND-ACCOUNTING: Fund accounting enforcement for NFP entities
+  - createFund validates entity has fund_accounting_enabled=true
+  - FundNotAllowedError thrown when creating Fund for FP entity
+  - All 4 fund types tested: UNRESTRICTED, TEMPORARILY_RESTRICTED, PERMANENTLY_RESTRICTED, ENDOWMENT
+  - 11 integration tests (fund-accounting.test.ts)
+  - Total: 85 tests across 13 files all passing
 
 ## What Comes Next
 1. P1-EDGE-MGMT: CONTRIBUTES_TO function types, edge weight management

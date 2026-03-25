@@ -1,6 +1,6 @@
 import { v4 as uuid } from 'uuid';
 import { runCypher } from '../../lib/neo4j.js';
-import { OntologyBoundaryViolation } from '../../lib/errors.js';
+import { OntologyBoundaryViolation, FundNotAllowedError } from '../../lib/errors.js';
 import type {
   Entity, Outcome, OutcomeOntology, OutcomeType,
   NodeStatus, ResourceType, MetricType, CapabilityLevel, AssetType,
@@ -925,6 +925,12 @@ export async function createFund(params: {
   label: string;
   restrictionDescription?: string;
 }): Promise<string> {
+  // Validate that entity has fund_accounting_enabled
+  const entity = await getEntity(params.entityId);
+  if (entity && !entity.fund_accounting_enabled) {
+    throw new FundNotAllowedError(params.entityId);
+  }
+
   const id = uuid();
   await runCypher(
     `CREATE (f:Fund {

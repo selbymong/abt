@@ -49,6 +49,16 @@ export class FundRequiredError extends EBGError {
   }
 }
 
+export class FundNotAllowedError extends EBGError {
+  constructor(entityId: string) {
+    super(
+      `Fund accounting not enabled for entity ${entityId}`,
+      'FUND_NOT_ALLOWED',
+      400,
+    );
+  }
+}
+
 export class PeriodClosedError extends EBGError {
   constructor(periodId: string, status: string) {
     super(
