@@ -42,10 +42,11 @@
 - [x] All 11 invariant tests pass against live databases (22 tests, 8 files)
 - [x] Saga rollback verified: 4 tests (reverse compensation, success path, error details, compensation failure)
 - [x] Neo4j permissions: ebg_app user with DENY DELETE on JournalEntry/LedgerLine, verified with test
-
-### Not Yet Done (Phase 0 remaining)
-- [ ] Verify ConfigurationService cascade resolution end-to-end
-- [ ] Verify GL projector: Kafka → TimescaleDB for a test LedgerLine
+- [x] ConfigurationService cascade: 8 tests (entity-pair → entity → system fallback, bi-temporal, JSON values)
+- [x] GL projector: 4 tests (debit/credit projection, accumulation, event filtering, fund partitioning)
+- [x] Fixed GL projector SQL: added explicit ::numeric casts for arithmetic
+- [x] Fixed vitest config: added dotenv loading for .env
+- [x] All TimescaleDB hypertable period_ids use UUIDv7 for time-based chunking
 
 ## Architecture Decisions
 - CQRS: Neo4j (write) + TimescaleDB (read) — enforced, never mix
@@ -54,10 +55,19 @@
 - Configuration over code: all policy via ConfigurationService
 - Ontology boundary: hard learning wall between FINANCIAL and MISSION
 
+## Phase 0 — COMPLETE
+All Phase 0 "definition of done" criteria met:
+- All 11 invariants pass (38 total tests across 11 files)
+- GL projector projects LedgerLines to TimescaleDB
+- Saga coordinator rolls back partial writes on failure
+- Neo4j ebg_app user cannot DELETE JournalEntry or LedgerLine
+- ConfigurationService resolves entity-scoped settings with cascade fallback
+- Four Entity nodes exist with all v1.2 properties
+
 ## What Comes Next
-1. Finish Phase 0 "definition of done" items (invariant tests, saga verify, Neo4j permissions)
-2. Phase 1: Core Graph + Basic GL + Fund Accounting + Admin UI (Sprints 4-8)
-3. Phase 2: Accruals + Fixed Assets + Depreciation Engine (Sprints 9-15)
+1. Phase 1: Core Graph + Basic GL + Fund Accounting + Admin UI (Sprints 4-8)
+2. Phase 2: Accruals + Fixed Assets + Depreciation Engine (Sprints 9-15)
+3. Phase 3: Multi-Entity + Related Party + Equity Close (Sprints 16-21)
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
