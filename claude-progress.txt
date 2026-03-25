@@ -40,9 +40,9 @@
 
 - [x] Upgraded to Node 22.16.0 (vitest 4.x requires Node 20+)
 - [x] All 11 invariant tests pass against live databases (22 tests, 8 files)
+- [x] Saga rollback verified: 4 tests (reverse compensation, success path, error details, compensation failure)
 
 ### Not Yet Done (Phase 0 remaining)
-- [ ] Verify saga coordinator rollback on simulated failure
 - [ ] Configure Neo4j deny UPDATE/DELETE on JournalEntry/LedgerLine labels
 - [ ] Verify ConfigurationService cascade resolution end-to-end
 - [ ] Verify GL projector: Kafka → TimescaleDB for a test LedgerLine

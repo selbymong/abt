@@ -96,7 +96,7 @@
       "id": "P0-SAGA-VERIFY",
       "phase": 0,
       "name": "Saga rollback verification on simulated failure",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P0-NEO4J-PERMISSIONS",
