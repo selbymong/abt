@@ -29,6 +29,17 @@ import {
   listLeaseLiabilities,
   processLeasePayment,
 } from '../../services/gl/lease-service.js';
+import {
+  createProvision,
+  getProvision,
+  listProvisions,
+  updateProvision,
+  deleteProvision,
+  recognizeProvision,
+  unwindProvisionDiscount,
+  settleProvision,
+  getProvisionsNeedingReview,
+} from '../../services/gl/provision-service.js';
 import { query } from '../../lib/pg.js';
 
 export const glRouter = Router();
@@ -297,4 +308,65 @@ glRouter.post('/leases/process-payment', async (req: Request, res: Response) => 
   }
   const result = await processLeasePayment(leaseLiabilityId, rouAssetId, periodId);
   res.json(result);
+});
+
+// --- Provisions (IAS 37) ---
+
+glRouter.post('/provisions', async (req: Request, res: Response) => {
+  const id = await createProvision(req.body);
+  res.status(201).json({ id });
+});
+
+glRouter.get('/provisions/:id', async (req: Request, res: Response) => {
+  const provision = await getProvision(req.params.id as string);
+  if (!provision) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json(provision);
+});
+
+glRouter.get('/provisions/by-entity/:entityId', async (req: Request, res: Response) => {
+  const probability = req.query.probability as string | undefined;
+  const provisions = await listProvisions(req.params.entityId as string, probability as any);
+  res.json({ provisions });
+});
+
+glRouter.patch('/provisions/:id', async (req: Request, res: Response) => {
+  const updated = await updateProvision(req.params.id as string, req.body);
+  if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json({ success: true });
+});
+
+glRouter.delete('/provisions/:id', async (req: Request, res: Response) => {
+  const deleted = await deleteProvision(req.params.id as string);
+  if (!deleted) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json({ success: true });
+});
+
+glRouter.post('/provisions/:id/recognize', async (req: Request, res: Response) => {
+  const { periodId } = req.body;
+  if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
+  const result = await recognizeProvision(req.params.id as string, periodId);
+  res.json(result);
+});
+
+glRouter.post('/provisions/:id/unwind', async (req: Request, res: Response) => {
+  const { periodId } = req.body;
+  if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
+  const result = await unwindProvisionDiscount(req.params.id as string, periodId);
+  res.json(result);
+});
+
+glRouter.post('/provisions/:id/settle', async (req: Request, res: Response) => {
+  const { periodId, actualAmount } = req.body;
+  if (!periodId || actualAmount === undefined) {
+    res.status(400).json({ error: 'Required: periodId, actualAmount' }); return;
+  }
+  const result = await settleProvision(req.params.id as string, periodId, actualAmount);
+  res.json(result);
+});
+
+glRouter.get('/provisions/review/:entityId', async (req: Request, res: Response) => {
+  const periodEndDate = req.query.periodEndDate as string;
+  if (!periodEndDate) { res.status(400).json({ error: 'Required: periodEndDate' }); return; }
+  const provisions = await getProvisionsNeedingReview(req.params.entityId as string, periodEndDate);
+  res.json({ provisions });
 });

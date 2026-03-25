@@ -208,6 +208,29 @@ export interface TemporalClaim extends TimestampedNode {
   materiality_flag: boolean;
 }
 
+// --- Provision nodes (IAS 37 / ASC 450) ---
+
+export type ProvisionType = 'WARRANTY' | 'RESTRUCTURING' | 'LEGAL_CLAIM' | 'ENVIRONMENTAL' | 'ONEROUS_CONTRACT' | 'DECOMMISSIONING';
+export type ProbabilityOfOutflow = 'PROBABLE' | 'POSSIBLE' | 'REMOTE';
+
+export interface Provision extends TimestampedNode {
+  entity_id: string;
+  label: string;
+  provision_type: ProvisionType;
+  present_obligation_basis: string;
+  recognition_criteria_met: boolean;
+  probability_of_outflow: ProbabilityOfOutflow;
+  best_estimate: number;
+  range_low?: number;
+  range_high?: number;
+  discount_rate?: number;
+  carrying_amount: number;
+  unwinding_to_date: number;
+  expected_settlement_date?: string;
+  reimbursement_asset_id?: string;
+  last_reviewed_date: string;
+}
+
 // --- Fixed Asset + Depreciation nodes ---
 
 // --- Lease accounting nodes ---

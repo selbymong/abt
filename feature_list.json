@@ -168,7 +168,7 @@
       "id": "P2-PROVISIONS",
       "phase": 2,
       "name": "Provision CRUD with IAS 37 recognition criteria",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P3-RELATED-PARTY",

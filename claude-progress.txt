@@ -171,6 +171,19 @@ All Phase 1 features implemented and tested:
   - 12 integration tests (leases.test.ts)
   - Total: 153 tests across 14 files all passing
 
+- [x] P2-PROVISIONS: Provision CRUD with IAS 37 recognition criteria
+  - Provision CRUD: create, get, list (with probability filter), update, delete
+  - IAS 37 recognition enforcement: only PROBABLE provisions posted to balance sheet
+  - POSSIBLE/REMOTE provisions tracked but not recognized (disclosure only)
+  - Discount unwinding: monthly interest accretion for long-term provisions (pre-tax risk-free rate)
+  - Settlement: gain/loss calculation when actual differs from carrying amount
+  - Period-end review: identifies provisions needing reassessment
+  - 6 provision types: WARRANTY, RESTRUCTURING, LEGAL_CLAIM, ENVIRONMENTAL, ONEROUS_CONTRACT, DECOMMISSIONING
+  - 3 probability levels: PROBABLE (>50%), POSSIBLE (5-50%), REMOTE (<5%)
+  - REST endpoints for all provision operations
+  - 19 integration tests (provisions.test.ts)
+  - Total: 172 tests across 15 files all passing
+
 ### Fixes Applied (Phase 2)
 - Added explicit ::numeric casts in journal-posting-service.ts TimescaleDB INSERT/UPDATE
 - Switched createAccountingPeriod to use UUIDv7 (required for TimescaleDB hypertable chunking)
@@ -179,9 +192,13 @@ All Phase 1 features implemented and tested:
 - Set fileParallelism: false in vitest config (shared database tests need sequential execution)
 - Installed Node 22 via nvm (vitest 4.x requires Node 20+, system Node is 18)
 
+## Phase 2 — COMPLETE
+All Phase 2 features implemented and tested:
+- P2-ACCRUALS, P2-FIXED-ASSETS, P2-LEASES, P2-PROVISIONS
+- 172 backend tests across 15 files all passing
+
 ## What Comes Next
-1. P2-PROVISIONS: Provision CRUD with IAS 37 recognition criteria
-2. Phase 3: Multi-Entity + Related Party + Equity Close (Sprints 16-21)
+1. Phase 3: Multi-Entity + Related Party + Equity Close (Sprints 16-21)
 3. Phase 4: AI Engine Services (Sprints 22-27)
 4. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
 
