@@ -199,7 +199,7 @@ describe('Graph CRUD — Activity', () => {
       entityId: testEntityId,
       label: 'Test Activity',
       costMonetary: 10000,
-      status: 'PLANNED' as any,
+      status: 'COMPLETED' as any,
     }));
 
     const activity = await getActivity(id);

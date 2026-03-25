@@ -108,15 +108,27 @@ All Phase 0 "definition of done" criteria met:
   - getEntityObligations: full obligation listing with status filter
   - REST endpoints for all social control operations
   - 9 integration tests (social-control.test.ts)
-  - Total: 110 tests across 15 files all passing
+  - Total: 99 tests across 11 files all passing
+- [x] P1-ADMIN-UI: React admin UI with Vite
+  - Entity listing with type, jurisdiction, currency, ontology details
+  - Configuration lookup and settings management
+  - Fund management for NFP entities (create/delete with 4 restriction types)
+  - Accounting period management with soft-close/hard-close actions
+  - API client layer (client/src/api/client.ts)
+  - Sidebar navigation with React Router
+
+## Phase 1 — COMPLETE
+All Phase 1 features implemented and tested:
+- P1-GRAPH-CRUD-FULL, P1-EDGE-MGMT, P1-ONTOLOGY-VALIDATION
+- P1-FUND-ACCOUNTING, P1-GL-CORE, P1-SOCIAL-CONTROL, P1-ADMIN-UI
+- 99 backend tests across 11 files all passing
+- React admin UI builds cleanly with Vite
 
 ## What Comes Next
-1. P1-EDGE-MGMT: CONTRIBUTES_TO function types, edge weight management
-2. P1-ONTOLOGY-VALIDATION: Ontology validation on Outcome creation and edge paths
-3. P1-FUND-ACCOUNTING: fund_id on LedgerLine, fund CRUD for NFP entities
-4. P1-GL-CORE: AccountingPeriod lifecycle, StatutoryMapping, P&L, balance sheet
-5. P1-SOCIAL-CONTROL: Social constraints (PROHIBITS pre-filter), obligations, alerts
-6. P1-ADMIN-UI: Admin UI: entity settings, approval thresholds, fund management
+1. Phase 2: Accruals + Fixed Assets + Depreciation Engine (Sprints 9-15)
+2. Phase 3: Multi-Entity + Related Party + Equity Close (Sprints 16-21)
+3. Phase 4: AI Engine Services (Sprints 22-27)
+4. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container

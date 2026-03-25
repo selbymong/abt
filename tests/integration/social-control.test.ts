@@ -51,12 +51,14 @@ describe('Social Control — PROHIBITS Pre-filter', () => {
       entityId: testEntityId,
       label: 'Allowed Activity',
       costMonetary: 5000,
+      status: 'COMPLETED' as any,
     }));
 
     blockedActivityId = track('Activity', await createActivity({
       entityId: testEntityId,
       label: 'Blocked Activity',
       costMonetary: 10000,
+      status: 'COMPLETED' as any,
     }));
 
     constraintId = track('SocialConstraint', await createSocialConstraint({

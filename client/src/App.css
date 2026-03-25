@@ -1,0 +1,160 @@
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.sidebar {
+  width: 220px;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  padding: 20px;
+  flex-shrink: 0;
+}
+
+.sidebar h1 {
+  font-size: 1.2rem;
+  margin-bottom: 24px;
+  color: #fff;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar li {
+  margin-bottom: 4px;
+}
+
+.sidebar a {
+  display: block;
+  padding: 8px 12px;
+  color: #b0b0b0;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.sidebar a:hover {
+  background: #16213e;
+  color: #fff;
+}
+
+.sidebar a.active {
+  background: #0f3460;
+  color: #fff;
+}
+
+.content {
+  flex: 1;
+  padding: 32px;
+  background: #f5f5f5;
+  overflow-y: auto;
+}
+
+h2 {
+  margin-top: 0;
+  font-size: 1.4rem;
+  color: #333;
+}
+
+h3 {
+  font-size: 1.1rem;
+  color: #555;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+th, td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  font-size: 0.85rem;
+}
+
+th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #555;
+}
+
+.card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.form-row {
+  margin-bottom: 12px;
+}
+
+.form-row label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+}
+
+input, select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  width: 300px;
+}
+
+button {
+  padding: 8px 16px;
+  background: #0f3460;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-right: 8px;
+}
+
+button:hover {
+  background: #16213e;
+}
+
+pre {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-size: 0.8rem;
+}
+
+.error {
+  color: #d32f2f;
+  padding: 8px;
+  background: #ffebee;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.success {
+  color: #2e7d32;
+  padding: 8px;
+  background: #e8f5e9;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.status-open { color: #2e7d32; font-weight: 600; }
+.status-soft_closed { color: #f57c00; font-weight: 600; }
+.status-hard_closed { color: #d32f2f; font-weight: 600; }

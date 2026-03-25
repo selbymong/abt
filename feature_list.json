@@ -144,7 +144,7 @@
       "id": "P1-ADMIN-UI",
       "phase": 1,
       "name": "Admin UI: entity settings, approval thresholds, fund management",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P2-ACCRUALS",
