@@ -74,7 +74,13 @@ All Phase 0 "definition of done" criteria met:
   - REST routes via addCrudRoutes() helper: POST, GET/:id, GET/by-entity/:entityId, PATCH/:id, DELETE/:id
   - Fixed Neo4j node property extraction (properties(n) AS n instead of RETURN n)
   - 24 integration tests (graph-crud.test.ts)
-  - Total: 62 tests across 12 files all passing
+- [x] P1-EDGE-MGMT: Full edge management for all 4 edge types
+  - CONTRIBUTES_TO: full property support (threshold_value, elasticity, temporal_value_pct auto-computed)
+  - Generic edge helpers: getEdges, getIncomingEdges, updateEdge, deleteEdge
+  - Get/list/update/delete for CONTRIBUTES_TO, DEPENDS_ON, DELEGATES_TO, PROHIBITS
+  - REST endpoints: GET /edges/*/from/:id, GET /edges/*/to/:id, PATCH, DELETE
+  - 10 additional edge management tests (34 total in graph-crud.test.ts)
+  - Total: 72 tests across 12 files all passing
 
 ## What Comes Next
 1. P1-EDGE-MGMT: CONTRIBUTES_TO function types, edge weight management

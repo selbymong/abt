@@ -625,7 +625,85 @@ export async function updateCashFlowEvent(id: string, u: Record<string, unknown>
 export async function deleteCashFlowEvent(id: string) { return deleteNode('CashFlowEvent', id); }
 
 // ============================================================
-// CONTRIBUTES_TO edge
+// Generic edge helpers
+// ============================================================
+
+export interface EdgeRecord {
+  sourceId: string;
+  targetId: string;
+  sourceLabel: string;
+  targetLabel: string;
+  [key: string]: unknown;
+}
+
+async function getEdges<T extends EdgeRecord>(
+  edgeType: string,
+  sourceId: string,
+): Promise<T[]> {
+  const results = await runCypher<T>(
+    `MATCH (s {id: $sourceId})-[r:${edgeType}]->(t)
+     RETURN s.id AS sourceId, labels(s)[0] AS sourceLabel,
+            t.id AS targetId, labels(t)[0] AS targetLabel,
+            properties(r) AS props`,
+    { sourceId },
+  );
+  return results.map((r: any) => ({ ...r.props, sourceId: r.sourceId, targetId: r.targetId, sourceLabel: r.sourceLabel, targetLabel: r.targetLabel })) as T[];
+}
+
+async function getIncomingEdges<T extends EdgeRecord>(
+  edgeType: string,
+  targetId: string,
+): Promise<T[]> {
+  const results = await runCypher<T>(
+    `MATCH (s)-[r:${edgeType}]->(t {id: $targetId})
+     RETURN s.id AS sourceId, labels(s)[0] AS sourceLabel,
+            t.id AS targetId, labels(t)[0] AS targetLabel,
+            properties(r) AS props`,
+    { targetId },
+  );
+  return results.map((r: any) => ({ ...r.props, sourceId: r.sourceId, targetId: r.targetId, sourceLabel: r.sourceLabel, targetLabel: r.targetLabel })) as T[];
+}
+
+async function updateEdge(
+  edgeType: string,
+  sourceId: string,
+  targetId: string,
+  updates: Record<string, unknown>,
+): Promise<boolean> {
+  const keys = Object.keys(updates);
+  if (keys.length === 0) return false;
+  const setParts = keys.map((k) => `r.${k} = $${k}`);
+
+  const result = await runCypher<{ sid: string }>(
+    `MATCH (s {id: $sourceId})-[r:${edgeType}]->(t {id: $targetId})
+     SET ${setParts.join(', ')}
+     RETURN s.id AS sid`,
+    { sourceId, targetId, ...updates },
+  );
+  return result.length > 0;
+}
+
+async function deleteEdge(
+  edgeType: string,
+  sourceId: string,
+  targetId: string,
+): Promise<boolean> {
+  const exists = await runCypher<{ sid: string }>(
+    `MATCH (s {id: $sourceId})-[r:${edgeType}]->(t {id: $targetId})
+     RETURN s.id AS sid`,
+    { sourceId, targetId },
+  );
+  if (exists.length === 0) return false;
+  await runCypher(
+    `MATCH (s {id: $sourceId})-[r:${edgeType}]->(t {id: $targetId})
+     DELETE r`,
+    { sourceId, targetId },
+  );
+  return true;
+}
+
+// ============================================================
+// CONTRIBUTES_TO edge (full property support)
 // ============================================================
 
 export async function createContributesToEdge(params: {
@@ -635,26 +713,66 @@ export async function createContributesToEdge(params: {
   confidence: number;
   lagDays?: number;
   contributionFunction?: string;
+  thresholdValue?: number;
+  elasticity?: number;
+  isCrossAssetEdge?: boolean;
+  aiInferred?: boolean;
 }): Promise<void> {
+  const lagDays = params.lagDays ?? 0;
+  // DCF-like temporal discount: 1 - rate × lag_days / 365
+  const temporalValuePct = Math.max(0, 1 - 0.1 * lagDays / 365);
+
   await runCypher(
     `MATCH (source {id: $sourceId})
      MATCH (target {id: $targetId})
      CREATE (source)-[:CONTRIBUTES_TO {
        weight: $weight, confidence: $confidence,
-       lag_days: $lagDays, temporal_value_pct: 1.0,
-       ai_inferred: false,
+       lag_days: $lagDays,
+       temporal_value_pct: $temporalValuePct,
+       ai_inferred: $aiInferred,
        contribution_function: $contributionFunction,
-       is_cross_asset_edge: false, ontology_bridge: false
+       threshold_value: $thresholdValue,
+       elasticity: $elasticity,
+       is_cross_asset_edge: $isCrossAssetEdge,
+       ontology_bridge: false
      }]->(target)`,
     {
       sourceId: params.sourceId,
       targetId: params.targetId,
       weight: params.weight,
       confidence: params.confidence,
-      lagDays: params.lagDays ?? 0,
+      lagDays,
+      temporalValuePct,
+      aiInferred: params.aiInferred ?? false,
       contributionFunction: params.contributionFunction ?? 'LINEAR',
+      thresholdValue: params.thresholdValue ?? null,
+      elasticity: params.elasticity ?? null,
+      isCrossAssetEdge: params.isCrossAssetEdge ?? false,
     },
   );
+}
+
+export async function getContributesToEdges(sourceId: string) {
+  return getEdges('CONTRIBUTES_TO', sourceId);
+}
+
+export async function getIncomingContributesToEdges(targetId: string) {
+  return getIncomingEdges('CONTRIBUTES_TO', targetId);
+}
+
+export async function updateContributesToEdge(
+  sourceId: string,
+  targetId: string,
+  updates: Record<string, unknown>,
+): Promise<boolean> {
+  return updateEdge('CONTRIBUTES_TO', sourceId, targetId, updates);
+}
+
+export async function deleteContributesToEdge(
+  sourceId: string,
+  targetId: string,
+): Promise<boolean> {
+  return deleteEdge('CONTRIBUTES_TO', sourceId, targetId);
 }
 
 // ============================================================
@@ -678,6 +796,20 @@ export async function createDependsOnEdge(params: {
   );
 }
 
+export async function getDependsOnEdges(sourceId: string) {
+  return getEdges('DEPENDS_ON', sourceId);
+}
+
+export async function updateDependsOnEdge(
+  sourceId: string, targetId: string, updates: Record<string, unknown>,
+): Promise<boolean> {
+  return updateEdge('DEPENDS_ON', sourceId, targetId, updates);
+}
+
+export async function deleteDependsOnEdge(sourceId: string, targetId: string): Promise<boolean> {
+  return deleteEdge('DEPENDS_ON', sourceId, targetId);
+}
+
 // ============================================================
 // DELEGATES_TO edge
 // ============================================================
@@ -699,6 +831,20 @@ export async function createDelegatesToEdge(params: {
   );
 }
 
+export async function getDelegatesToEdges(sourceId: string) {
+  return getEdges('DELEGATES_TO', sourceId);
+}
+
+export async function updateDelegatesToEdge(
+  sourceId: string, targetId: string, updates: Record<string, unknown>,
+): Promise<boolean> {
+  return updateEdge('DELEGATES_TO', sourceId, targetId, updates);
+}
+
+export async function deleteDelegatesToEdge(sourceId: string, targetId: string): Promise<boolean> {
+  return deleteEdge('DELEGATES_TO', sourceId, targetId);
+}
+
 // ============================================================
 // PROHIBITS edge (SocialConstraint → Activity)
 // ============================================================
@@ -714,6 +860,14 @@ export async function createProhibitsEdge(params: {
      CREATE (sc)-[:PROHIBITS {severity: $severity}]->(a)`,
     { constraintId: params.constraintId, activityId: params.activityId, severity: params.severity },
   );
+}
+
+export async function getProhibitsEdges(constraintId: string) {
+  return getEdges('PROHIBITS', constraintId);
+}
+
+export async function deleteProhibitsEdge(constraintId: string, activityId: string): Promise<boolean> {
+  return deleteEdge('PROHIBITS', constraintId, activityId);
 }
 
 // ============================================================

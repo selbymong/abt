@@ -114,7 +114,7 @@
       "id": "P1-EDGE-MGMT",
       "phase": 1,
       "name": "Edge management (CONTRIBUTES_TO functions, DEPENDS_ON, DELEGATES_TO)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P1-ONTOLOGY-VALIDATION",

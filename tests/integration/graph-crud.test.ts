@@ -51,9 +51,20 @@ import {
   createCashFlowEvent,
   getCashFlowEvent,
   createContributesToEdge,
+  getContributesToEdges,
+  getIncomingContributesToEdges,
+  updateContributesToEdge,
+  deleteContributesToEdge,
   createDependsOnEdge,
+  getDependsOnEdges,
+  updateDependsOnEdge,
+  deleteDependsOnEdge,
   createDelegatesToEdge,
+  getDelegatesToEdges,
+  deleteDelegatesToEdge,
   createProhibitsEdge,
+  getProhibitsEdges,
+  deleteProhibitsEdge,
   createAccountingPeriod,
   getAccountingPeriod,
   createFund,
@@ -378,8 +389,10 @@ describe('Graph CRUD — AccountingPeriod & Fund', () => {
   });
 });
 
-describe('Graph CRUD — Edge Creation', () => {
+describe('Graph CRUD — Edge Management', () => {
   let activityId: string;
+  let activity2Id: string;
+  let activity3Id: string;
   let outcomeId: string;
   let constraintId: string;
 
@@ -392,6 +405,17 @@ describe('Graph CRUD — Edge Creation', () => {
       entityId: testEntityId,
       label: 'Edge Test Activity',
       costMonetary: 5000,
+    }));
+
+    activity2Id = track('Activity', await createActivity({
+      entityId: testEntityId,
+      label: 'Dependent Activity',
+      costMonetary: 3000,
+    }));
+
+    activity3Id = track('Activity', await createActivity({
+      entityId: testEntityId,
+      label: 'Delegated Activity',
     }));
 
     outcomeId = track('Outcome', await createOutcome({
@@ -414,31 +438,94 @@ describe('Graph CRUD — Edge Creation', () => {
     }));
   });
 
-  it('creates a CONTRIBUTES_TO edge', async () => {
+  // --- CONTRIBUTES_TO full lifecycle ---
+
+  it('creates CONTRIBUTES_TO with full properties (threshold, elasticity)', async () => {
     await createContributesToEdge({
       sourceId: activityId,
       targetId: outcomeId,
       weight: 0.8,
       confidence: 0.9,
       lagDays: 30,
+      contributionFunction: 'THRESHOLD',
+      thresholdValue: 0.55,
+      elasticity: 1.2,
     });
 
-    const edges = await runCypher<{ w: number }>(
+    const edges = await runCypher<{ w: number; cf: string; tv: number; el: number }>(
       `MATCH (:Activity {id: $aId})-[r:CONTRIBUTES_TO]->(:Outcome {id: $oId})
-       RETURN r.weight AS w`,
+       RETURN r.weight AS w, r.contribution_function AS cf,
+              r.threshold_value AS tv, r.elasticity AS el`,
       { aId: activityId, oId: outcomeId },
     );
     expect(edges).toHaveLength(1);
     expect(edges[0].w).toBe(0.8);
+    expect(edges[0].cf).toBe('THRESHOLD');
+    expect(edges[0].tv).toBe(0.55);
+    expect(edges[0].el).toBe(1.2);
   });
 
-  it('creates a DEPENDS_ON edge', async () => {
-    const activity2Id = track('Activity', await createActivity({
-      entityId: testEntityId,
-      label: 'Dependent Activity',
-      costMonetary: 3000,
-    }));
+  it('computes temporal_value_pct from lag_days', async () => {
+    const edges = await runCypher<{ tvp: number; ld: number }>(
+      `MATCH (:Activity {id: $aId})-[r:CONTRIBUTES_TO]->(:Outcome {id: $oId})
+       RETURN r.temporal_value_pct AS tvp, r.lag_days AS ld`,
+      { aId: activityId, oId: outcomeId },
+    );
+    // temporal_value_pct = max(0, 1 - 0.1 * 30 / 365) ≈ 0.9918
+    expect(edges[0].ld).toBe(30);
+    expect(edges[0].tvp).toBeCloseTo(1 - 0.1 * 30 / 365, 4);
+  });
 
+  it('lists outgoing CONTRIBUTES_TO edges from a source', async () => {
+    const edges = await getContributesToEdges(activityId);
+    expect(edges.length).toBeGreaterThanOrEqual(1);
+    const toOutcome = edges.find((e: any) => e.targetId === outcomeId);
+    expect(toOutcome).toBeDefined();
+    expect(toOutcome!.weight).toBe(0.8);
+  });
+
+  it('lists incoming CONTRIBUTES_TO edges to a target', async () => {
+    const edges = await getIncomingContributesToEdges(outcomeId);
+    expect(edges.length).toBeGreaterThanOrEqual(1);
+    const fromActivity = edges.find((e: any) => e.sourceId === activityId);
+    expect(fromActivity).toBeDefined();
+  });
+
+  it('updates CONTRIBUTES_TO edge weight and confidence', async () => {
+    const updated = await updateContributesToEdge(activityId, outcomeId, {
+      weight: 0.6,
+      confidence: 0.95,
+    });
+    expect(updated).toBe(true);
+
+    const edges = await runCypher<{ w: number; c: number }>(
+      `MATCH (:Activity {id: $aId})-[r:CONTRIBUTES_TO]->(:Outcome {id: $oId})
+       RETURN r.weight AS w, r.confidence AS c`,
+      { aId: activityId, oId: outcomeId },
+    );
+    expect(edges[0].w).toBe(0.6);
+    expect(edges[0].c).toBe(0.95);
+  });
+
+  it('deletes CONTRIBUTES_TO edge', async () => {
+    const deleted = await deleteContributesToEdge(activityId, outcomeId);
+    expect(deleted).toBe(true);
+
+    const edges = await runCypher(
+      `MATCH (:Activity {id: $aId})-[r:CONTRIBUTES_TO]->(:Outcome {id: $oId}) RETURN r`,
+      { aId: activityId, oId: outcomeId },
+    );
+    expect(edges).toHaveLength(0);
+  });
+
+  it('returns false when deleting non-existent CONTRIBUTES_TO edge', async () => {
+    const deleted = await deleteContributesToEdge(activityId, outcomeId);
+    expect(deleted).toBe(false);
+  });
+
+  // --- DEPENDS_ON lifecycle ---
+
+  it('creates and lists DEPENDS_ON edges', async () => {
     await createDependsOnEdge({
       sourceId: activity2Id,
       targetId: activityId,
@@ -446,49 +533,70 @@ describe('Graph CRUD — Edge Creation', () => {
       description: 'Must complete first activity',
     });
 
-    const edges = await runCypher<{ dc: string }>(
-      `MATCH (:Activity {id: $a2})-[r:DEPENDS_ON]->(:Activity {id: $a1})
-       RETURN r.dependency_class AS dc`,
-      { a2: activity2Id, a1: activityId },
-    );
-    expect(edges).toHaveLength(1);
-    expect(edges[0].dc).toBe('BLOCKING');
+    const edges = await getDependsOnEdges(activity2Id);
+    expect(edges.length).toBeGreaterThanOrEqual(1);
+    const dep = edges.find((e: any) => e.targetId === activityId);
+    expect(dep).toBeDefined();
+    expect(dep!.dependency_class).toBe('BLOCKING');
   });
 
-  it('creates a DELEGATES_TO edge', async () => {
-    const activity3Id = track('Activity', await createActivity({
-      entityId: testEntityId,
-      label: 'Delegated Activity',
-    }));
+  it('updates DEPENDS_ON edge', async () => {
+    const updated = await updateDependsOnEdge(activity2Id, activityId, {
+      dependency_class: 'SOFT',
+    });
+    expect(updated).toBe(true);
+  });
 
+  it('deletes DEPENDS_ON edge', async () => {
+    const deleted = await deleteDependsOnEdge(activity2Id, activityId);
+    expect(deleted).toBe(true);
+
+    const edges = await getDependsOnEdges(activity2Id);
+    const dep = edges.find((e: any) => e.targetId === activityId);
+    expect(dep).toBeUndefined();
+  });
+
+  // --- DELEGATES_TO lifecycle ---
+
+  it('creates and lists DELEGATES_TO edges', async () => {
     await createDelegatesToEdge({
       sourceId: activityId,
       targetId: activity3Id,
       controlAttenuation: 0.7,
+      slaReference: 'SLA-001',
     });
 
-    const edges = await runCypher<{ ca: number }>(
-      `MATCH (:Activity {id: $a1})-[r:DELEGATES_TO]->(:Activity {id: $a3})
-       RETURN r.control_attenuation AS ca`,
-      { a1: activityId, a3: activity3Id },
-    );
-    expect(edges).toHaveLength(1);
-    expect(edges[0].ca).toBe(0.7);
+    const edges = await getDelegatesToEdges(activityId);
+    expect(edges.length).toBeGreaterThanOrEqual(1);
+    const del = edges.find((e: any) => e.targetId === activity3Id);
+    expect(del).toBeDefined();
+    expect(del!.control_attenuation).toBe(0.7);
+    expect(del!.sla_reference).toBe('SLA-001');
   });
 
-  it('creates a PROHIBITS edge', async () => {
+  it('deletes DELEGATES_TO edge', async () => {
+    const deleted = await deleteDelegatesToEdge(activityId, activity3Id);
+    expect(deleted).toBe(true);
+  });
+
+  // --- PROHIBITS lifecycle ---
+
+  it('creates and lists PROHIBITS edges', async () => {
     await createProhibitsEdge({
       constraintId,
       activityId,
       severity: 0.9,
     });
 
-    const edges = await runCypher<{ s: number }>(
-      `MATCH (:SocialConstraint {id: $sc})-[r:PROHIBITS]->(:Activity {id: $a})
-       RETURN r.severity AS s`,
-      { sc: constraintId, a: activityId },
-    );
-    expect(edges).toHaveLength(1);
-    expect(edges[0].s).toBe(0.9);
+    const edges = await getProhibitsEdges(constraintId);
+    expect(edges.length).toBeGreaterThanOrEqual(1);
+    const p = edges.find((e: any) => e.targetId === activityId);
+    expect(p).toBeDefined();
+    expect(p!.severity).toBe(0.9);
+  });
+
+  it('deletes PROHIBITS edge', async () => {
+    const deleted = await deleteProhibitsEdge(constraintId, activityId);
+    expect(deleted).toBe(true);
   });
 });

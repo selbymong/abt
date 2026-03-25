@@ -98,9 +98,21 @@ import {
   deleteFund,
   // Edges
   createContributesToEdge,
+  getContributesToEdges,
+  getIncomingContributesToEdges,
+  updateContributesToEdge,
+  deleteContributesToEdge,
   createDependsOnEdge,
+  getDependsOnEdges,
+  updateDependsOnEdge,
+  deleteDependsOnEdge,
   createDelegatesToEdge,
+  getDelegatesToEdges,
+  updateDelegatesToEdge,
+  deleteDelegatesToEdge,
   createProhibitsEdge,
+  getProhibitsEdges,
+  deleteProhibitsEdge,
 } from '../../services/graph/graph-crud-service.js';
 import { runCypher } from '../../lib/neo4j.js';
 
@@ -179,25 +191,102 @@ addCrudRoutes('/cash-flow-events', createCashFlowEvent, getCashFlowEvent, listCa
 addCrudRoutes('/periods', createAccountingPeriod, getAccountingPeriod, listAccountingPeriods, updateAccountingPeriod);
 addCrudRoutes('/funds', createFund, getFund, listFunds, updateFund, deleteFund);
 
-// --- Edge routes ---
+// --- Edge routes: CONTRIBUTES_TO ---
 graphRouter.post('/edges/contributes-to', async (req: Request, res: Response) => {
   await createContributesToEdge(req.body);
   res.status(201).json({ success: true });
 });
 
+graphRouter.get('/edges/contributes-to/from/:sourceId', async (req: Request, res: Response) => {
+  const edges = await getContributesToEdges(req.params.sourceId as string);
+  res.json({ edges });
+});
+
+graphRouter.get('/edges/contributes-to/to/:targetId', async (req: Request, res: Response) => {
+  const edges = await getIncomingContributesToEdges(req.params.targetId as string);
+  res.json({ edges });
+});
+
+graphRouter.patch('/edges/contributes-to', async (req: Request, res: Response) => {
+  const { sourceId, targetId, ...updates } = req.body;
+  const updated = await updateContributesToEdge(sourceId, targetId, updates);
+  if (!updated) { res.status(404).json({ error: 'Edge not found' }); return; }
+  res.json({ success: true });
+});
+
+graphRouter.delete('/edges/contributes-to', async (req: Request, res: Response) => {
+  const { sourceId, targetId } = req.body;
+  const deleted = await deleteContributesToEdge(sourceId, targetId);
+  if (!deleted) { res.status(404).json({ error: 'Edge not found' }); return; }
+  res.json({ success: true });
+});
+
+// --- Edge routes: DEPENDS_ON ---
 graphRouter.post('/edges/depends-on', async (req: Request, res: Response) => {
   await createDependsOnEdge(req.body);
   res.status(201).json({ success: true });
 });
 
+graphRouter.get('/edges/depends-on/from/:sourceId', async (req: Request, res: Response) => {
+  const edges = await getDependsOnEdges(req.params.sourceId as string);
+  res.json({ edges });
+});
+
+graphRouter.patch('/edges/depends-on', async (req: Request, res: Response) => {
+  const { sourceId, targetId, ...updates } = req.body;
+  const updated = await updateDependsOnEdge(sourceId, targetId, updates);
+  if (!updated) { res.status(404).json({ error: 'Edge not found' }); return; }
+  res.json({ success: true });
+});
+
+graphRouter.delete('/edges/depends-on', async (req: Request, res: Response) => {
+  const { sourceId, targetId } = req.body;
+  const deleted = await deleteDependsOnEdge(sourceId, targetId);
+  if (!deleted) { res.status(404).json({ error: 'Edge not found' }); return; }
+  res.json({ success: true });
+});
+
+// --- Edge routes: DELEGATES_TO ---
 graphRouter.post('/edges/delegates-to', async (req: Request, res: Response) => {
   await createDelegatesToEdge(req.body);
   res.status(201).json({ success: true });
 });
 
+graphRouter.get('/edges/delegates-to/from/:sourceId', async (req: Request, res: Response) => {
+  const edges = await getDelegatesToEdges(req.params.sourceId as string);
+  res.json({ edges });
+});
+
+graphRouter.patch('/edges/delegates-to', async (req: Request, res: Response) => {
+  const { sourceId, targetId, ...updates } = req.body;
+  const updated = await updateDelegatesToEdge(sourceId, targetId, updates);
+  if (!updated) { res.status(404).json({ error: 'Edge not found' }); return; }
+  res.json({ success: true });
+});
+
+graphRouter.delete('/edges/delegates-to', async (req: Request, res: Response) => {
+  const { sourceId, targetId } = req.body;
+  const deleted = await deleteDelegatesToEdge(sourceId, targetId);
+  if (!deleted) { res.status(404).json({ error: 'Edge not found' }); return; }
+  res.json({ success: true });
+});
+
+// --- Edge routes: PROHIBITS ---
 graphRouter.post('/edges/prohibits', async (req: Request, res: Response) => {
   await createProhibitsEdge(req.body);
   res.status(201).json({ success: true });
+});
+
+graphRouter.get('/edges/prohibits/from/:constraintId', async (req: Request, res: Response) => {
+  const edges = await getProhibitsEdges(req.params.constraintId as string);
+  res.json({ edges });
+});
+
+graphRouter.delete('/edges/prohibits', async (req: Request, res: Response) => {
+  const { constraintId, activityId } = req.body;
+  const deleted = await deleteProhibitsEdge(constraintId, activityId);
+  if (!deleted) { res.status(404).json({ error: 'Edge not found' }); return; }
+  res.json({ success: true });
 });
 
 // --- Traversal queries ---
