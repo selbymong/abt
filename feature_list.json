@@ -120,7 +120,7 @@
       "id": "P1-ONTOLOGY-VALIDATION",
       "phase": 1,
       "name": "Ontology validation on Outcome creation and edge paths",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P1-FUND-ACCOUNTING",

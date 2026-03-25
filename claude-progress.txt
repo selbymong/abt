@@ -81,6 +81,12 @@ All Phase 0 "definition of done" criteria met:
   - REST endpoints: GET /edges/*/from/:id, GET /edges/*/to/:id, PATCH, DELETE
   - 10 additional edge management tests (34 total in graph-crud.test.ts)
   - Total: 72 tests across 12 files all passing
+- [x] P1-ONTOLOGY-VALIDATION: Ontology boundary enforcement on edge creation
+  - createContributesToEdge validates source/target entities share same outcome_ontology
+  - Throws OntologyBoundaryViolation if FINANCIAL→MISSION or MISSION→FINANCIAL
+  - createOutcome already validates ontology match (from Phase 0)
+  - 2 integration tests (cross-ontology rejection + same-ontology acceptance)
+  - Total: 74 tests across 12 files all passing
 
 ## What Comes Next
 1. P1-EDGE-MGMT: CONTRIBUTES_TO function types, edge weight management

@@ -718,6 +718,24 @@ export async function createContributesToEdge(params: {
   isCrossAssetEdge?: boolean;
   aiInferred?: boolean;
 }): Promise<void> {
+  // Ontology boundary validation: if both nodes have entity_id,
+  // verify they belong to entities with the same outcome_ontology.
+  const ontologyCheck = await runCypher<{ srcOntology: string; tgtOntology: string }>(
+    `MATCH (source {id: $sourceId})
+     MATCH (target {id: $targetId})
+     OPTIONAL MATCH (e1:Entity {id: source.entity_id})
+     OPTIONAL MATCH (e2:Entity {id: target.entity_id})
+     RETURN e1.outcome_ontology AS srcOntology, e2.outcome_ontology AS tgtOntology`,
+    { sourceId: params.sourceId, targetId: params.targetId },
+  );
+
+  if (ontologyCheck.length > 0) {
+    const { srcOntology, tgtOntology } = ontologyCheck[0];
+    if (srcOntology && tgtOntology && srcOntology !== tgtOntology) {
+      throw new OntologyBoundaryViolation(srcOntology, tgtOntology);
+    }
+  }
+
   const lagDays = params.lagDays ?? 0;
   // DCF-like temporal discount: 1 - rate × lag_days / 365
   const temporalValuePct = Math.max(0, 1 - 0.1 * lagDays / 365);

@@ -389,6 +389,85 @@ describe('Graph CRUD — AccountingPeriod & Fund', () => {
   });
 });
 
+describe('Graph CRUD — Ontology Boundary Enforcement', () => {
+  it('rejects CONTRIBUTES_TO edge crossing ontology boundary', async () => {
+    // Get two entities with different ontologies
+    const entities = await getAllEntities();
+    const fpEntity = entities.find((e: any) => e.entity_type === 'FOR_PROFIT');
+    const nfpEntity = entities.find((e: any) => e.entity_type === 'NOT_FOR_PROFIT');
+
+    if (!fpEntity || !nfpEntity) {
+      // Skip if we don't have both entity types seeded
+      return;
+    }
+
+    // Create an activity in FP entity and an outcome in NFP entity
+    const actId = track('Activity', await createActivity({
+      entityId: fpEntity.id,
+      label: 'FP Activity for Ontology Test',
+      costMonetary: 1000,
+    }));
+
+    const outId = track('Outcome', await createOutcome({
+      entityId: nfpEntity.id,
+      label: 'NFP Outcome for Ontology Test',
+      ontology: 'MISSION' as any,
+      outcomeType: 'DELIVER_MISSION' as any,
+      targetDelta: 10000,
+      currency: 'CAD',
+      periodStart: '2026-01-01',
+      periodEnd: '2026-12-31',
+    }));
+
+    // This should throw OntologyBoundaryViolation
+    await expect(
+      createContributesToEdge({
+        sourceId: actId,
+        targetId: outId,
+        weight: 0.5,
+        confidence: 0.8,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('allows CONTRIBUTES_TO edge within same ontology', async () => {
+    const entities = await getAllEntities();
+    const fpEntity = entities.find((e: any) => e.entity_type === 'FOR_PROFIT');
+    if (!fpEntity) return;
+
+    const actId = track('Activity', await createActivity({
+      entityId: fpEntity.id,
+      label: 'Same Ontology Activity',
+      costMonetary: 2000,
+    }));
+
+    const outId = track('Outcome', await createOutcome({
+      entityId: fpEntity.id,
+      label: 'Same Ontology Outcome',
+      ontology: 'FINANCIAL' as any,
+      outcomeType: 'IMPROVE_REVENUE' as any,
+      targetDelta: 20000,
+      currency: 'CAD',
+      periodStart: '2026-01-01',
+      periodEnd: '2026-12-31',
+    }));
+
+    // Should succeed without throwing
+    await createContributesToEdge({
+      sourceId: actId,
+      targetId: outId,
+      weight: 0.7,
+      confidence: 0.85,
+    });
+
+    const edges = await getContributesToEdges(actId);
+    expect(edges.find((e: any) => e.targetId === outId)).toBeDefined();
+
+    // Clean up edge
+    await deleteContributesToEdge(actId, outId);
+  });
+});
+
 describe('Graph CRUD — Edge Management', () => {
   let activityId: string;
   let activity2Id: string;
