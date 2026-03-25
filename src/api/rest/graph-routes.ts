@@ -2,17 +2,151 @@ import { Router, Request, Response } from 'express';
 import {
   getAllEntities,
   getEntity,
+  // Outcome
   createOutcome,
+  getOutcome,
+  listOutcomes,
+  updateOutcome,
+  // Resource
+  createResource,
+  getResource,
+  listResources,
+  updateResource,
+  deleteResource,
+  // Activity
   createActivity,
-  createContributesToEdge,
+  getActivity,
+  listActivities,
+  updateActivity,
+  deleteActivity,
+  // Project
+  createProject,
+  getProject,
+  listProjects,
+  updateProject,
+  deleteProject,
+  // Initiative
+  createInitiative,
+  getInitiative,
+  listInitiatives,
+  updateInitiative,
+  deleteInitiative,
+  // Metric
+  createMetric,
+  getMetric,
+  listMetrics,
+  updateMetric,
+  deleteMetric,
+  // Capability
+  createCapability,
+  getCapability,
+  listCapabilities,
+  updateCapability,
+  deleteCapability,
+  // Asset
+  createAsset,
+  getAsset,
+  listAssets,
+  updateAsset,
+  deleteAsset,
+  // CustomerRelationshipAsset
+  createCustomerRelationshipAsset,
+  getCustomerRelationshipAsset,
+  listCustomerRelationshipAssets,
+  updateCustomerRelationshipAsset,
+  deleteCustomerRelationshipAsset,
+  // WorkforceAsset
+  createWorkforceAsset,
+  getWorkforceAsset,
+  listWorkforceAssets,
+  updateWorkforceAsset,
+  deleteWorkforceAsset,
+  // StakeholderAsset
+  createStakeholderAsset,
+  getStakeholderAsset,
+  listStakeholderAssets,
+  updateStakeholderAsset,
+  deleteStakeholderAsset,
+  // SocialConstraint
+  createSocialConstraint,
+  getSocialConstraint,
+  listSocialConstraints,
+  updateSocialConstraint,
+  deleteSocialConstraint,
+  // Obligation
+  createObligation,
+  getObligation,
+  listObligations,
+  updateObligation,
+  deleteObligation,
+  // CashFlowEvent
+  createCashFlowEvent,
+  getCashFlowEvent,
+  listCashFlowEvents,
+  updateCashFlowEvent,
+  deleteCashFlowEvent,
+  // AccountingPeriod
   createAccountingPeriod,
+  getAccountingPeriod,
+  listAccountingPeriods,
+  updateAccountingPeriod,
+  // Fund
   createFund,
+  getFund,
+  listFunds,
+  updateFund,
+  deleteFund,
+  // Edges
+  createContributesToEdge,
+  createDependsOnEdge,
+  createDelegatesToEdge,
+  createProhibitsEdge,
 } from '../../services/graph/graph-crud-service.js';
 import { runCypher } from '../../lib/neo4j.js';
 
 export const graphRouter = Router();
 
-// --- Entity routes ---
+// Helper to build standard CRUD routes for a node type
+function addCrudRoutes(
+  path: string,
+  create: (body: any) => Promise<string>,
+  get: (id: string) => Promise<any>,
+  list: (entityId: string) => Promise<any[]>,
+  update: (id: string, u: Record<string, unknown>) => Promise<boolean>,
+  del?: (id: string) => Promise<boolean>,
+) {
+  graphRouter.post(path, async (req: Request, res: Response) => {
+    const id = await create(req.body);
+    res.status(201).json({ id });
+  });
+
+  graphRouter.get(`${path}/:id`, async (req: Request, res: Response) => {
+    const node = await get(req.params.id as string);
+    if (!node) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(node);
+  });
+
+  graphRouter.get(`${path}/by-entity/:entityId`, async (req: Request, res: Response) => {
+    const nodes = await list(req.params.entityId as string);
+    res.json({ items: nodes });
+  });
+
+  graphRouter.patch(`${path}/:id`, async (req: Request, res: Response) => {
+    const updated = await update(req.params.id as string, req.body);
+    if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json({ success: true });
+  });
+
+  if (del) {
+    graphRouter.delete(`${path}/:id`, async (req: Request, res: Response) => {
+      const deleted = await del(req.params.id as string);
+      if (!deleted) { res.status(404).json({ error: 'Not found' }); return; }
+      res.json({ success: true });
+    });
+  }
+}
+
+// --- Entity routes (read-only — entities are seeded, not created via API) ---
 graphRouter.get('/entities', async (_req: Request, res: Response) => {
   const entities = await getAllEntities();
   res.json({ entities });
@@ -27,34 +161,43 @@ graphRouter.get('/entities/:id', async (req: Request, res: Response) => {
   res.json(entity);
 });
 
-// --- Outcome routes ---
-graphRouter.post('/outcomes', async (req: Request, res: Response) => {
-  const id = await createOutcome(req.body);
-  res.status(201).json({ id });
-});
+// --- Node CRUD routes ---
+addCrudRoutes('/outcomes', createOutcome, getOutcome, listOutcomes, updateOutcome);
+addCrudRoutes('/resources', createResource, getResource, listResources, updateResource, deleteResource);
+addCrudRoutes('/activities', createActivity, getActivity, listActivities, updateActivity, deleteActivity);
+addCrudRoutes('/projects', createProject, getProject, listProjects, updateProject, deleteProject);
+addCrudRoutes('/initiatives', createInitiative, getInitiative, listInitiatives, updateInitiative, deleteInitiative);
+addCrudRoutes('/metrics', createMetric, getMetric, listMetrics, updateMetric, deleteMetric);
+addCrudRoutes('/capabilities', createCapability, getCapability, listCapabilities, updateCapability, deleteCapability);
+addCrudRoutes('/assets', createAsset, getAsset, listAssets, updateAsset, deleteAsset);
+addCrudRoutes('/customer-relationship-assets', createCustomerRelationshipAsset, getCustomerRelationshipAsset, listCustomerRelationshipAssets, updateCustomerRelationshipAsset, deleteCustomerRelationshipAsset);
+addCrudRoutes('/workforce-assets', createWorkforceAsset, getWorkforceAsset, listWorkforceAssets, updateWorkforceAsset, deleteWorkforceAsset);
+addCrudRoutes('/stakeholder-assets', createStakeholderAsset, getStakeholderAsset, listStakeholderAssets, updateStakeholderAsset, deleteStakeholderAsset);
+addCrudRoutes('/social-constraints', createSocialConstraint, getSocialConstraint, listSocialConstraints, updateSocialConstraint, deleteSocialConstraint);
+addCrudRoutes('/obligations', createObligation, getObligation, listObligations, updateObligation, deleteObligation);
+addCrudRoutes('/cash-flow-events', createCashFlowEvent, getCashFlowEvent, listCashFlowEvents, updateCashFlowEvent, deleteCashFlowEvent);
+addCrudRoutes('/periods', createAccountingPeriod, getAccountingPeriod, listAccountingPeriods, updateAccountingPeriod);
+addCrudRoutes('/funds', createFund, getFund, listFunds, updateFund, deleteFund);
 
-// --- Activity routes ---
-graphRouter.post('/activities', async (req: Request, res: Response) => {
-  const id = await createActivity(req.body);
-  res.status(201).json({ id });
-});
-
-// --- CONTRIBUTES_TO edge ---
+// --- Edge routes ---
 graphRouter.post('/edges/contributes-to', async (req: Request, res: Response) => {
   await createContributesToEdge(req.body);
   res.status(201).json({ success: true });
 });
 
-// --- AccountingPeriod routes ---
-graphRouter.post('/periods', async (req: Request, res: Response) => {
-  const id = await createAccountingPeriod(req.body);
-  res.status(201).json({ id });
+graphRouter.post('/edges/depends-on', async (req: Request, res: Response) => {
+  await createDependsOnEdge(req.body);
+  res.status(201).json({ success: true });
 });
 
-// --- Fund routes ---
-graphRouter.post('/funds', async (req: Request, res: Response) => {
-  const id = await createFund(req.body);
-  res.status(201).json({ id });
+graphRouter.post('/edges/delegates-to', async (req: Request, res: Response) => {
+  await createDelegatesToEdge(req.body);
+  res.status(201).json({ success: true });
+});
+
+graphRouter.post('/edges/prohibits', async (req: Request, res: Response) => {
+  await createProhibitsEdge(req.body);
+  res.status(201).json({ success: true });
 });
 
 // --- Traversal queries ---

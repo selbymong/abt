@@ -108,7 +108,7 @@
       "id": "P1-GRAPH-CRUD-FULL",
       "phase": 1,
       "name": "Full graph node CRUD (Resource, Project, Initiative, Metric, Capability, Asset, etc.)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P1-EDGE-MGMT",

@@ -64,10 +64,25 @@ All Phase 0 "definition of done" criteria met:
 - ConfigurationService resolves entity-scoped settings with cascade fallback
 - Four Entity nodes exist with all v1.2 properties
 
+## Phase 1 — Core Graph + Basic GL (IN PROGRESS)
+- [x] P1-GRAPH-CRUD-FULL: Full CRUD for all 14 business node types with REST API
+  - Generic createNode/getNode/listNodesByEntity/updateNode/deleteNode helpers
+  - CRUD for: Resource, Activity, Project, Initiative, Metric, Capability, Asset,
+    CustomerRelationshipAsset, WorkforceAsset, StakeholderAsset, SocialConstraint,
+    Obligation, CashFlowEvent, AccountingPeriod, Fund, Outcome
+  - Edge creation: CONTRIBUTES_TO, DEPENDS_ON, DELEGATES_TO, PROHIBITS
+  - REST routes via addCrudRoutes() helper: POST, GET/:id, GET/by-entity/:entityId, PATCH/:id, DELETE/:id
+  - Fixed Neo4j node property extraction (properties(n) AS n instead of RETURN n)
+  - 24 integration tests (graph-crud.test.ts)
+  - Total: 62 tests across 12 files all passing
+
 ## What Comes Next
-1. Phase 1: Core Graph + Basic GL + Fund Accounting + Admin UI (Sprints 4-8)
-2. Phase 2: Accruals + Fixed Assets + Depreciation Engine (Sprints 9-15)
-3. Phase 3: Multi-Entity + Related Party + Equity Close (Sprints 16-21)
+1. P1-EDGE-MGMT: CONTRIBUTES_TO function types, edge weight management
+2. P1-ONTOLOGY-VALIDATION: Ontology validation on Outcome creation and edge paths
+3. P1-FUND-ACCOUNTING: fund_id on LedgerLine, fund CRUD for NFP entities
+4. P1-GL-CORE: AccountingPeriod lifecycle, StatutoryMapping, P&L, balance sheet
+5. P1-SOCIAL-CONTROL: Social constraints (PROHIBITS pre-filter), obligations, alerts
+6. P1-ADMIN-UI: Admin UI: entity settings, approval thresholds, fund management
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
