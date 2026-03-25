@@ -48,7 +48,8 @@ export type NodeRefType =
   | 'ACTIVITY' | 'PROJECT' | 'INITIATIVE' | 'OUTCOME'
   | 'CASHFLOWEVENT' | 'TEMPORAL_CLAIM' | 'FIXED_ASSET'
   | 'GOODWILL' | 'PROVISION' | 'WORKFORCE_ASSET'
-  | 'CUSTOMER_RELATIONSHIP_ASSET' | 'FUND' | 'TAX_CREDIT_CLAIM' | 'OCI';
+  | 'CUSTOMER_RELATIONSHIP_ASSET' | 'FUND' | 'TAX_CREDIT_CLAIM' | 'OCI'
+  | 'RIGHT_OF_USE_ASSET' | 'LEASE_LIABILITY';
 
 // --- Common property blocks ---
 
@@ -205,6 +206,50 @@ export interface TemporalClaim extends TimestampedNode {
   ecl_stage: ECLStage;
   tax_recognition_basis: TaxRecognitionBasis;
   materiality_flag: boolean;
+}
+
+// --- Fixed Asset + Depreciation nodes ---
+
+// --- Lease accounting nodes ---
+
+export type LeaseClassification = 'FINANCE' | 'OPERATING';
+
+export interface LeasePaymentScheduleEntry {
+  period_id: string;
+  payment_date: string;
+  lease_payment_amount: number;
+  interest_portion: number;
+  principal_portion: number;
+  carrying_amount_after: number;
+}
+
+export interface RightOfUseAsset extends TimestampedNode {
+  entity_id: string;
+  label: string;
+  lease_classification: LeaseClassification;
+  cost_at_initial_recognition: number;
+  accumulated_amortization: number;
+  accumulated_impairment: number;
+  carrying_amount: number;
+  lease_term_months: number;
+  incremental_borrowing_rate: number;
+  acquisition_date: string;
+  lease_end_date: string;
+  tax_base: number;
+  activity_ref_id?: string;
+}
+
+export interface LeaseLiability extends TimestampedNode {
+  entity_id: string;
+  label: string;
+  initial_measurement: number;
+  accumulated_interest: number;
+  accumulated_payments: number;
+  remaining_liability: number;
+  lease_term_months: number;
+  incremental_borrowing_rate: number;
+  payment_schedule: LeasePaymentScheduleEntry[];
+  tax_base: number;
 }
 
 // --- Fixed Asset + Depreciation nodes ---

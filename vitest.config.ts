@@ -9,6 +9,7 @@ export default defineConfig({
     globals: true,
     testTimeout: 30_000,
     hookTimeout: 30_000,
+    fileParallelism: false,
     exclude: ['**/node_modules/**', '**/dist/**', '**/client/**'],
   },
   resolve: {

@@ -155,19 +155,36 @@ All Phase 1 features implemented and tested:
   - 25 integration tests (fixed-assets.test.ts)
   - Total: 141 tests across 13 files all passing
 
+- [x] P2-LEASES: Lease accounting — RightOfUseAsset, LeaseLiability, payment unwinding
+  - RightOfUseAsset CRUD: create (with PV calculation), get, list by entity
+  - LeaseLiability CRUD: create, get (with JSON schedule parsing), list by entity
+  - PV calculation: annuity present value using incremental borrowing rate
+  - Payment schedule: interest/principal split with declining-balance interest
+  - Payment unwinding: processLeasePayment posts 2 JournalEntries per period:
+    - Payment JE: DR Interest Expense + DR Lease Liability (principal) = CR Cash
+    - Amortization JE: DR Amortization Expense = CR ROU Asset (straight-line)
+  - Updates LeaseLiability (accumulated_interest, accumulated_payments, remaining)
+  - Updates ROU Asset (accumulated_amortization, carrying_amount)
+  - No-op for periods with no schedule entry
+  - NodeRefType extended with RIGHT_OF_USE_ASSET and LEASE_LIABILITY
+  - REST endpoints for all lease operations
+  - 12 integration tests (leases.test.ts)
+  - Total: 153 tests across 14 files all passing
+
 ### Fixes Applied (Phase 2)
 - Added explicit ::numeric casts in journal-posting-service.ts TimescaleDB INSERT/UPDATE
 - Switched createAccountingPeriod to use UUIDv7 (required for TimescaleDB hypertable chunking)
 - Convert Neo4j Integer objects with Number() for TemporalClaim numeric fields
 - Added TemporalClaimStatus type (separate from ClaimStatus for TaxCreditClaim)
+- Set fileParallelism: false in vitest config (shared database tests need sequential execution)
+- Installed Node 22 via nvm (vitest 4.x requires Node 20+, system Node is 18)
 
 ## What Comes Next
-1. P2-LEASES: Lease accounting — RightOfUseAsset, LeaseLiability
-2. P2-PROVISIONS: Provision CRUD with IAS 37 recognition criteria
-4. Phase 3: Multi-Entity + Related Party + Equity Close (Sprints 16-21)
-5. Phase 4: AI Engine Services (Sprints 22-27)
-6. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
+1. P2-PROVISIONS: Provision CRUD with IAS 37 recognition criteria
+2. Phase 3: Multi-Entity + Related Party + Equity Close (Sprints 16-21)
+3. Phase 4: AI Engine Services (Sprints 22-27)
+4. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
-- Node 22 installed at ~/.local/node/bin (added to PATH in .bashrc)
+- Node 22 installed via nvm (system Node 18 incompatible with vitest 4.x)

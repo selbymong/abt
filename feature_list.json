@@ -162,7 +162,7 @@
       "id": "P2-LEASES",
       "phase": 2,
       "name": "Lease accounting: RightOfUseAsset, LeaseLiability, operating lease for ASPE",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P2-PROVISIONS",

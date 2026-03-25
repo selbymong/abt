@@ -21,6 +21,14 @@ import {
   updateECL,
   writeOffClaim,
 } from '../../services/gl/accruals-service.js';
+import {
+  createLease,
+  getRightOfUseAsset,
+  listRightOfUseAssets,
+  getLeaseLiability,
+  listLeaseLiabilities,
+  processLeasePayment,
+} from '../../services/gl/lease-service.js';
 import { query } from '../../lib/pg.js';
 
 export const glRouter = Router();
@@ -250,5 +258,43 @@ glRouter.get('/statutory-mappings/resolve', async (req: Request, res: Response) 
     economicCategory as string, asOfDate as string,
   );
   if (!result) { res.status(404).json({ error: 'No matching mapping' }); return; }
+  res.json(result);
+});
+
+// --- Lease Accounting ---
+
+glRouter.post('/leases', async (req: Request, res: Response) => {
+  const result = await createLease(req.body);
+  res.status(201).json(result);
+});
+
+glRouter.get('/rou-assets/:id', async (req: Request, res: Response) => {
+  const asset = await getRightOfUseAsset(req.params.id as string);
+  if (!asset) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json(asset);
+});
+
+glRouter.get('/rou-assets/by-entity/:entityId', async (req: Request, res: Response) => {
+  const assets = await listRightOfUseAssets(req.params.entityId as string);
+  res.json({ assets });
+});
+
+glRouter.get('/lease-liabilities/:id', async (req: Request, res: Response) => {
+  const liability = await getLeaseLiability(req.params.id as string);
+  if (!liability) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json(liability);
+});
+
+glRouter.get('/lease-liabilities/by-entity/:entityId', async (req: Request, res: Response) => {
+  const liabilities = await listLeaseLiabilities(req.params.entityId as string);
+  res.json({ liabilities });
+});
+
+glRouter.post('/leases/process-payment', async (req: Request, res: Response) => {
+  const { leaseLiabilityId, rouAssetId, periodId } = req.body;
+  if (!leaseLiabilityId || !rouAssetId || !periodId) {
+    res.status(400).json({ error: 'Required: leaseLiabilityId, rouAssetId, periodId' }); return;
+  }
+  const result = await processLeasePayment(leaseLiabilityId, rouAssetId, periodId);
   res.json(result);
 });
