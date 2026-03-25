@@ -211,9 +211,22 @@ All Phase 2 features implemented and tested:
   - 16 integration tests (related-party.test.ts)
   - Total: 188 tests across 16 files all passing
 
+- [x] P3-CONSOLIDATION: Consolidation — intercompany matching, FX translation, goodwill
+  - ConsolidationGroup CRUD: group creation with entity membership and policies
+  - OwnershipInterest CRUD: parent-subsidiary investment with goodwill calculation
+  - INTERCOMPANY_MATCH edge: LedgerLine ↔ LedgerLine for elimination
+  - CurrencyTranslation: FX translation from functional to presentation currency
+    - P&L at average rate, balance sheet at closing rate
+    - CTA (Currency Translation Adjustment) computed automatically
+  - Goodwill CRUD: immutable gross amount, impairment-only reductions (IAS 36)
+  - Consolidated P&L: aggregates entities, eliminates intercompany via INTERCOMPANY_MATCH
+  - Consolidated Balance Sheet: includes goodwill from group subsidiaries
+  - REST endpoints for all consolidation operations
+  - 17 integration tests (consolidation.test.ts)
+  - Total: 205 tests across 17 files all passing
+
 ## What Comes Next
-1. P3-CONSOLIDATION: Consolidation — intercompany matching, FX translation, goodwill
-2. P3-EQUITY-CLOSE: Equity close — RetainedEarnings, OCI components, recycling
+1. P3-EQUITY-CLOSE: Equity close — RetainedEarnings, OCI components, recycling
 3. Phase 4: AI Engine Services (Sprints 22-27)
 4. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
 

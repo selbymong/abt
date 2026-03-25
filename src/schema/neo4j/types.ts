@@ -106,6 +106,77 @@ export interface Entity extends TimestampedNode {
   reporting_lag_days: number;
 }
 
+// --- Consolidation nodes ---
+
+export type MinorityInterestMethod = 'PROPORTIONATE' | 'FULL_GOODWILL';
+export type IntercompanyTransactionType = 'SALE' | 'LOAN' | 'DIVIDEND' | 'SERVICE' | 'MANAGEMENT_FEE' | 'RENTAL' | 'GUARANTEE';
+export type ImpairmentTestResult = 'PASS' | 'IMPAIRED';
+
+export interface ConsolidationGroup extends TimestampedNode {
+  label: string;
+  parent_entity_id: string;
+  functional_currency: string;
+  entity_ids: string[];
+  minority_interest_method: MinorityInterestMethod;
+  intercompany_threshold: number;
+}
+
+export interface OwnershipInterest extends TimestampedNode {
+  investor_entity_id: string;
+  investee_entity_id: string;
+  ownership_pct: number;
+  acquisition_cost: number;
+  net_assets_at_acquisition: number;
+  goodwill: number;
+  carrying_value: number;
+  acquisition_date: string;
+  disposal_date?: string;
+}
+
+export interface CurrencyTranslation extends TimestampedNode {
+  entity_id: string;
+  period_id: string;
+  functional_currency: string;
+  presentation_currency: string;
+  average_rate: number;
+  closing_rate: number;
+  revenue_translated: number;
+  expense_translated: number;
+  asset_translated: number;
+  liability_translated: number;
+  cta_current_period: number;
+  cumulative_cta: number;
+}
+
+export interface Goodwill extends TimestampedNode {
+  business_combination_id?: string;
+  acquiree_entity_id: string;
+  cgu_id?: string;
+  gross_amount: number;
+  accumulated_impairment: number;
+  carrying_amount: number;
+  currency: string;
+  is_full_goodwill: boolean;
+  nci_goodwill_pct?: number;
+  last_test_date?: string;
+  last_test_result?: ImpairmentTestResult;
+  tax_deductible: boolean;
+  tax_base: number;
+  disposal_date?: string;
+}
+
+export interface IntercompanyMatchEdge {
+  source_entity_id: string;
+  target_entity_id: string;
+  source_ledger_line_id: string;
+  target_ledger_line_id: string;
+  elimination_amount: number;
+  transaction_type: IntercompanyTransactionType;
+  amount_seller_currency: number;
+  amount_buyer_currency: number;
+  unrealized_profit_pct?: number;
+}
+
 export interface Outcome extends TimestampedNode, Partial<EpistemicProperties>, Partial<ControlProperties> {
   label: string;
   entity_id: string;

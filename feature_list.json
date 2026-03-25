@@ -180,7 +180,7 @@
       "id": "P3-CONSOLIDATION",
       "phase": 3,
       "name": "Consolidation: intercompany matching, FX translation, goodwill",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P3-EQUITY-CLOSE",
