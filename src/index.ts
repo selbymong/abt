@@ -10,6 +10,7 @@ import { glRouter } from './api/rest/gl-routes.js';
 import { graphRouter } from './api/rest/graph-routes.js';
 import { depreciationRouter } from './api/rest/depreciation-routes.js';
 import { consolidationRouter } from './api/rest/consolidation-routes.js';
+import { aiRouter } from './api/rest/ai-routes.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -28,6 +29,7 @@ app.use('/api/gl', glRouter);
 app.use('/api/graph', graphRouter);
 app.use('/api/depreciation', depreciationRouter);
 app.use('/api/consolidation', consolidationRouter);
+app.use('/api/ai', aiRouter);
 
 // Global error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

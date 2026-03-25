@@ -192,7 +192,7 @@
       "id": "P4-WEIGHT-LEARNER",
       "phase": 4,
       "name": "AI weight learner with ontology-aware back-propagation",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P4-EPISTEMIC-SCORER",

@@ -242,9 +242,30 @@ All Phase 3 features implemented and tested:
 - P3-RELATED-PARTY, P3-CONSOLIDATION, P3-EQUITY-CLOSE
 - 223 backend tests across 18 files all passing
 
+## Phase 4 — AI Engine Services (IN PROGRESS)
+- [x] P4-WEIGHT-LEARNER: AI weight learner with ontology-aware back-propagation
+  - recordRealization: records realized_delta on Outcome, triggers back-propagation
+  - Back-propagation: gradient descent on CONTRIBUTES_TO edges up to 6 hops
+    - w_new = w_old + lr × hop_decay × (accuracy - 1)
+    - Hop decay: learning rate attenuated by 1/hops for distant edges
+  - Ontology boundary enforcement: edges crossing FINANCIAL/MISSION boundary skipped
+  - Calibration updates: exponential smoothing (α=0.3) on accuracy per (entity, outcome_type)
+  - Effective stake: ci_point_estimate × state_discount × calibration × ci_width_penalty
+  - Effective contribution: weight × temporal_value_pct × control_score
+  - Value state transitions: FORECASTED→ESTIMATED→VALIDATED→REALIZED with gates
+    - ESTIMATED→VALIDATED requires epistemic_activity_id
+  - Calibration history query and current factor retrieval
+  - Kafka events: REALIZATION_RECORDED, EDGE_WEIGHT_UPDATED, VALUE_STATE_TRANSITION
+  - REST endpoints for all weight learner operations
+  - 17 integration tests (weight-learner.test.ts)
+  - Total: 240 tests across 19 files all passing
+
 ## What Comes Next
-1. Phase 4: AI Engine Services (Sprints 22-27)
-2. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
+1. P4-EPISTEMIC-SCORER: EVOI computation engine
+2. P4-CASHFLOW-OPTIMIZER: FloatWindow scoring, AR discount vs facility
+3. P4-SCENARIO-ENGINE: Monte Carlo on distal/force majeure nodes
+4. P4-CLAUDE-INTEGRATION: Natural language → graph traversal
+5. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
