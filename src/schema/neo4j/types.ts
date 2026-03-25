@@ -207,6 +207,80 @@ export interface TemporalClaim extends TimestampedNode {
   materiality_flag: boolean;
 }
 
+// --- Fixed Asset + Depreciation nodes ---
+
+export type PoolMethod = 'INDIVIDUAL' | 'POOLED';
+export type DisposalRule = 'RECAPTURE_AND_TERMINAL_LOSS' | 'GAIN_LOSS_ON_DISPOSAL' | 'HALF_YEAR_DISPOSAL';
+
+export interface FixedAsset extends TimestampedNode {
+  entity_id: string;
+  label: string;
+  cost_at_acquisition: number;
+  accumulated_depreciation: number;
+  accumulated_impairment: number;
+  carrying_amount: number;
+  depreciation_method?: DepreciationMethod;
+  useful_life_years?: number;
+  salvage_value?: number;
+  acquisition_date: string;
+  disposal_date?: string;
+  cgu_id?: string;
+  tax_base: number;
+  tax_accumulated_dep: number;
+  activity_ref_id: string;
+}
+
+export interface AssetClassNode extends TimestampedNode {
+  class_code: string;
+  label: string;
+  class_system: ClassSystem;
+  jurisdiction: string;
+  depreciation_method: DepreciationMethod;
+  rate_pct?: number;
+  useful_life_years?: number;
+  salvage_value_pct: number;
+  first_year_rule: FirstYearRule;
+  pool_method: PoolMethod;
+  disposal_rule: DisposalRule;
+  accelerated_incentive_rate?: number;
+  accelerated_incentive_expiry?: string;
+  eligible_entity_types: string[];
+  asset_examples: string[];
+  legislation_reference: string;
+  effective_from: string;
+  effective_until?: string;
+}
+
+export interface UCCPool extends TimestampedNode {
+  entity_id: string;
+  asset_class_id: string;
+  fiscal_year: string;
+  opening_ucc: number;
+  additions: number;
+  disposals_proceeds: number;
+  adjustments: number;
+  base_for_cca: number;
+  cca_claimed: number;
+  cca_maximum: number;
+  closing_ucc: number;
+  recapture: number;
+  terminal_loss: number;
+}
+
+export interface DepreciationScheduleEntry {
+  period_id: string;
+  charge: number;
+  accumulated: number;
+  carrying_remaining: number;
+}
+
+export interface DepreciationSchedule extends TimestampedNode {
+  fixed_asset_id: string;
+  schedule: DepreciationScheduleEntry[];
+  last_charge_period_id?: string;
+  revision_history: { revised_at: string; old_life: number; new_life: number; reason: string }[];
+}
+
 // --- Edge types ---
 
 export interface ContributesToEdge {

@@ -139,6 +139,21 @@ All Phase 1 features implemented and tested:
   - REST endpoints for all operations
   - 17 integration tests (accruals.test.ts)
   - Total: 116 tests across 12 files all passing
+- [x] P2-FIXED-ASSETS: Fixed assets + two-pass depreciation engine
+  - FixedAsset CRUD: create, get, list, update, dispose (with gain/loss calculation)
+  - AssetClass lookups: by code, by system/jurisdiction (14 CCA, 8 MACRS, 8 ACCOUNTING seeded)
+  - BELONGS_TO edge management: FixedAsset → AssetClass with override support
+  - Two-pass depreciation engine: accounting pass (ACCOUNTING class) + tax pass (CCA/MACRS class)
+  - Depreciation methods: STRAIGHT_LINE, DECLINING_BALANCE, DOUBLE_DECLINING
+  - First-year rules: HALF_YEAR, MID_QUARTER, MID_MONTH, FULL_YEAR
+  - DepreciationSchedule tracking (JSON-serialized schedule per asset)
+  - UCCPool management: create, calculate CCA with half-year rule, discretionary claims
+  - Recapture and terminal loss detection
+  - Temporary difference computation (tax base vs carrying amount)
+  - Monthly depreciation JournalEntry posting via saga
+  - REST endpoints for all depreciation operations
+  - 25 integration tests (fixed-assets.test.ts)
+  - Total: 141 tests across 13 files all passing
 
 ### Fixes Applied (Phase 2)
 - Added explicit ::numeric casts in journal-posting-service.ts TimescaleDB INSERT/UPDATE
@@ -147,9 +162,8 @@ All Phase 1 features implemented and tested:
 - Added TemporalClaimStatus type (separate from ClaimStatus for TaxCreditClaim)
 
 ## What Comes Next
-1. P2-FIXED-ASSETS: Fixed assets + two-pass depreciation (accounting + tax CCA/MACRS)
-2. P2-LEASES: Lease accounting — RightOfUseAsset, LeaseLiability
-3. P2-PROVISIONS: Provision CRUD with IAS 37 recognition criteria
+1. P2-LEASES: Lease accounting — RightOfUseAsset, LeaseLiability
+2. P2-PROVISIONS: Provision CRUD with IAS 37 recognition criteria
 4. Phase 3: Multi-Entity + Related Party + Equity Close (Sprints 16-21)
 5. Phase 4: AI Engine Services (Sprints 22-27)
 6. Phase 5: Tax + Credits + Compliance (Sprints 28-36)

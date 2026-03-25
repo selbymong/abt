@@ -156,7 +156,7 @@
       "id": "P2-FIXED-ASSETS",
       "phase": 2,
       "name": "Fixed assets + two-pass depreciation (accounting + tax CCA/MACRS)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P2-LEASES",

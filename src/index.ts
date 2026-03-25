@@ -8,6 +8,7 @@ import { closeKafka } from './lib/kafka.js';
 import { configRouter } from './api/rest/config-routes.js';
 import { glRouter } from './api/rest/gl-routes.js';
 import { graphRouter } from './api/rest/graph-routes.js';
+import { depreciationRouter } from './api/rest/depreciation-routes.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -24,6 +25,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/config', configRouter);
 app.use('/api/gl', glRouter);
 app.use('/api/graph', graphRouter);
+app.use('/api/depreciation', depreciationRouter);
 
 // Global error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
