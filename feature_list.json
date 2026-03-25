@@ -174,7 +174,7 @@
       "id": "P3-RELATED-PARTY",
       "phase": 3,
       "name": "Related party framework: transactions, arm's length, disclosures",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P3-CONSOLIDATION",

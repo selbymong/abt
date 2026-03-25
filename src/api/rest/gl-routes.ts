@@ -40,6 +40,17 @@ import {
   settleProvision,
   getProvisionsNeedingReview,
 } from '../../services/gl/provision-service.js';
+import {
+  createRelatedParty,
+  getRelatedParties,
+  getRelatedPartyBetween,
+  updateRelatedParty,
+  deleteRelatedParty,
+  createRelatedPartyTransaction,
+  getRelatedPartyTransactions,
+  validateArmsLength,
+  generateDisclosureSchedule,
+} from '../../services/gl/related-party-service.js';
 import { query } from '../../lib/pg.js';
 
 export const glRouter = Router();
@@ -369,4 +380,67 @@ glRouter.get('/provisions/review/:entityId', async (req: Request, res: Response)
   if (!periodEndDate) { res.status(400).json({ error: 'Required: periodEndDate' }); return; }
   const provisions = await getProvisionsNeedingReview(req.params.entityId as string, periodEndDate);
   res.json({ provisions });
+});
+
+// --- Related Party (IAS 24) ---
+
+glRouter.post('/related-parties', async (req: Request, res: Response) => {
+  await createRelatedParty(req.body);
+  res.status(201).json({ success: true });
+});
+
+glRouter.get('/related-parties/by-entity/:entityId', async (req: Request, res: Response) => {
+  const parties = await getRelatedParties(req.params.entityId as string);
+  res.json({ relatedParties: parties });
+});
+
+glRouter.get('/related-parties/between', async (req: Request, res: Response) => {
+  const { entityId1, entityId2 } = req.query;
+  if (!entityId1 || !entityId2) { res.status(400).json({ error: 'Required: entityId1, entityId2' }); return; }
+  const rel = await getRelatedPartyBetween(entityId1 as string, entityId2 as string);
+  if (!rel) { res.status(404).json({ error: 'No related party relationship found' }); return; }
+  res.json(rel);
+});
+
+glRouter.patch('/related-parties', async (req: Request, res: Response) => {
+  const { sourceEntityId, targetEntityId, ...updates } = req.body;
+  if (!sourceEntityId || !targetEntityId) { res.status(400).json({ error: 'Required: sourceEntityId, targetEntityId' }); return; }
+  const updated = await updateRelatedParty(sourceEntityId, targetEntityId, updates);
+  if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json({ success: true });
+});
+
+glRouter.delete('/related-parties', async (req: Request, res: Response) => {
+  const { sourceEntityId, targetEntityId } = req.body;
+  if (!sourceEntityId || !targetEntityId) { res.status(400).json({ error: 'Required: sourceEntityId, targetEntityId' }); return; }
+  const deleted = await deleteRelatedParty(sourceEntityId, targetEntityId);
+  if (!deleted) { res.status(404).json({ error: 'Not found' }); return; }
+  res.json({ success: true });
+});
+
+glRouter.post('/related-party-transactions', async (req: Request, res: Response) => {
+  await createRelatedPartyTransaction(req.body);
+  res.status(201).json({ success: true });
+});
+
+glRouter.get('/related-party-transactions/by-entity/:entityId', async (req: Request, res: Response) => {
+  const periodId = req.query.periodId as string | undefined;
+  const transactions = await getRelatedPartyTransactions(req.params.entityId as string, periodId);
+  res.json({ transactions });
+});
+
+glRouter.post('/related-party-transactions/validate-arms-length', async (req: Request, res: Response) => {
+  const { entityId, periodId, method, tolerancePct } = req.body;
+  if (!entityId || !periodId || !method) {
+    res.status(400).json({ error: 'Required: entityId, periodId, method' }); return;
+  }
+  const results = await validateArmsLength(entityId, periodId, method, tolerancePct);
+  res.json({ results });
+});
+
+glRouter.get('/related-party-transactions/disclosure/:entityId', async (req: Request, res: Response) => {
+  const periodId = req.query.periodId as string;
+  if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
+  const schedule = await generateDisclosureSchedule(req.params.entityId as string, periodId);
+  res.json({ disclosures: schedule });
 });

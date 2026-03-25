@@ -373,3 +373,36 @@ export interface DelegatesToEdge {
   control_attenuation: number;
   sla_reference?: string;
 }
+
+// --- Related Party edge types (IAS 24) ---
+
+export type RelatedPartyRelationshipType =
+  | 'SHARED_BOARD' | 'SHARED_MANAGEMENT' | 'ECONOMIC_DEPENDENCE'
+  | 'FAMILY' | 'SIGNIFICANT_INFLUENCE';
+
+export type TransactionNature =
+  | 'TRADE' | 'SERVICE' | 'DONATION' | 'GRANT'
+  | 'MANAGEMENT_FEE' | 'SHARED_COST_ALLOCATION'
+  | 'LICENSING' | 'LOAN';
+
+export type ArmsLengthMethod = 'CUP' | 'COST_PLUS' | 'RESALE_MINUS' | 'TNMM' | 'PROFIT_SPLIT';
+
+export interface RelatedPartyEdge {
+  relationship_type: RelatedPartyRelationshipType;
+  individuals_in_common: string[];
+  effective_from: string;
+  effective_until?: string;
+  disclosure_required: boolean;
+}
+
+export interface RelatedPartyTransactionEdge {
+  transaction_nature: TransactionNature;
+  source_entity_id: string;
+  target_entity_id: string;
+  arms_length_validated: boolean;
+  arms_length_method?: ArmsLengthMethod;
+  source_journal_entry_id: string;
+  target_journal_entry_id: string;
+  tax_deductible_for_source: boolean;
+  donation_receipt_issued?: boolean;
+}

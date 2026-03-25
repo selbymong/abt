@@ -197,8 +197,23 @@ All Phase 2 features implemented and tested:
 - P2-ACCRUALS, P2-FIXED-ASSETS, P2-LEASES, P2-PROVISIONS
 - 172 backend tests across 15 files all passing
 
+## Phase 3 — Multi-Entity + Related Party + Equity Close (IN PROGRESS)
+- [x] P3-RELATED-PARTY: Related party framework — transactions, arm's length, disclosures
+  - RELATED_PARTY edge CRUD: Entity ↔ Entity with 5 relationship types
+    (SHARED_BOARD, SHARED_MANAGEMENT, ECONOMIC_DEPENDENCE, FAMILY, SIGNIFICANT_INFLUENCE)
+  - RELATED_PARTY_TRANSACTION edge: JournalEntry ↔ JournalEntry linking
+  - 8 transaction natures: TRADE, SERVICE, DONATION, GRANT, MANAGEMENT_FEE, etc.
+  - Arm's length validation: 5 methods (CUP, COST_PLUS, RESALE_MINUS, TNMM, PROFIT_SPLIT)
+  - Variance detection with configurable tolerance
+  - Disclosure schedule generation per IAS 24
+  - Donation flow tracking with receipt issuance for FP→NFP transfers
+  - REST endpoints for all related party operations
+  - 16 integration tests (related-party.test.ts)
+  - Total: 188 tests across 16 files all passing
+
 ## What Comes Next
-1. Phase 3: Multi-Entity + Related Party + Equity Close (Sprints 16-21)
+1. P3-CONSOLIDATION: Consolidation — intercompany matching, FX translation, goodwill
+2. P3-EQUITY-CLOSE: Equity close — RetainedEarnings, OCI components, recycling
 3. Phase 4: AI Engine Services (Sprints 22-27)
 4. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
 
