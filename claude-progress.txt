@@ -38,8 +38,10 @@
 - Made 08-v1.2-seed-data.cypher idempotent with MERGE instead of CREATE
 - Suppressed parameterized query template errors in neo4j-init.ts
 
+- [x] Upgraded to Node 22.16.0 (vitest 4.x requires Node 20+)
+- [x] All 11 invariant tests pass against live databases (22 tests, 8 files)
+
 ### Not Yet Done (Phase 0 remaining)
-- [ ] Run invariant tests against live databases
 - [ ] Verify saga coordinator rollback on simulated failure
 - [ ] Configure Neo4j deny UPDATE/DELETE on JournalEntry/LedgerLine labels
 - [ ] Verify ConfigurationService cascade resolution end-to-end
@@ -58,5 +60,5 @@
 3. Phase 2: Accruals + Fixed Assets + Depreciation Engine (Sprints 9-15)
 
 ## Known Issues
-- Vitest requires Node 20+ (current env has 18.19.1); using tsc build as regression gate
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
+- Node 22 installed at ~/.local/node/bin (added to PATH in .bashrc)

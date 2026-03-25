@@ -90,7 +90,7 @@
       "id": "P0-INVARIANTS-LIVE",
       "phase": 0,
       "name": "All 11 invariants pass against live databases",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P0-SAGA-VERIFY",
