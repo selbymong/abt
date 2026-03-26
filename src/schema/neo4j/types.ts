@@ -515,3 +515,92 @@ export interface RelatedPartyTransactionEdge {
   tax_deductible_for_source: boolean;
   donation_receipt_issued?: boolean;
 }
+
+// --- Tax engine nodes ---
+
+export type TaxProvisionStatus = 'DRAFT' | 'APPROVED' | 'POSTED';
+export type TempDiffDirection = 'TAXABLE' | 'DEDUCTIBLE';
+export type TaxAuthority = 'CRA' | 'IRS' | 'PROVINCIAL' | 'STATE';
+export type AccountingTreatment = 'COST_REDUCTION' | 'INCOME_APPROACH' | 'ITC_METHOD';
+export type QualificationBasis = 'AI_INFERRED' | 'MANUALLY_TAGGED' | 'RULE_MATCHED';
+export type CreditCertainty = 'CLAIMED' | 'ASSESSED' | 'REALIZED';
+
+export interface DeferredTaxPosition extends TimestampedNode {
+  entity_id: string;
+  period_id: string;
+  source_node_id: string;
+  source_node_type: string;
+  accounting_carrying_amt: number;
+  tax_base: number;
+  temporary_difference: number;
+  direction: TempDiffDirection;
+  tax_rate_applicable: number;
+  deferred_tax_amount: number;
+  recognition_criteria_met: boolean;
+}
+
+export interface TaxProvision extends TimestampedNode {
+  entity_id: string;
+  period_id: string;
+  current_tax_expense: number;
+  deferred_tax_movement: number;
+  total_tax_expense: number;
+  credit_amount: number;
+  effective_tax_rate: number;
+  status: TaxProvisionStatus;
+  journal_entry_id?: string;
+}
+
+export interface TaxCreditProgram extends TimestampedNode {
+  program_code: string;
+  label: string;
+  jurisdiction: string;
+  authority: TaxAuthority;
+  credit_type: CreditType;
+  credit_rate: number;
+  credit_rate_enhanced?: number;
+  expenditure_limit?: number;
+  annual_cap?: number;
+  carryforward_years?: number;
+  carryback_years?: number;
+  eligible_entity_types: string[];
+  eligibility_criteria?: string;
+  accounting_treatment: AccountingTreatment;
+  legislation_reference: string;
+  effective_from: string;
+  effective_until?: string;
+  filing_form?: string;
+}
+
+export interface TaxCreditClaim extends TimestampedNode {
+  entity_id: string;
+  program_id: string;
+  period_id: string;
+  fiscal_year: string;
+  claim_status: ClaimStatus;
+  eligible_expenditure_total: number;
+  credit_amount_claimed: number;
+  credit_amount_assessed?: number;
+  refundable_portion: number;
+  non_refundable_portion: number;
+  applied_to_tax: number;
+  carried_forward: number;
+  carried_back: number;
+  cash_received: number;
+  eligible_node_ids: string[];
+  ai_confidence?: number;
+  journal_entry_id?: string;
+}
+
+export interface TaxCreditBalance extends TimestampedNode {
+  entity_id: string;
+  program_id: string;
+  balance_as_of: string;
+  opening_balance: number;
+  credits_earned: number;
+  credits_applied: number;
+  credits_expired: number;
+  credits_carried_back: number;
+  closing_balance: number;
+  vintages: string;
+}

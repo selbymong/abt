@@ -222,7 +222,7 @@
       "id": "P5-TAX-ENGINE",
       "phase": 5,
       "name": "Tax engine core: DeferredTax, TaxProvision, current tax",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P5-TAX-MODULES",

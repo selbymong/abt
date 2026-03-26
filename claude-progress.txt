@@ -314,9 +314,27 @@ All Phase 4 AI Engine features implemented and tested:
 - P4-SCENARIO-ENGINE, P4-CLAUDE-INTEGRATION
 - 298 backend tests across 23 files all passing
 
+## Phase 5 — Tax + Credits + Compliance (IN PROGRESS)
+- [x] P5-TAX-ENGINE: Tax engine core — DeferredTax, TaxProvision, current tax
+  - Temporary difference scanning: FixedAsset, RightOfUseAsset, LeaseLiability, Goodwill
+  - DeferredTaxPosition computation: temporary_difference × tax_rate (IAS 12)
+  - Current tax computation: P&L from TimescaleDB, permanent differences, taxable income
+  - TaxProvision lifecycle: DRAFT → APPROVED → POSTED with CFO/controller gate
+  - Credit amount reduction applied to total tax expense
+  - Effective tax rate = total_tax_expense / accounting_income
+  - Deferred tax movement = current period net - prior period net
+  - Tax rate lookup: configuration_settings → jurisdiction defaults (CA: 26.5%, US: 21%)
+  - Deferred tax summary with DTA/DTL totals and breakdown by source type
+  - Kafka event: TAX_PROVISION_COMPUTED
+  - REST endpoints for all tax engine operations (/api/tax)
+  - 19 integration tests (tax-engine.test.ts)
+  - Total: 317 tests across 24 files all passing
+
 ## What Comes Next
-1. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
-2. Phase 6: Advanced Accounting (IFRS 15, inventory, equity, XBRL)
+1. P5-TAX-MODULES: Tax modules (CRA Corp, GST/HST, IRS Corp, etc.)
+2. P5-TAX-CREDITS: Tax credit management
+3. P5-COMPLIANCE: Compliance workflows
+4. Phase 6: Advanced Accounting (IFRS 15, inventory, equity, XBRL)
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
