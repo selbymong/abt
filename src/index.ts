@@ -4,8 +4,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { logger } from './lib/logger.js';
-import { closeNeo4j } from './lib/neo4j.js';
-import { closePg } from './lib/pg.js';
+import { getNeo4jDriver, closeNeo4j, runCypher } from './lib/neo4j.js';
+import { closePg, query } from './lib/pg.js';
 import { closeKafka } from './lib/kafka.js';
 import { configRouter } from './api/rest/config-routes.js';
 import { glRouter } from './api/rest/gl-routes.js';
@@ -23,6 +23,19 @@ import { xbrlRouter } from './api/rest/xbrl-routes.js';
 import { bankRecRouter } from './api/rest/bank-rec-routes.js';
 import { hedgeRouter } from './api/rest/hedge-routes.js';
 import { migrationRouter } from './api/rest/migration-routes.js';
+
+// --- Environment validation ---
+function validateEnv() {
+  const required = process.env.NODE_ENV === 'production'
+    ? ['NEO4J_URI', 'NEO4J_PASSWORD', 'PG_HOST', 'PG_PASSWORD']
+    : [];
+  const missing = required.filter((k) => !process.env[k]);
+  if (missing.length > 0) {
+    logger.fatal({ missing }, 'Missing required environment variables');
+    process.exit(1);
+  }
+}
+validateEnv();
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -47,9 +60,45 @@ app.use(rateLimit({
 
 app.use(express.json({ limit: '1mb' }));
 
-// Health check
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', version: '1.2.0' });
+// Request logging
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    logger.info({
+      method: req.method,
+      url: req.originalUrl,
+      status: res.statusCode,
+      duration,
+    }, 'request');
+  });
+  next();
+});
+
+// Liveness probe — always returns OK if the process is up
+app.get('/healthz', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
+// Readiness probe — checks database connectivity
+app.get('/health', async (_req, res) => {
+  const checks: Record<string, string> = {};
+  try {
+    await runCypher('RETURN 1 AS n', {});
+    checks.neo4j = 'ok';
+  } catch { checks.neo4j = 'error'; }
+
+  try {
+    await query('SELECT 1');
+    checks.postgres = 'ok';
+  } catch { checks.postgres = 'error'; }
+
+  const allOk = Object.values(checks).every((v) => v === 'ok');
+  res.status(allOk ? 200 : 503).json({
+    status: allOk ? 'ok' : 'degraded',
+    version: '1.2.0',
+    checks,
+  });
 });
 
 // API routes
@@ -84,11 +133,35 @@ const server = app.listen(port, () => {
   logger.info({ port }, 'EBG API server started');
 });
 
-// Graceful shutdown
+// Graceful shutdown with timeout
+const SHUTDOWN_TIMEOUT = 15_000;
+let shuttingDown = false;
+
 async function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
   logger.info('Shutting down...');
-  server.close();
-  await Promise.all([closeNeo4j(), closePg(), closeKafka()]);
+
+  // Force exit after timeout
+  const forceTimer = setTimeout(() => {
+    logger.error('Shutdown timed out, forcing exit');
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT);
+  forceTimer.unref();
+
+  // Stop accepting new connections, drain existing
+  server.close(() => {
+    logger.info('HTTP server closed');
+  });
+
+  try {
+    await Promise.all([closeNeo4j(), closePg(), closeKafka()]);
+    logger.info('All connections closed');
+  } catch (err) {
+    logger.error({ err }, 'Error during connection cleanup');
+  }
+
+  clearTimeout(forceTimer);
   process.exit(0);
 }
 
