@@ -246,7 +246,7 @@
       "id": "P6-IFRS15",
       "phase": 6,
       "name": "IFRS 15 revenue recognition (contracts, performance obligations)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P6-INVENTORY",

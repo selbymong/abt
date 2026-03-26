@@ -49,7 +49,8 @@ export type NodeRefType =
   | 'CASHFLOWEVENT' | 'TEMPORAL_CLAIM' | 'FIXED_ASSET'
   | 'GOODWILL' | 'PROVISION' | 'WORKFORCE_ASSET'
   | 'CUSTOMER_RELATIONSHIP_ASSET' | 'FUND' | 'TAX_CREDIT_CLAIM' | 'OCI'
-  | 'RIGHT_OF_USE_ASSET' | 'LEASE_LIABILITY';
+  | 'RIGHT_OF_USE_ASSET' | 'LEASE_LIABILITY'
+  | 'REVENUE_CONTRACT' | 'PERFORMANCE_OBLIGATION';
 
 // --- Common property blocks ---
 
@@ -590,6 +591,61 @@ export interface TaxCreditClaim extends TimestampedNode {
   eligible_node_ids: string[];
   ai_confidence?: number;
   journal_entry_id?: string;
+}
+
+// --- IFRS 15 Revenue Recognition nodes ---
+
+export type ContractStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'IMPAIRED';
+export type POSatisfactionMethod = 'POINT_IN_TIME' | 'OVER_TIME';
+export type OverTimeMeasure = 'INPUT' | 'OUTPUT' | 'STRAIGHT_LINE';
+export type VariableConsiderationType = 'DISCOUNT' | 'REBATE' | 'PENALTY' | 'BONUS' | 'PRICE_CONCESSION' | 'RIGHT_OF_RETURN';
+export type ConstraintEstimateMethod = 'EXPECTED_VALUE' | 'MOST_LIKELY_AMOUNT';
+
+export interface RevenueContract extends TimestampedNode {
+  entity_id: string;
+  label: string;
+  customer_name: string;
+  customer_id?: string;
+  contract_status: ContractStatus;
+  inception_date: string;
+  completion_date?: string;
+  transaction_price: number;
+  allocated_transaction_price: number;
+  variable_consideration_estimate: number;
+  constraint_applied: boolean;
+  currency: string;
+  period_id: string;
+  total_revenue_recognized: number;
+  contract_asset: number;
+  contract_liability: number;
+}
+
+export interface PerformanceObligation extends TimestampedNode {
+  entity_id: string;
+  contract_id: string;
+  label: string;
+  standalone_selling_price: number;
+  allocated_transaction_price: number;
+  satisfaction_method: POSatisfactionMethod;
+  over_time_measure?: OverTimeMeasure;
+  progress_pct: number;
+  revenue_recognized: number;
+  is_distinct: boolean;
+  is_satisfied: boolean;
+  satisfied_date?: string;
+}
+
+export interface VariableConsideration extends TimestampedNode {
+  entity_id: string;
+  contract_id: string;
+  consideration_type: VariableConsiderationType;
+  estimate_method: ConstraintEstimateMethod;
+  estimated_amount: number;
+  constraint_adjusted_amount: number;
+  constraint_reason?: string;
+  is_constrained: boolean;
+  resolved_amount?: number;
+  resolved: boolean;
 }
 
 export interface TaxCreditBalance extends TimestampedNode {

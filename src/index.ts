@@ -14,6 +14,7 @@ import { aiRouter } from './api/rest/ai-routes.js';
 import { cashflowRouter } from './api/rest/cashflow-routes.js';
 import { taxRouter } from './api/rest/tax-routes.js';
 import { complianceRouter } from './api/rest/compliance-routes.js';
+import { revenueRouter } from './api/rest/revenue-routes.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -36,6 +37,7 @@ app.use('/api/ai', aiRouter);
 app.use('/api/cashflow', cashflowRouter);
 app.use('/api/tax', taxRouter);
 app.use('/api/compliance', complianceRouter);
+app.use('/api/revenue', revenueRouter);
 
 // Global error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

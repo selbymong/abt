@@ -381,11 +381,27 @@ All Phase 5 Tax + Credits + Compliance features implemented and tested:
 - P5-TAX-ENGINE, P5-TAX-MODULES, P5-TAX-CREDITS, P5-COMPLIANCE
 - 376 backend tests across 27 files all passing
 
+## Phase 6 — Advanced Accounting (IN PROGRESS)
+- [x] P6-IFRS15: IFRS 15 revenue recognition (contracts, performance obligations)
+  - RevenueContract CRUD: create, get, list (with status filter), activate, complete
+  - PerformanceObligation CRUD: create, get, list by contract
+  - POINT_IN_TIME satisfaction: full revenue at delivery
+  - OVER_TIME satisfaction: incremental recognition with progress tracking
+  - Transaction price allocation: relative SSP method across POs
+  - VariableConsideration: DISCOUNT, REBATE, PENALTY, BONUS, PRICE_CONCESSION, RIGHT_OF_RETURN
+  - Constraint mechanism: constrained VC excluded from allocation until resolved
+  - Contract asset/liability tracking (revenue recognized vs billed)
+  - Contract summary with completion percentage
+  - NodeRefType extended with REVENUE_CONTRACT, PERFORMANCE_OBLIGATION
+  - REST endpoints for all IFRS 15 operations (/api/revenue/*)
+  - 23 integration tests (revenue-recognition.test.ts)
+  - Total: 399 tests across 28 files all passing
+
 ## What Comes Next
-1. Phase 6: Advanced Accounting (IFRS 15, inventory, equity, XBRL, bank rec)
-2. P5-TAX-CREDITS: Tax credit management
-3. P5-COMPLIANCE: Compliance workflows
-4. Phase 6: Advanced Accounting (IFRS 15, inventory, equity, XBRL)
+1. P6-INVENTORY: Inventory accounting (FIFO/WA/LIFO, NRV testing)
+2. P6-EQUITY-EXPAND: Equity expansion (ShareClass, EquityAward, EPS)
+3. P6-XBRL: XBRL tagging on StatutoryMapping
+4. P6-BANK-REC: Bank reconciliation service
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
