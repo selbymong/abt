@@ -216,7 +216,7 @@
       "id": "P4-CLAUDE-INTEGRATION",
       "phase": 4,
       "name": "Claude AI assistant (natural language → graph traversal)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P5-TAX-ENGINE",

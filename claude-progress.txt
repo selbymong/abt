@@ -297,9 +297,26 @@ All Phase 3 features implemented and tested:
   - 14 integration tests (scenario-engine.test.ts)
   - Total: 280 tests across 22 files all passing
 
+- [x] P4-CLAUDE-INTEGRATION: Natural language → graph traversal
+  - findPathsToOutcomes: multi-hop path traversal with aggregated effective contribution
+  - findTopContributors: ranked activities by contribution to specific outcome
+  - parseQuery: rule-based NL query parser (PATH_TO_OUTCOME, TOP_CONTRIBUTORS, IMPACT_ANALYSIS, NODE_SEARCH)
+  - executeQuery: dispatches parsed intents to appropriate graph queries
+  - getEntityGraphSummary: node/edge counts and outcome listing for context
+  - Impact analysis: aggregates contributions across multiple paths to same outcome
+  - REST endpoints: /paths, /top-contributors, /query, /graph-summary
+  - 18 integration tests (graph-query.test.ts)
+  - Total: 298 tests across 23 files all passing
+
+## Phase 4 — COMPLETE
+All Phase 4 AI Engine features implemented and tested:
+- P4-WEIGHT-LEARNER, P4-EPISTEMIC-SCORER, P4-CASHFLOW-OPTIMIZER
+- P4-SCENARIO-ENGINE, P4-CLAUDE-INTEGRATION
+- 298 backend tests across 23 files all passing
+
 ## What Comes Next
-1. P4-CLAUDE-INTEGRATION: Natural language → graph traversal
-2. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
+1. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
+2. Phase 6: Advanced Accounting (IFRS 15, inventory, equity, XBRL)
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container

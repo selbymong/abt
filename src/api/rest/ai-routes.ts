@@ -24,6 +24,13 @@ import {
   computeEntityRiskProfiles,
   fireScenario,
 } from '../../services/ai/scenario-engine-service.js';
+import {
+  findPathsToOutcomes,
+  findTopContributors,
+  parseQuery,
+  executeQuery,
+  getEntityGraphSummary,
+} from '../../services/ai/graph-query-service.js';
 
 export const aiRouter = Router();
 
@@ -165,4 +172,33 @@ aiRouter.post('/scenarios/fire', async (req: Request, res: Response) => {
   const result = await fireScenario(scenarioSetId, scenarioLabel, actualImpact);
   if (!result) { res.status(404).json({ error: 'Not found' }); return; }
   res.json({ success: true });
+});
+
+// --- Graph Query (Claude Integration) ---
+
+aiRouter.get('/paths/:nodeId', async (req: Request, res: Response) => {
+  const maxHops = req.query.maxHops ? Number(req.query.maxHops) : 6;
+  const paths = await findPathsToOutcomes(req.params.nodeId as string, maxHops);
+  res.json({ paths });
+});
+
+aiRouter.get('/top-contributors/:outcomeId', async (req: Request, res: Response) => {
+  const maxHops = req.query.maxHops ? Number(req.query.maxHops) : 6;
+  const limit = req.query.limit ? Number(req.query.limit) : 10;
+  const contributors = await findTopContributors(req.params.outcomeId as string, maxHops, limit);
+  res.json({ contributors });
+});
+
+aiRouter.post('/query', async (req: Request, res: Response) => {
+  const { query: queryText, entityId, nodeId, outcomeId } = req.body;
+  if (!queryText) { res.status(400).json({ error: 'Required: query' }); return; }
+  const intent = parseQuery(queryText);
+  if (entityId) intent.entityId = entityId;
+  const result = await executeQuery(intent, { entityId, nodeId, outcomeId });
+  res.json({ intent: intent.type, result });
+});
+
+aiRouter.get('/graph-summary/:entityId', async (req: Request, res: Response) => {
+  const summary = await getEntityGraphSummary(req.params.entityId as string);
+  res.json(summary);
 });
