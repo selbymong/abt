@@ -15,12 +15,21 @@ import {
   getHighSensitivityAccess,
   generateRelatedPartyDisclosures,
 } from '../../services/compliance/compliance-service.js';
+import {
+  validateBody,
+  createApprovalWorkflowSchema,
+  approveWorkflowSchema,
+  rejectWorkflowSchema,
+  createSourceDocumentSchema,
+  verifyDocumentSchema,
+  logAccessSchema,
+} from './validation.js';
 
 export const complianceRouter = Router();
 
 // --- Approval Workflow ---
 
-complianceRouter.post('/approvals', async (req: Request, res: Response) => {
+complianceRouter.post('/approvals', validateBody(createApprovalWorkflowSchema), async (req: Request, res: Response) => {
   try {
     const id = await createApprovalWorkflow(req.body);
     res.status(201).json({ id });
@@ -49,7 +58,7 @@ complianceRouter.get('/approvals/pending/:entityId', async (req: Request, res: R
   }
 });
 
-complianceRouter.post('/approvals/:id/approve', async (req: Request, res: Response) => {
+complianceRouter.post('/approvals/:id/approve', validateBody(approveWorkflowSchema), async (req: Request, res: Response) => {
   try {
     const { approverId } = req.body;
     if (!approverId) return res.status(400).json({ error: 'approverId required' });
@@ -60,7 +69,7 @@ complianceRouter.post('/approvals/:id/approve', async (req: Request, res: Respon
   }
 });
 
-complianceRouter.post('/approvals/:id/reject', async (req: Request, res: Response) => {
+complianceRouter.post('/approvals/:id/reject', validateBody(rejectWorkflowSchema), async (req: Request, res: Response) => {
   try {
     const { rejectedBy, reason } = req.body;
     if (!rejectedBy || !reason) return res.status(400).json({ error: 'rejectedBy and reason required' });
@@ -82,7 +91,7 @@ complianceRouter.get('/approvals/check/:nodeId', async (req: Request, res: Respo
 
 // --- Source Documents ---
 
-complianceRouter.post('/documents', async (req: Request, res: Response) => {
+complianceRouter.post('/documents', validateBody(createSourceDocumentSchema), async (req: Request, res: Response) => {
   try {
     const id = await createSourceDocument(req.body);
     res.status(201).json({ id });
@@ -111,7 +120,7 @@ complianceRouter.get('/documents/by-entity/:entityId', async (req: Request, res:
   }
 });
 
-complianceRouter.post('/documents/:id/verify', async (req: Request, res: Response) => {
+complianceRouter.post('/documents/:id/verify', validateBody(verifyDocumentSchema), async (req: Request, res: Response) => {
   try {
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: 'content required' });
@@ -124,7 +133,7 @@ complianceRouter.post('/documents/:id/verify', async (req: Request, res: Respons
 
 // --- Access Audit ---
 
-complianceRouter.post('/audit/log', async (req: Request, res: Response) => {
+complianceRouter.post('/audit/log', validateBody(logAccessSchema), async (req: Request, res: Response) => {
   try {
     const id = await logAccess(req.body);
     res.status(201).json({ id });

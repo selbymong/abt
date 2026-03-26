@@ -13,12 +13,20 @@ import {
   finalizeReconciliation,
   generateReconciliationReport,
 } from '../../services/reconciliation/bank-reconciliation-service.js';
+import {
+  validateBody,
+  createBankStatementSchema,
+  createBankStatementLineSchema,
+  importStatementLinesSchema,
+  matchLineToEventSchema,
+  autoMatchSchema,
+} from './validation.js';
 
 export const bankRecRouter = Router();
 
 // --- Bank Statements ---
 
-bankRecRouter.post('/statements', async (req: Request, res: Response) => {
+bankRecRouter.post('/statements', validateBody(createBankStatementSchema), async (req: Request, res: Response) => {
   try {
     const id = await createBankStatement(req.body);
     res.status(201).json({ id });
@@ -49,7 +57,7 @@ bankRecRouter.get('/statements/by-entity/:entityId', async (req: Request, res: R
 
 // --- Statement Lines ---
 
-bankRecRouter.post('/lines', async (req: Request, res: Response) => {
+bankRecRouter.post('/lines', validateBody(createBankStatementLineSchema), async (req: Request, res: Response) => {
   try {
     const id = await addStatementLine(req.body);
     res.status(201).json({ id });
@@ -78,7 +86,7 @@ bankRecRouter.get('/lines/by-statement/:statementId', async (req: Request, res: 
   }
 });
 
-bankRecRouter.post('/lines/import', async (req: Request, res: Response) => {
+bankRecRouter.post('/lines/import', validateBody(importStatementLinesSchema), async (req: Request, res: Response) => {
   try {
     const { entityId, statementId, bankAccountId, lines } = req.body;
     const result = await importStatementLines(entityId, statementId, bankAccountId, lines);
@@ -90,7 +98,7 @@ bankRecRouter.post('/lines/import', async (req: Request, res: Response) => {
 
 // --- Matching ---
 
-bankRecRouter.post('/match', async (req: Request, res: Response) => {
+bankRecRouter.post('/match', validateBody(matchLineToEventSchema), async (req: Request, res: Response) => {
   try {
     const { lineId, cashFlowEventId } = req.body;
     if (!lineId || !cashFlowEventId) {
@@ -112,7 +120,7 @@ bankRecRouter.post('/clear/:lineId', async (req: Request, res: Response) => {
   }
 });
 
-bankRecRouter.post('/auto-match/:statementId', async (req: Request, res: Response) => {
+bankRecRouter.post('/auto-match/:statementId', validateBody(autoMatchSchema), async (req: Request, res: Response) => {
   try {
     const dateTolerance = req.body.dateTolerance ?? 3;
     const result = await autoMatch(req.params.statementId as string, dateTolerance);

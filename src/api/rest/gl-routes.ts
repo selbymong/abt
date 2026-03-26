@@ -2,7 +2,15 @@ import { Router, Request, Response } from 'express';
 import { postJournalEntry, PostJournalEntryInput } from '../../services/gl/journal-posting-service.js';
 import { softClosePeriod, hardClosePeriod, reopenPeriod } from '../../services/gl/period-service.js';
 import { getProfitAndLoss, getBalanceSheet, getFundBalances } from '../../services/gl/reporting-service.js';
-import { validateBody, postJournalEntrySchema, createTemporalClaimSchema, createProvisionSchema } from './validation.js';
+import {
+  validateBody, postJournalEntrySchema, createTemporalClaimSchema, createProvisionSchema,
+  periodActionSchema, createStatutoryMappingSchema, recognizeClaimSchema,
+  recognizeAllClaimsSchema, autoReverseClaimsSchema, updateECLSchema,
+  createLeaseSchema, processLeasePaymentSchema, provisionPeriodActionSchema,
+  settleProvisionSchema, createRelatedPartySchema, createRelatedPartyTransactionSchema,
+  validateArmsLengthSchema, computeRetainedEarningsSchema, recordOCISchema,
+  recycleOCISchema, generateEquitySectionSchema,
+} from './validation.js';
 import {
   createStatutoryMapping,
   getStatutoryMapping,
@@ -171,21 +179,21 @@ glRouter.get('/trial-balance', async (req: Request, res: Response) => {
 
 // --- Period Lifecycle ---
 
-glRouter.post('/periods/:periodId/soft-close', async (req: Request, res: Response) => {
+glRouter.post('/periods/:periodId/soft-close', validateBody(periodActionSchema), async (req: Request, res: Response) => {
   try {
     const result = await softClosePeriod(req.params.periodId as string, req.body.closedBy);
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/periods/:periodId/hard-close', async (req: Request, res: Response) => {
+glRouter.post('/periods/:periodId/hard-close', validateBody(periodActionSchema), async (req: Request, res: Response) => {
   try {
     const result = await hardClosePeriod(req.params.periodId as string, req.body.closedBy);
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/periods/:periodId/reopen', async (req: Request, res: Response) => {
+glRouter.post('/periods/:periodId/reopen', validateBody(periodActionSchema), async (req: Request, res: Response) => {
   try {
     const result = await reopenPeriod(req.params.periodId as string, req.body.reopenedBy);
     res.json(result);
@@ -243,7 +251,7 @@ glRouter.get('/fund-balances', async (req: Request, res: Response) => {
 
 // --- Statutory Mappings ---
 
-glRouter.post('/statutory-mappings', async (req: Request, res: Response) => {
+glRouter.post('/statutory-mappings', validateBody(createStatutoryMappingSchema), async (req: Request, res: Response) => {
   try {
     const id = await createStatutoryMapping(req.body);
     res.status(201).json({ id });
@@ -317,36 +325,31 @@ glRouter.patch('/temporal-claims/:id', async (req: Request, res: Response) => {
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/temporal-claims/:id/recognize', async (req: Request, res: Response) => {
+glRouter.post('/temporal-claims/:id/recognize', validateBody(recognizeClaimSchema), async (req: Request, res: Response) => {
   try {
     const { periodId } = req.body;
-    if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
     const result = await recognizeClaim(req.params.id as string, periodId);
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/temporal-claims/recognize-all', async (req: Request, res: Response) => {
+glRouter.post('/temporal-claims/recognize-all', validateBody(recognizeAllClaimsSchema), async (req: Request, res: Response) => {
   try {
     const { entityId, periodId } = req.body;
-    if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
     const result = await recognizeAllClaims(entityId, periodId);
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/temporal-claims/auto-reverse', async (req: Request, res: Response) => {
+glRouter.post('/temporal-claims/auto-reverse', validateBody(autoReverseClaimsSchema), async (req: Request, res: Response) => {
   try {
     const { entityId, currentPeriodId, previousPeriodId } = req.body;
-    if (!entityId || !currentPeriodId || !previousPeriodId) {
-      res.status(400).json({ error: 'Required: entityId, currentPeriodId, previousPeriodId' }); return;
-    }
     const result = await autoReverseClaims(entityId, currentPeriodId, previousPeriodId);
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/temporal-claims/:id/ecl', async (req: Request, res: Response) => {
+glRouter.post('/temporal-claims/:id/ecl', validateBody(updateECLSchema), async (req: Request, res: Response) => {
   try {
     const { collectabilityScore, eclAllowance } = req.body;
     const result = await updateECL(req.params.id as string, collectabilityScore, eclAllowance);
@@ -379,7 +382,7 @@ glRouter.get('/statutory-mappings/resolve', async (req: Request, res: Response) 
 
 // --- Lease Accounting ---
 
-glRouter.post('/leases', async (req: Request, res: Response) => {
+glRouter.post('/leases', validateBody(createLeaseSchema), async (req: Request, res: Response) => {
   try {
     const result = await createLease(req.body);
     res.status(201).json(result);
@@ -416,12 +419,9 @@ glRouter.get('/lease-liabilities/by-entity/:entityId', async (req: Request, res:
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/leases/process-payment', async (req: Request, res: Response) => {
+glRouter.post('/leases/process-payment', validateBody(processLeasePaymentSchema), async (req: Request, res: Response) => {
   try {
     const { leaseLiabilityId, rouAssetId, periodId } = req.body;
-    if (!leaseLiabilityId || !rouAssetId || !periodId) {
-      res.status(400).json({ error: 'Required: leaseLiabilityId, rouAssetId, periodId' }); return;
-    }
     const result = await processLeasePayment(leaseLiabilityId, rouAssetId, periodId);
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -468,30 +468,25 @@ glRouter.delete('/provisions/:id', async (req: Request, res: Response) => {
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/provisions/:id/recognize', async (req: Request, res: Response) => {
+glRouter.post('/provisions/:id/recognize', validateBody(provisionPeriodActionSchema), async (req: Request, res: Response) => {
   try {
     const { periodId } = req.body;
-    if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
     const result = await recognizeProvision(req.params.id as string, periodId);
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/provisions/:id/unwind', async (req: Request, res: Response) => {
+glRouter.post('/provisions/:id/unwind', validateBody(provisionPeriodActionSchema), async (req: Request, res: Response) => {
   try {
     const { periodId } = req.body;
-    if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
     const result = await unwindProvisionDiscount(req.params.id as string, periodId);
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/provisions/:id/settle', async (req: Request, res: Response) => {
+glRouter.post('/provisions/:id/settle', validateBody(settleProvisionSchema), async (req: Request, res: Response) => {
   try {
     const { periodId, actualAmount } = req.body;
-    if (!periodId || actualAmount === undefined) {
-      res.status(400).json({ error: 'Required: periodId, actualAmount' }); return;
-    }
     const result = await settleProvision(req.params.id as string, periodId, actualAmount);
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -508,7 +503,7 @@ glRouter.get('/provisions/review/:entityId', async (req: Request, res: Response)
 
 // --- Related Party (IAS 24) ---
 
-glRouter.post('/related-parties', async (req: Request, res: Response) => {
+glRouter.post('/related-parties', validateBody(createRelatedPartySchema), async (req: Request, res: Response) => {
   try {
     await createRelatedParty(req.body);
     res.status(201).json({ success: true });
@@ -552,7 +547,7 @@ glRouter.delete('/related-parties', async (req: Request, res: Response) => {
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/related-party-transactions', async (req: Request, res: Response) => {
+glRouter.post('/related-party-transactions', validateBody(createRelatedPartyTransactionSchema), async (req: Request, res: Response) => {
   try {
     await createRelatedPartyTransaction(req.body);
     res.status(201).json({ success: true });
@@ -567,12 +562,9 @@ glRouter.get('/related-party-transactions/by-entity/:entityId', async (req: Requ
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/related-party-transactions/validate-arms-length', async (req: Request, res: Response) => {
+glRouter.post('/related-party-transactions/validate-arms-length', validateBody(validateArmsLengthSchema), async (req: Request, res: Response) => {
   try {
     const { entityId, periodId, method, tolerancePct } = req.body;
-    if (!entityId || !periodId || !method) {
-      res.status(400).json({ error: 'Required: entityId, periodId, method' }); return;
-    }
     const results = await validateArmsLength(entityId, periodId, method, tolerancePct);
     res.json({ results });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -589,7 +581,7 @@ glRouter.get('/related-party-transactions/disclosure/:entityId', async (req: Req
 
 // --- Equity Close ---
 
-glRouter.post('/retained-earnings', async (req: Request, res: Response) => {
+glRouter.post('/retained-earnings', validateBody(computeRetainedEarningsSchema), async (req: Request, res: Response) => {
   try {
     const id = await computeRetainedEarnings(req.body);
     res.status(201).json({ id });
@@ -606,17 +598,16 @@ glRouter.get('/retained-earnings', async (req: Request, res: Response) => {
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/oci', async (req: Request, res: Response) => {
+glRouter.post('/oci', validateBody(recordOCISchema), async (req: Request, res: Response) => {
   try {
     const id = await recordOCI(req.body);
     res.status(201).json({ id });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/oci/:id/recycle', async (req: Request, res: Response) => {
+glRouter.post('/oci/:id/recycle', validateBody(recycleOCISchema), async (req: Request, res: Response) => {
   try {
     const { amount } = req.body;
-    if (amount === undefined) { res.status(400).json({ error: 'Required: amount' }); return; }
     const result = await recycleOCI(req.params.id as string, amount);
     if (!result) { res.status(404).json({ error: 'Not found' }); return; }
     res.json({ success: true });
@@ -639,10 +630,9 @@ glRouter.get('/oci/recyclable/:component', async (req: Request, res: Response) =
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-glRouter.post('/equity-section', async (req: Request, res: Response) => {
+glRouter.post('/equity-section', validateBody(generateEquitySectionSchema), async (req: Request, res: Response) => {
   try {
     const { entityId, periodId, nciEquity } = req.body;
-    if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
     const id = await generateEquitySection(entityId, periodId, nciEquity);
     res.status(201).json({ id });
   } catch (err: any) { res.status(500).json({ error: err.message }); }

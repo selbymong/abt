@@ -1,5 +1,8 @@
 import { Router, Request, Response } from 'express';
 import {
+  validateBody, createCashFlowEventSchema, createCreditFacilitySchema,
+} from './validation.js';
+import {
   createCashFlowEvent,
   getCashFlowEvent,
   listCashFlowEvents,
@@ -17,7 +20,7 @@ export const cashflowRouter = Router();
 
 // --- CashFlowEvent ---
 
-cashflowRouter.post('/events', async (req: Request, res: Response) => {
+cashflowRouter.post('/events', validateBody(createCashFlowEventSchema), async (req: Request, res: Response) => {
   try {
     const id = await createCashFlowEvent(req.body);
     res.status(201).json({ id });
@@ -50,7 +53,7 @@ cashflowRouter.post('/events/:id/settle', async (req: Request, res: Response) =>
 
 // --- CreditFacility ---
 
-cashflowRouter.post('/facilities', async (req: Request, res: Response) => {
+cashflowRouter.post('/facilities', validateBody(createCreditFacilitySchema), async (req: Request, res: Response) => {
   try {
     const id = await createCreditFacility(req.body);
     res.status(201).json({ id });

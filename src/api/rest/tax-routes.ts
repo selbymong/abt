@@ -1,6 +1,31 @@
 import { Router, Request, Response } from 'express';
 import type { ClaimStatus } from '../../schema/neo4j/types.js';
 import {
+  validateBody,
+  computeDeferredTaxSchema,
+  computeCurrentTaxSchema,
+  createTaxProvisionSchema,
+  postTaxProvisionSchema,
+  computeCRACorporateSchema,
+  computeGSTHSTSchema,
+  computeIRSCorporateSchema,
+  computeCRACharitySchema,
+  computeIRSExemptSchema,
+  computeStateTaxSchema,
+  computeWithholdingTaxSchema,
+  computeAllModulesSchema,
+  identifyEligibleExpendituresSchema,
+  createTaxCreditClaimSchema,
+  updateClaimStatusSchema,
+  updateCreditBalanceSchema,
+  createReducesCostEdgeSchema,
+  createQualifiesForEdgeSchema,
+  acceptQualificationSchema,
+  rejectQualificationSchema,
+  batchReviewSchema,
+  reidentifyWithRefinedModelSchema,
+} from './validation.js';
+import {
   getTemporaryDifferences,
   computeDeferredTax,
   getDeferredTaxPositions,
@@ -70,7 +95,7 @@ taxRouter.get('/temporary-differences/:entityId', async (req: Request, res: Resp
 
 // --- Deferred Tax ---
 
-taxRouter.post('/deferred-tax', async (req: Request, res: Response) => {
+taxRouter.post('/deferred-tax', validateBody(computeDeferredTaxSchema), async (req: Request, res: Response) => {
   try {
     const result = await computeDeferredTax(req.body);
     res.status(201).json(result);
@@ -102,7 +127,7 @@ taxRouter.get('/deferred-tax-summary/:entityId', async (req: Request, res: Respo
 
 // --- Current Tax ---
 
-taxRouter.post('/current-tax', async (req: Request, res: Response) => {
+taxRouter.post('/current-tax', validateBody(computeCurrentTaxSchema), async (req: Request, res: Response) => {
   try {
     const result = await computeCurrentTax(req.body);
     res.json(result);
@@ -124,7 +149,7 @@ taxRouter.get('/tax-rate/:entityId', async (req: Request, res: Response) => {
 
 // --- Tax Provision ---
 
-taxRouter.post('/provisions', async (req: Request, res: Response) => {
+taxRouter.post('/provisions', validateBody(createTaxProvisionSchema), async (req: Request, res: Response) => {
   try {
     const result = await createTaxProvision(req.body);
     res.status(201).json(result);
@@ -161,10 +186,9 @@ taxRouter.post('/provisions/:id/approve', async (req: Request, res: Response) =>
   }
 });
 
-taxRouter.post('/provisions/:id/post', async (req: Request, res: Response) => {
+taxRouter.post('/provisions/:id/post', validateBody(postTaxProvisionSchema), async (req: Request, res: Response) => {
   try {
     const { journalEntryId } = req.body;
-    if (!journalEntryId) return res.status(400).json({ error: 'journalEntryId required' });
     const result = await postTaxProvision(req.params.id as string, journalEntryId);
     res.json(result);
   } catch (err: any) {
@@ -174,7 +198,7 @@ taxRouter.post('/provisions/:id/post', async (req: Request, res: Response) => {
 
 // --- Tax Modules ---
 
-taxRouter.post('/modules/cra-corporate', async (req: Request, res: Response) => {
+taxRouter.post('/modules/cra-corporate', validateBody(computeCRACorporateSchema), async (req: Request, res: Response) => {
   try {
     const result = await computeCRACorporate(req.body);
     res.status(201).json(result);
@@ -183,7 +207,7 @@ taxRouter.post('/modules/cra-corporate', async (req: Request, res: Response) => 
   }
 });
 
-taxRouter.post('/modules/gst-hst', async (req: Request, res: Response) => {
+taxRouter.post('/modules/gst-hst', validateBody(computeGSTHSTSchema), async (req: Request, res: Response) => {
   try {
     const result = await computeGSTHST(req.body);
     res.status(201).json(result);
@@ -192,7 +216,7 @@ taxRouter.post('/modules/gst-hst', async (req: Request, res: Response) => {
   }
 });
 
-taxRouter.post('/modules/irs-corporate', async (req: Request, res: Response) => {
+taxRouter.post('/modules/irs-corporate', validateBody(computeIRSCorporateSchema), async (req: Request, res: Response) => {
   try {
     const result = await computeIRSCorporate(req.body);
     res.status(201).json(result);
@@ -201,7 +225,7 @@ taxRouter.post('/modules/irs-corporate', async (req: Request, res: Response) => 
   }
 });
 
-taxRouter.post('/modules/cra-charity', async (req: Request, res: Response) => {
+taxRouter.post('/modules/cra-charity', validateBody(computeCRACharitySchema), async (req: Request, res: Response) => {
   try {
     const result = await computeCRACharity(req.body);
     res.status(201).json(result);
@@ -210,7 +234,7 @@ taxRouter.post('/modules/cra-charity', async (req: Request, res: Response) => {
   }
 });
 
-taxRouter.post('/modules/irs-exempt', async (req: Request, res: Response) => {
+taxRouter.post('/modules/irs-exempt', validateBody(computeIRSExemptSchema), async (req: Request, res: Response) => {
   try {
     const result = await computeIRSExempt(req.body);
     res.status(201).json(result);
@@ -219,7 +243,7 @@ taxRouter.post('/modules/irs-exempt', async (req: Request, res: Response) => {
   }
 });
 
-taxRouter.post('/modules/state-tax', async (req: Request, res: Response) => {
+taxRouter.post('/modules/state-tax', validateBody(computeStateTaxSchema), async (req: Request, res: Response) => {
   try {
     const result = await computeStateTax(req.body);
     res.status(201).json(result);
@@ -228,7 +252,7 @@ taxRouter.post('/modules/state-tax', async (req: Request, res: Response) => {
   }
 });
 
-taxRouter.post('/modules/withholding', async (req: Request, res: Response) => {
+taxRouter.post('/modules/withholding', validateBody(computeWithholdingTaxSchema), async (req: Request, res: Response) => {
   try {
     const result = await computeWithholdingTax(req.body);
     res.status(201).json(result);
@@ -237,7 +261,7 @@ taxRouter.post('/modules/withholding', async (req: Request, res: Response) => {
   }
 });
 
-taxRouter.post('/modules/compute-all', async (req: Request, res: Response) => {
+taxRouter.post('/modules/compute-all', validateBody(computeAllModulesSchema), async (req: Request, res: Response) => {
   try {
     const { entityId, periodId } = req.body;
     const results = await computeAllModules(entityId, periodId);
@@ -289,7 +313,7 @@ taxRouter.get('/credits/programs/:code', async (req: Request, res: Response) => 
   }
 });
 
-taxRouter.post('/credits/identify', async (req: Request, res: Response) => {
+taxRouter.post('/credits/identify', validateBody(identifyEligibleExpendituresSchema), async (req: Request, res: Response) => {
   try {
     const result = await identifyEligibleExpenditures(req.body);
     res.json(result);
@@ -298,7 +322,7 @@ taxRouter.post('/credits/identify', async (req: Request, res: Response) => {
   }
 });
 
-taxRouter.post('/credits/claims', async (req: Request, res: Response) => {
+taxRouter.post('/credits/claims', validateBody(createTaxCreditClaimSchema), async (req: Request, res: Response) => {
   try {
     const id = await createTaxCreditClaim(req.body);
     res.status(201).json({ id });
@@ -330,7 +354,7 @@ taxRouter.get('/credits/claims/by-entity/:entityId', async (req: Request, res: R
   }
 });
 
-taxRouter.post('/credits/claims/:id/status', async (req: Request, res: Response) => {
+taxRouter.post('/credits/claims/:id/status', validateBody(updateClaimStatusSchema), async (req: Request, res: Response) => {
   try {
     const { status, assessedAmount } = req.body;
     const result = await updateClaimStatus(req.params.id as string, status, assessedAmount);
@@ -340,7 +364,7 @@ taxRouter.post('/credits/claims/:id/status', async (req: Request, res: Response)
   }
 });
 
-taxRouter.post('/credits/balances', async (req: Request, res: Response) => {
+taxRouter.post('/credits/balances', validateBody(updateCreditBalanceSchema), async (req: Request, res: Response) => {
   try {
     const id = await updateCreditBalance(req.body);
     res.status(201).json({ id });
@@ -371,7 +395,7 @@ taxRouter.get('/credits/balances/:entityId', async (req: Request, res: Response)
   }
 });
 
-taxRouter.post('/credits/reduces-cost', async (req: Request, res: Response) => {
+taxRouter.post('/credits/reduces-cost', validateBody(createReducesCostEdgeSchema), async (req: Request, res: Response) => {
   try {
     const { claimId, targetNodeId, costReductionAmount, certainty } = req.body;
     await createReducesCostEdge(claimId, targetNodeId, costReductionAmount, certainty);
@@ -416,7 +440,7 @@ taxRouter.get('/credits/filing/form6765/:entityId/:fiscalYear', async (req: Requ
 
 // --- Tax Credit AI Feedback Loop ---
 
-taxRouter.post('/credits/qualifies-for', async (req: Request, res: Response) => {
+taxRouter.post('/credits/qualifies-for', validateBody(createQualifiesForEdgeSchema), async (req: Request, res: Response) => {
   try {
     await createQualifiesForEdge(req.body);
     res.status(201).json({ success: true });
@@ -434,7 +458,7 @@ taxRouter.get('/credits/qualifies-for/:claimId', async (req: Request, res: Respo
   }
 });
 
-taxRouter.post('/credits/qualifies-for/accept', async (req: Request, res: Response) => {
+taxRouter.post('/credits/qualifies-for/accept', validateBody(acceptQualificationSchema), async (req: Request, res: Response) => {
   try {
     const { sourceNodeId, claimId } = req.body;
     await acceptQualification(sourceNodeId, claimId);
@@ -444,10 +468,9 @@ taxRouter.post('/credits/qualifies-for/accept', async (req: Request, res: Respon
   }
 });
 
-taxRouter.post('/credits/qualifies-for/reject', async (req: Request, res: Response) => {
+taxRouter.post('/credits/qualifies-for/reject', validateBody(rejectQualificationSchema), async (req: Request, res: Response) => {
   try {
     const { sourceNodeId, claimId, rejectionReason } = req.body;
-    if (!rejectionReason) return res.status(400).json({ error: 'rejectionReason required' });
     await rejectQualification(sourceNodeId, claimId, rejectionReason);
     res.json({ success: true });
   } catch (err: any) {
@@ -455,7 +478,7 @@ taxRouter.post('/credits/qualifies-for/reject', async (req: Request, res: Respon
   }
 });
 
-taxRouter.post('/credits/qualifies-for/batch-review', async (req: Request, res: Response) => {
+taxRouter.post('/credits/qualifies-for/batch-review', validateBody(batchReviewSchema), async (req: Request, res: Response) => {
   try {
     const result = await batchReview(req.body.reviews ?? []);
     res.json(result);
@@ -501,12 +524,9 @@ taxRouter.delete('/credits/refined-model/:programCode', async (req: Request, res
   }
 });
 
-taxRouter.post('/credits/reidentify', async (req: Request, res: Response) => {
+taxRouter.post('/credits/reidentify', validateBody(reidentifyWithRefinedModelSchema), async (req: Request, res: Response) => {
   try {
     const { entityId, programCode, periodId } = req.body;
-    if (!entityId || !programCode || !periodId) {
-      return res.status(400).json({ error: 'Required: entityId, programCode, periodId' });
-    }
     const results = await reidentifyWithRefinedModel(entityId, programCode, periodId);
     res.json(results);
   } catch (err: any) {

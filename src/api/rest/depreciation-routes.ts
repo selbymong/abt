@@ -1,5 +1,10 @@
 import { Router, Request, Response } from 'express';
 import {
+  validateBody, createFixedAssetSchema, disposeFixedAssetSchema,
+  createBelongsToSchema, createUCCPoolSchema, calculateCCASchema,
+  depreciateAssetSchema, depreciateAllAssetsSchema,
+} from './validation.js';
+import {
   createFixedAsset,
   getFixedAsset,
   listFixedAssets,
@@ -24,7 +29,7 @@ export const depreciationRouter = Router();
 
 // --- FixedAsset CRUD ---
 
-depreciationRouter.post('/fixed-assets', async (req: Request, res: Response) => {
+depreciationRouter.post('/fixed-assets', validateBody(createFixedAssetSchema), async (req: Request, res: Response) => {
   try {
     const id = await createFixedAsset(req.body);
     res.status(201).json({ id });
@@ -54,7 +59,7 @@ depreciationRouter.patch('/fixed-assets/:id', async (req: Request, res: Response
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-depreciationRouter.post('/fixed-assets/:id/dispose', async (req: Request, res: Response) => {
+depreciationRouter.post('/fixed-assets/:id/dispose', validateBody(disposeFixedAssetSchema), async (req: Request, res: Response) => {
   try {
     const { disposalDate, proceedsAmount } = req.body;
     const result = await disposeFixedAsset(req.params.id as string, disposalDate, proceedsAmount);
@@ -83,7 +88,7 @@ depreciationRouter.get('/asset-classes/by-code/:code', async (req: Request, res:
 
 // --- BELONGS_TO edges ---
 
-depreciationRouter.post('/fixed-assets/:id/belongs-to', async (req: Request, res: Response) => {
+depreciationRouter.post('/fixed-assets/:id/belongs-to', validateBody(createBelongsToSchema), async (req: Request, res: Response) => {
   try {
     await createBelongsToEdge({
       fixedAssetId: req.params.id as string,
@@ -102,7 +107,7 @@ depreciationRouter.get('/fixed-assets/:id/asset-classes', async (req: Request, r
 
 // --- UCCPool ---
 
-depreciationRouter.post('/ucc-pools', async (req: Request, res: Response) => {
+depreciationRouter.post('/ucc-pools', validateBody(createUCCPoolSchema), async (req: Request, res: Response) => {
   try {
     const id = await createUCCPool(req.body);
     res.status(201).json({ id });
@@ -128,7 +133,7 @@ depreciationRouter.get('/ucc-pools/by-class', async (req: Request, res: Response
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-depreciationRouter.post('/ucc-pools/:id/calculate-cca', async (req: Request, res: Response) => {
+depreciationRouter.post('/ucc-pools/:id/calculate-cca', validateBody(calculateCCASchema), async (req: Request, res: Response) => {
   try {
     const { claimAmount } = req.body;
     const result = await calculateCCA(req.params.id as string, claimAmount);
@@ -138,21 +143,17 @@ depreciationRouter.post('/ucc-pools/:id/calculate-cca', async (req: Request, res
 
 // --- Depreciation Engine ---
 
-depreciationRouter.post('/depreciate/:fixedAssetId', async (req: Request, res: Response) => {
+depreciationRouter.post('/depreciate/:fixedAssetId', validateBody(depreciateAssetSchema), async (req: Request, res: Response) => {
   try {
     const { periodId } = req.body;
-    if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
     const result = await depreciateAsset(req.params.fixedAssetId as string, periodId);
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-depreciationRouter.post('/depreciate-all', async (req: Request, res: Response) => {
+depreciationRouter.post('/depreciate-all', validateBody(depreciateAllAssetsSchema), async (req: Request, res: Response) => {
   try {
     const { entityId, periodId } = req.body;
-    if (!entityId || !periodId) {
-      res.status(400).json({ error: 'Required: entityId, periodId' }); return;
-    }
     const result = await depreciateAllAssets(entityId, periodId);
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }

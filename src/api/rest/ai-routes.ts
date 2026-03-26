@@ -42,12 +42,26 @@ import {
   createInferredEdges,
   runEdgeDiscoveryPipeline,
 } from '../../services/ai/vector-embedder-service.js';
+import {
+  validateBody,
+  recordRealizationSchema,
+  valueStateTransitionSchema,
+  createScenarioSetSchema,
+  runMonteCarloSchema,
+  fireScenarioSchema,
+  epistemicROISchema,
+  aiQuerySchema,
+  generateEmbeddingSchema,
+  discoverEdgeCandidatesSchema,
+  createInferredEdgesSchema,
+  edgeDiscoveryPipelineSchema,
+} from './validation.js';
 
 export const aiRouter = Router();
 
 // --- Weight Learner ---
 
-aiRouter.post('/realizations', async (req: Request, res: Response) => {
+aiRouter.post('/realizations', validateBody(recordRealizationSchema), async (req: Request, res: Response) => {
   try {
     const { outcomeId, realizedDelta, periodId } = req.body;
     if (!outcomeId || realizedDelta === undefined || !periodId) {
@@ -87,7 +101,7 @@ aiRouter.get('/effective-contributions/:sourceId', async (req: Request, res: Res
 
 // --- Value State Transitions ---
 
-aiRouter.post('/value-state-transition', async (req: Request, res: Response) => {
+aiRouter.post('/value-state-transition', validateBody(valueStateTransitionSchema), async (req: Request, res: Response) => {
   try {
     const { nodeId, newState, epistemicActivityId } = req.body;
     if (!nodeId || !newState) {
@@ -145,7 +159,7 @@ aiRouter.post('/epistemic-priorities/:entityId', async (req: Request, res: Respo
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-aiRouter.post('/epistemic-roi', async (req: Request, res: Response) => {
+aiRouter.post('/epistemic-roi', validateBody(epistemicROISchema), async (req: Request, res: Response) => {
   try {
     const { nodeId, activityCost } = req.body;
     if (!nodeId || activityCost === undefined) {
@@ -173,7 +187,7 @@ aiRouter.post('/stale-estimates/:entityId/downgrade', async (req: Request, res: 
 
 // --- Scenario Engine ---
 
-aiRouter.post('/scenario-sets', async (req: Request, res: Response) => {
+aiRouter.post('/scenario-sets', validateBody(createScenarioSetSchema), async (req: Request, res: Response) => {
   try {
     const id = await createScenarioSet(req.body);
     res.status(201).json({ id });
@@ -195,7 +209,7 @@ aiRouter.get('/scenario-sets/by-node/:nodeId', async (req: Request, res: Respons
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-aiRouter.post('/monte-carlo/:scenarioSetId', async (req: Request, res: Response) => {
+aiRouter.post('/monte-carlo/:scenarioSetId', validateBody(runMonteCarloSchema), async (req: Request, res: Response) => {
   try {
     const simulations = req.body.simulations ?? 10000;
     const result = await runMonteCarlo(req.params.scenarioSetId as string, simulations);
@@ -211,7 +225,7 @@ aiRouter.get('/risk-profiles/:entityId', async (req: Request, res: Response) => 
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-aiRouter.post('/scenarios/fire', async (req: Request, res: Response) => {
+aiRouter.post('/scenarios/fire', validateBody(fireScenarioSchema), async (req: Request, res: Response) => {
   try {
     const { scenarioSetId, scenarioLabel, actualImpact } = req.body;
     if (!scenarioSetId || !scenarioLabel || actualImpact === undefined) {
@@ -242,7 +256,7 @@ aiRouter.get('/top-contributors/:outcomeId', async (req: Request, res: Response)
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-aiRouter.post('/query', async (req: Request, res: Response) => {
+aiRouter.post('/query', validateBody(aiQuerySchema), async (req: Request, res: Response) => {
   try {
     const { query: queryText, entityId, nodeId, outcomeId } = req.body;
     if (!queryText) { res.status(400).json({ error: 'Required: query' }); return; }
@@ -262,7 +276,7 @@ aiRouter.get('/graph-summary/:entityId', async (req: Request, res: Response) => 
 
 // --- Vector Embedder ---
 
-aiRouter.post('/embeddings', async (req: Request, res: Response) => {
+aiRouter.post('/embeddings', validateBody(generateEmbeddingSchema), async (req: Request, res: Response) => {
   try {
     const { nodeId, entityId, nodeLabel, properties } = req.body;
     if (!nodeId || !entityId || !nodeLabel) {
@@ -315,7 +329,7 @@ aiRouter.get('/embeddings/similar/:nodeId', async (req: Request, res: Response) 
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-aiRouter.post('/embeddings/discover/:entityId', async (req: Request, res: Response) => {
+aiRouter.post('/embeddings/discover/:entityId', validateBody(discoverEdgeCandidatesSchema), async (req: Request, res: Response) => {
   try {
     const threshold = req.body.threshold ?? 0.82;
     const limit = req.body.limit ?? 50;
@@ -326,7 +340,7 @@ aiRouter.post('/embeddings/discover/:entityId', async (req: Request, res: Respon
   }
 });
 
-aiRouter.post('/embeddings/create-edges', async (req: Request, res: Response) => {
+aiRouter.post('/embeddings/create-edges', validateBody(createInferredEdgesSchema), async (req: Request, res: Response) => {
   try {
     const { candidates, entityId } = req.body;
     if (!candidates || !entityId) {
@@ -339,7 +353,7 @@ aiRouter.post('/embeddings/create-edges', async (req: Request, res: Response) =>
   }
 });
 
-aiRouter.post('/embeddings/pipeline/:entityId', async (req: Request, res: Response) => {
+aiRouter.post('/embeddings/pipeline/:entityId', validateBody(edgeDiscoveryPipelineSchema), async (req: Request, res: Response) => {
   try {
     const result = await runEdgeDiscoveryPipeline(req.params.entityId as string, req.body);
     res.json(result);

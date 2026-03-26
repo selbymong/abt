@@ -1,5 +1,10 @@
 import { Router, Request, Response } from 'express';
 import {
+  validateBody, createConsolidationGroupSchema, createOwnershipInterestSchema,
+  createIntercompanyMatchSchema, createGoodwillSchema, impairGoodwillSchema,
+  createCurrencyTranslationSchema,
+} from './validation.js';
+import {
   createConsolidationGroup,
   getConsolidationGroup,
   getConsolidationGroupForEntity,
@@ -20,7 +25,7 @@ export const consolidationRouter = Router();
 
 // --- ConsolidationGroup ---
 
-consolidationRouter.post('/groups', async (req: Request, res: Response) => {
+consolidationRouter.post('/groups', validateBody(createConsolidationGroupSchema), async (req: Request, res: Response) => {
   try {
     const id = await createConsolidationGroup(req.body);
     res.status(201).json({ id });
@@ -45,7 +50,7 @@ consolidationRouter.get('/groups/by-entity/:entityId', async (req: Request, res:
 
 // --- OwnershipInterest ---
 
-consolidationRouter.post('/ownership-interests', async (req: Request, res: Response) => {
+consolidationRouter.post('/ownership-interests', validateBody(createOwnershipInterestSchema), async (req: Request, res: Response) => {
   try {
     const id = await createOwnershipInterest(req.body);
     res.status(201).json({ id });
@@ -69,7 +74,7 @@ consolidationRouter.get('/ownership-interests/by-investor/:entityId', async (req
 
 // --- Intercompany Matching ---
 
-consolidationRouter.post('/intercompany-match', async (req: Request, res: Response) => {
+consolidationRouter.post('/intercompany-match', validateBody(createIntercompanyMatchSchema), async (req: Request, res: Response) => {
   try {
     await createIntercompanyMatch(req.body);
     res.status(201).json({ success: true });
@@ -78,7 +83,7 @@ consolidationRouter.post('/intercompany-match', async (req: Request, res: Respon
 
 // --- Goodwill ---
 
-consolidationRouter.post('/goodwill', async (req: Request, res: Response) => {
+consolidationRouter.post('/goodwill', validateBody(createGoodwillSchema), async (req: Request, res: Response) => {
   try {
     const id = await createGoodwill(req.body);
     res.status(201).json({ id });
@@ -93,12 +98,9 @@ consolidationRouter.get('/goodwill/:id', async (req: Request, res: Response) => 
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-consolidationRouter.post('/goodwill/:id/impair', async (req: Request, res: Response) => {
+consolidationRouter.post('/goodwill/:id/impair', validateBody(impairGoodwillSchema), async (req: Request, res: Response) => {
   try {
     const { impairmentLoss, testDate } = req.body;
-    if (!impairmentLoss || !testDate) {
-      res.status(400).json({ error: 'Required: impairmentLoss, testDate' }); return;
-    }
     const result = await impairGoodwill(req.params.id as string, impairmentLoss, testDate);
     if (!result) { res.status(404).json({ error: 'Not found' }); return; }
     res.json({ success: true });
@@ -107,7 +109,7 @@ consolidationRouter.post('/goodwill/:id/impair', async (req: Request, res: Respo
 
 // --- Currency Translation ---
 
-consolidationRouter.post('/currency-translation', async (req: Request, res: Response) => {
+consolidationRouter.post('/currency-translation', validateBody(createCurrencyTranslationSchema), async (req: Request, res: Response) => {
   try {
     const result = await translateCurrency(req.body);
     res.status(201).json(result);

@@ -12,12 +12,21 @@ import {
   verifyAgainstTrialBalance,
   getMigrationSummary,
 } from '../../services/gl/coa-migration-service.js';
+import {
+  validateBody,
+  registerCOAMappingSchema,
+  validateImportSchema,
+  importLegacyGLSchema,
+  createNodesForUnmappedCodesSchema,
+  seedStatutorySchema,
+  verifyTrialBalanceSchema,
+} from './validation.js';
 
 export const migrationRouter = Router();
 
 // --- COA Mappings ---
 
-migrationRouter.post('/coa-mappings', async (req: Request, res: Response) => {
+migrationRouter.post('/coa-mappings', validateBody(registerCOAMappingSchema), async (req: Request, res: Response) => {
   try {
     if (Array.isArray(req.body)) {
       const count = registerCOAMappings(req.body);
@@ -54,7 +63,7 @@ migrationRouter.delete('/coa-mappings', (_req: Request, res: Response) => {
 
 // --- Validation ---
 
-migrationRouter.post('/validate', (req: Request, res: Response) => {
+migrationRouter.post('/validate', validateBody(validateImportSchema), (req: Request, res: Response) => {
   try {
     const result = validateImport(req.body.entries ?? []);
     res.json(result);
@@ -63,7 +72,7 @@ migrationRouter.post('/validate', (req: Request, res: Response) => {
 
 // --- Import ---
 
-migrationRouter.post('/import', async (req: Request, res: Response) => {
+migrationRouter.post('/import', validateBody(importLegacyGLSchema), async (req: Request, res: Response) => {
   try {
     const { entityId, periodId, entries, currency } = req.body;
     if (!entityId || !periodId || !entries) {
@@ -78,7 +87,7 @@ migrationRouter.post('/import', async (req: Request, res: Response) => {
 
 // --- Auto-create nodes ---
 
-migrationRouter.post('/create-nodes', async (req: Request, res: Response) => {
+migrationRouter.post('/create-nodes', validateBody(createNodesForUnmappedCodesSchema), async (req: Request, res: Response) => {
   try {
     const { entityId, unmappedCodes } = req.body;
     if (!entityId || !unmappedCodes) {
@@ -93,7 +102,7 @@ migrationRouter.post('/create-nodes', async (req: Request, res: Response) => {
 
 // --- Seed StatutoryMappings ---
 
-migrationRouter.post('/seed-statutory', async (req: Request, res: Response) => {
+migrationRouter.post('/seed-statutory', validateBody(seedStatutorySchema), async (req: Request, res: Response) => {
   try {
     const { jurisdiction, asOfDate } = req.body;
     if (!jurisdiction || !asOfDate) {
@@ -108,7 +117,7 @@ migrationRouter.post('/seed-statutory', async (req: Request, res: Response) => {
 
 // --- Verification ---
 
-migrationRouter.post('/verify', async (req: Request, res: Response) => {
+migrationRouter.post('/verify', validateBody(verifyTrialBalanceSchema), async (req: Request, res: Response) => {
   try {
     const { entityId, periodId, trialBalance } = req.body;
     if (!entityId || !periodId || !trialBalance) {

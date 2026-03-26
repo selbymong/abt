@@ -17,12 +17,21 @@ import {
   recognizeOverTime,
   getContractSummary,
 } from '../../services/gl/revenue-recognition-service.js';
+import {
+  validateBody,
+  createRevenueContractSchema,
+  createPerformanceObligationSchema,
+  createVariableConsiderationSchema,
+  resolveVariableConsiderationSchema,
+  recognizePointInTimeSchema,
+  recognizeOverTimeSchema,
+} from './validation.js';
 
 export const revenueRouter = Router();
 
 // --- Revenue Contracts ---
 
-revenueRouter.post('/contracts', async (req: Request, res: Response) => {
+revenueRouter.post('/contracts', validateBody(createRevenueContractSchema), async (req: Request, res: Response) => {
   try {
     const id = await createRevenueContract(req.body);
     res.status(201).json({ id });
@@ -80,7 +89,7 @@ revenueRouter.get('/contracts/:id/summary', async (req: Request, res: Response) 
 
 // --- Performance Obligations ---
 
-revenueRouter.post('/obligations', async (req: Request, res: Response) => {
+revenueRouter.post('/obligations', validateBody(createPerformanceObligationSchema), async (req: Request, res: Response) => {
   try {
     const id = await createPerformanceObligation(req.body);
     res.status(201).json({ id });
@@ -121,7 +130,7 @@ revenueRouter.post('/contracts/:id/allocate', async (req: Request, res: Response
 
 // --- Variable Consideration ---
 
-revenueRouter.post('/variable-consideration', async (req: Request, res: Response) => {
+revenueRouter.post('/variable-consideration', validateBody(createVariableConsiderationSchema), async (req: Request, res: Response) => {
   try {
     const id = await createVariableConsideration(req.body);
     res.status(201).json({ id });
@@ -149,7 +158,7 @@ revenueRouter.get('/variable-consideration/by-contract/:contractId', async (req:
   }
 });
 
-revenueRouter.post('/variable-consideration/:id/resolve', async (req: Request, res: Response) => {
+revenueRouter.post('/variable-consideration/:id/resolve', validateBody(resolveVariableConsiderationSchema), async (req: Request, res: Response) => {
   try {
     const { resolvedAmount } = req.body;
     if (resolvedAmount === undefined) return res.status(400).json({ error: 'resolvedAmount required' });
@@ -162,7 +171,7 @@ revenueRouter.post('/variable-consideration/:id/resolve', async (req: Request, r
 
 // --- Revenue Recognition ---
 
-revenueRouter.post('/recognize/point-in-time', async (req: Request, res: Response) => {
+revenueRouter.post('/recognize/point-in-time', validateBody(recognizePointInTimeSchema), async (req: Request, res: Response) => {
   try {
     const { poId, periodId, satisfiedDate } = req.body;
     if (!poId || !periodId || !satisfiedDate) {
@@ -175,7 +184,7 @@ revenueRouter.post('/recognize/point-in-time', async (req: Request, res: Respons
   }
 });
 
-revenueRouter.post('/recognize/over-time', async (req: Request, res: Response) => {
+revenueRouter.post('/recognize/over-time', validateBody(recognizeOverTimeSchema), async (req: Request, res: Response) => {
   try {
     const { poId, periodId, progressPct, validDate } = req.body;
     if (!poId || !periodId || progressPct === undefined || !validDate) {

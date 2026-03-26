@@ -11,12 +11,20 @@ import {
   testNRV,
   getInventoryValuation,
 } from '../../services/gl/inventory-service.js';
+import {
+  validateBody,
+  createInventoryItemSchema,
+  createInventoryLotSchema,
+  receiveInventorySchema,
+  issueInventorySchema,
+  nrvTestSchema,
+} from './validation.js';
 
 export const inventoryRouter = Router();
 
 // --- Inventory Items ---
 
-inventoryRouter.post('/items', async (req: Request, res: Response) => {
+inventoryRouter.post('/items', validateBody(createInventoryItemSchema), async (req: Request, res: Response) => {
   try {
     const id = await createInventoryItem(req.body);
     res.status(201).json({ id });
@@ -47,7 +55,7 @@ inventoryRouter.get('/items/by-entity/:entityId', async (req: Request, res: Resp
 
 // --- Inventory Lots ---
 
-inventoryRouter.post('/lots', async (req: Request, res: Response) => {
+inventoryRouter.post('/lots', validateBody(createInventoryLotSchema), async (req: Request, res: Response) => {
   try {
     const id = await createInventoryLot(req.body);
     res.status(201).json({ id });
@@ -78,7 +86,7 @@ inventoryRouter.get('/lots/by-item/:itemId', async (req: Request, res: Response)
 
 // --- Receive / Issue ---
 
-inventoryRouter.post('/receive', async (req: Request, res: Response) => {
+inventoryRouter.post('/receive', validateBody(receiveInventorySchema), async (req: Request, res: Response) => {
   try {
     const result = await receiveInventory(req.body);
     res.status(201).json(result);
@@ -87,7 +95,7 @@ inventoryRouter.post('/receive', async (req: Request, res: Response) => {
   }
 });
 
-inventoryRouter.post('/issue', async (req: Request, res: Response) => {
+inventoryRouter.post('/issue', validateBody(issueInventorySchema), async (req: Request, res: Response) => {
   try {
     const result = await issueInventory(req.body);
     res.json(result);
@@ -98,7 +106,7 @@ inventoryRouter.post('/issue', async (req: Request, res: Response) => {
 
 // --- NRV Testing ---
 
-inventoryRouter.post('/nrv-test', async (req: Request, res: Response) => {
+inventoryRouter.post('/nrv-test', validateBody(nrvTestSchema), async (req: Request, res: Response) => {
   try {
     const result = await testNRV(req.body);
     res.json(result);

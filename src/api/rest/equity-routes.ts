@@ -12,12 +12,20 @@ import {
   forfeitAward,
   computeEPS,
 } from '../../services/gl/equity-expansion-service.js';
+import {
+  validateBody,
+  createShareClassSchema,
+  issueSharesSchema,
+  createEquityAwardSchema,
+  recognizeVestingSchema,
+  computeEPSSchema,
+} from './validation.js';
 
 export const equityRouter = Router();
 
 // --- Share Classes ---
 
-equityRouter.post('/share-classes', async (req: Request, res: Response) => {
+equityRouter.post('/share-classes', validateBody(createShareClassSchema), async (req: Request, res: Response) => {
   try {
     const id = await createShareClass(req.body);
     res.status(201).json({ id });
@@ -45,7 +53,7 @@ equityRouter.get('/share-classes/by-entity/:entityId', async (req: Request, res:
   }
 });
 
-equityRouter.post('/share-classes/:id/issue', async (req: Request, res: Response) => {
+equityRouter.post('/share-classes/:id/issue', validateBody(issueSharesSchema), async (req: Request, res: Response) => {
   try {
     const { additionalShares, pricePerShare } = req.body;
     const result = await issueShares(req.params.id as string, additionalShares, pricePerShare);
@@ -66,7 +74,7 @@ equityRouter.get('/share-capital/:entityId', async (req: Request, res: Response)
 
 // --- Equity Awards ---
 
-equityRouter.post('/awards', async (req: Request, res: Response) => {
+equityRouter.post('/awards', validateBody(createEquityAwardSchema), async (req: Request, res: Response) => {
   try {
     const id = await createEquityAward(req.body);
     res.status(201).json({ id });
@@ -95,7 +103,7 @@ equityRouter.get('/awards/by-entity/:entityId', async (req: Request, res: Respon
   }
 });
 
-equityRouter.post('/awards/:id/vest', async (req: Request, res: Response) => {
+equityRouter.post('/awards/:id/vest', validateBody(recognizeVestingSchema), async (req: Request, res: Response) => {
   try {
     const { periodId, monthsElapsed, validDate, currency } = req.body;
     const result = await recognizeVestingCompensation(
@@ -118,7 +126,7 @@ equityRouter.post('/awards/:id/forfeit', async (req: Request, res: Response) => 
 
 // --- EPS ---
 
-equityRouter.post('/eps', async (req: Request, res: Response) => {
+equityRouter.post('/eps', validateBody(computeEPSSchema), async (req: Request, res: Response) => {
   try {
     const { entityId, periodId, netIncome } = req.body;
     const result = await computeEPS(entityId, periodId, netIncome);

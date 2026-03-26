@@ -16,12 +16,21 @@ import {
   recycleOciToP_L,
   getHedgeAccountingSummary,
 } from '../../services/gl/hedge-accounting-service.js';
+import {
+  validateBody,
+  createFinancialInstrumentSchema,
+  updateFairValueSchema,
+  createHedgeRelationshipSchema,
+  retrospectiveTestSchema,
+  hedgeProcessSchema,
+  netInvestmentHedgeProcessSchema,
+} from './validation.js';
 
 export const hedgeRouter = Router();
 
 // --- Financial Instruments ---
 
-hedgeRouter.post('/instruments', async (req: Request, res: Response) => {
+hedgeRouter.post('/instruments', validateBody(createFinancialInstrumentSchema), async (req: Request, res: Response) => {
   try {
     const id = await createFinancialInstrument(req.body);
     res.status(201).json({ id });
@@ -48,7 +57,7 @@ hedgeRouter.get('/instruments/by-entity/:entityId', async (req: Request, res: Re
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-hedgeRouter.post('/instruments/:id/fair-value', async (req: Request, res: Response) => {
+hedgeRouter.post('/instruments/:id/fair-value', validateBody(updateFairValueSchema), async (req: Request, res: Response) => {
   try {
     const result = await updateFairValue(req.params.id as string, req.body.fairValue);
     res.json(result);
@@ -59,7 +68,7 @@ hedgeRouter.post('/instruments/:id/fair-value', async (req: Request, res: Respon
 
 // --- Hedge Relationships ---
 
-hedgeRouter.post('/hedges', async (req: Request, res: Response) => {
+hedgeRouter.post('/hedges', validateBody(createHedgeRelationshipSchema), async (req: Request, res: Response) => {
   try {
     const id = await createHedgeRelationship(req.body);
     res.status(201).json({ id });
@@ -97,7 +106,7 @@ hedgeRouter.post('/hedges/:id/prospective-test', async (req: Request, res: Respo
   }
 });
 
-hedgeRouter.post('/hedges/:id/retrospective-test', async (req: Request, res: Response) => {
+hedgeRouter.post('/hedges/:id/retrospective-test', validateBody(retrospectiveTestSchema), async (req: Request, res: Response) => {
   try {
     const { hedgingInstrumentChange, hedgedItemChange } = req.body;
     const result = await runRetrospectiveTest(
@@ -111,7 +120,7 @@ hedgeRouter.post('/hedges/:id/retrospective-test', async (req: Request, res: Res
 
 // --- Hedge Processing ---
 
-hedgeRouter.post('/hedges/:id/process-fair-value', async (req: Request, res: Response) => {
+hedgeRouter.post('/hedges/:id/process-fair-value', validateBody(hedgeProcessSchema), async (req: Request, res: Response) => {
   try {
     const { instrumentFVChange, hedgedItemFVChange } = req.body;
     const result = await processFairValueHedge(
@@ -123,7 +132,7 @@ hedgeRouter.post('/hedges/:id/process-fair-value', async (req: Request, res: Res
   }
 });
 
-hedgeRouter.post('/hedges/:id/process-cash-flow', async (req: Request, res: Response) => {
+hedgeRouter.post('/hedges/:id/process-cash-flow', validateBody(hedgeProcessSchema), async (req: Request, res: Response) => {
   try {
     const { instrumentFVChange, hedgedItemFVChange } = req.body;
     const result = await processCashFlowHedge(
@@ -135,7 +144,7 @@ hedgeRouter.post('/hedges/:id/process-cash-flow', async (req: Request, res: Resp
   }
 });
 
-hedgeRouter.post('/hedges/:id/process-net-investment', async (req: Request, res: Response) => {
+hedgeRouter.post('/hedges/:id/process-net-investment', validateBody(netInvestmentHedgeProcessSchema), async (req: Request, res: Response) => {
   try {
     const { instrumentFVChange, netInvestmentChange } = req.body;
     const result = await processNetInvestmentHedge(
