@@ -271,6 +271,36 @@
       "phase": 6,
       "name": "Bank reconciliation service",
       "passes": true
+    },
+    {
+      "id": "P4-VECTOR-EMBEDDER",
+      "phase": 4,
+      "name": "Vector embedder (node embeddings via pgvector, AI edge discovery)",
+      "passes": true
+    },
+    {
+      "id": "P6-HEDGE-ACCOUNTING",
+      "phase": 6,
+      "name": "IFRS 9 hedge accounting (HedgeRelationship, effectiveness testing)",
+      "passes": false
+    },
+    {
+      "id": "P6-COA-MIGRATION",
+      "phase": 6,
+      "name": "COA migration tooling (historical data import from traditional GL)",
+      "passes": false
+    },
+    {
+      "id": "P6-TAX-CREDIT-AI",
+      "phase": 6,
+      "name": "Tax credit AI feedback loop (reviewer rejection → eligibility model refinement)",
+      "passes": false
+    },
+    {
+      "id": "P2-ADMIN-UI-ADVANCED",
+      "phase": 2,
+      "name": "Admin UI: ECL rate matrix editor, AssetClass management, restatement workflow",
+      "passes": false
     }
   ]
 }

@@ -31,6 +31,17 @@ import {
   executeQuery,
   getEntityGraphSummary,
 } from '../../services/ai/graph-query-service.js';
+import {
+  generateAndStoreEmbedding,
+  getEmbedding,
+  deleteEmbedding,
+  countEmbeddings,
+  embedEntityNodes,
+  findSimilarNodes,
+  discoverEdgeCandidates,
+  createInferredEdges,
+  runEdgeDiscoveryPipeline,
+} from '../../services/ai/vector-embedder-service.js';
 
 export const aiRouter = Router();
 
@@ -201,4 +212,84 @@ aiRouter.post('/query', async (req: Request, res: Response) => {
 aiRouter.get('/graph-summary/:entityId', async (req: Request, res: Response) => {
   const summary = await getEntityGraphSummary(req.params.entityId as string);
   res.json(summary);
+});
+
+// --- Vector Embedder ---
+
+aiRouter.post('/embeddings', async (req: Request, res: Response) => {
+  try {
+    const { nodeId, entityId, nodeLabel, properties } = req.body;
+    if (!nodeId || !entityId || !nodeLabel) {
+      res.status(400).json({ error: 'Required: nodeId, entityId, nodeLabel' }); return;
+    }
+    const result = await generateAndStoreEmbedding(nodeId, entityId, nodeLabel, properties ?? {});
+    res.status(201).json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+aiRouter.get('/embeddings/:nodeId', async (req: Request, res: Response) => {
+  const emb = await getEmbedding(req.params.nodeId as string);
+  if (!emb) { res.status(404).json({ error: 'Embedding not found' }); return; }
+  res.json(emb);
+});
+
+aiRouter.delete('/embeddings/:nodeId', async (req: Request, res: Response) => {
+  const deleted = await deleteEmbedding(req.params.nodeId as string);
+  res.json({ deleted });
+});
+
+aiRouter.get('/embeddings/count/:entityId', async (req: Request, res: Response) => {
+  const count = await countEmbeddings(req.params.entityId as string);
+  res.json({ count });
+});
+
+aiRouter.post('/embeddings/embed-entity/:entityId', async (req: Request, res: Response) => {
+  try {
+    const result = await embedEntityNodes(req.params.entityId as string);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+aiRouter.get('/embeddings/similar/:nodeId', async (req: Request, res: Response) => {
+  const threshold = req.query.threshold ? Number(req.query.threshold) : 0.82;
+  const limit = req.query.limit ? Number(req.query.limit) : 50;
+  const candidates = await findSimilarNodes(req.params.nodeId as string, threshold, limit);
+  res.json({ candidates });
+});
+
+aiRouter.post('/embeddings/discover/:entityId', async (req: Request, res: Response) => {
+  try {
+    const threshold = req.body.threshold ?? 0.82;
+    const limit = req.body.limit ?? 50;
+    const candidates = await discoverEdgeCandidates(req.params.entityId as string, threshold, limit);
+    res.json({ candidates });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+aiRouter.post('/embeddings/create-edges', async (req: Request, res: Response) => {
+  try {
+    const { candidates, entityId } = req.body;
+    if (!candidates || !entityId) {
+      res.status(400).json({ error: 'Required: candidates, entityId' }); return;
+    }
+    const result = await createInferredEdges(candidates, entityId);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+aiRouter.post('/embeddings/pipeline/:entityId', async (req: Request, res: Response) => {
+  try {
+    const result = await runEdgeDiscoveryPipeline(req.params.entityId as string, req.body);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });

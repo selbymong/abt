@@ -470,12 +470,28 @@ The entire EBG v1.2 build plan has been implemented:
 - Phase 5: Tax + credits + compliance
 - Phase 6: Advanced accounting (IFRS 15, inventory, equity, XBRL, bank rec)
 
+## Remaining Features (post-Phase 6)
+- [x] P4-VECTOR-EMBEDDER: Vector embedder — node embeddings via pgvector, AI edge discovery
+  - Pluggable embedding function (hash-based deterministic default, swappable for production API)
+  - Embedding CRUD: generate+store, get, delete, count, upsert on conflict
+  - Bulk entity embedding: embeds all Activity, Resource, Project, Initiative, Metric,
+    Capability, Asset, Outcome, CashFlowEvent, Obligation nodes
+  - Similarity search: cosine similarity via pgvector <=> operator
+  - Edge discovery: finds similar node pairs without existing CONTRIBUTES_TO edges
+  - Inferred edge creation: creates CONTRIBUTES_TO with discovery_method='AI_EMBEDDING',
+    confidence='LOW', weight=cosine_similarity
+  - Full pipeline: embed → discover → optionally create edges
+  - Kafka events: EDGE_CREATED_BY_AI on ebg.graph topic
+  - REST endpoints added to /api/ai/embeddings/*
+  - 16 integration tests (vector-embedder.test.ts)
+  - Total: 470 tests across 33 files all passing
+
 ## What Comes Next
-- All 6 phases complete. Potential future work:
-  - Performance optimization and load testing
-  - Frontend UI for Phase 2–6 features
-  - Production deployment configuration
-  - Additional IFRS/GAAP coverage gaps from docs/07-accounting-standards.md
+- Remaining features:
+  1. P6-HEDGE-ACCOUNTING: IFRS 9 hedge accounting (HedgeRelationship, effectiveness testing)
+  2. P6-COA-MIGRATION: COA migration tooling (historical data import from traditional GL)
+  3. P6-TAX-CREDIT-AI: Tax credit AI feedback loop (reviewer rejection → eligibility refinement)
+  4. P2-ADMIN-UI-ADVANCED: Admin UI — ECL rate matrix editor, AssetClass management, restatement workflow
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
