@@ -271,11 +271,24 @@ All Phase 3 features implemented and tested:
   - 12 integration tests (epistemic-scorer.test.ts)
   - Total: 252 tests across 20 files all passing
 
+- [x] P4-CASHFLOW-OPTIMIZER: FloatWindow scoring, AR discount vs facility
+  - CashFlowEvent CRUD: create, get, list (with status filter), settle
+  - CreditFacility CRUD: create, get, list by entity
+  - FloatWindow scoring: DELAY_PAYABLE and ACCELERATE_RECEIVABLE opportunities
+    - Computes window_days, opportunity_value, discount_cost, net_value
+    - Annualized discount rate: (disc / (1-disc)) × (365 / window_days)
+    - Compares to credit facility rate for AR decisions
+  - Entity-wide scoring: batch-score all pending events sorted by net value
+  - AR discount analysis: TAKE_DISCOUNT vs USE_FACILITY recommendation with savings
+  - Kafka events: CFE_SETTLED, FLOAT_WINDOW_CREATED
+  - REST endpoints for all cashflow operations
+  - 14 integration tests (cashflow-optimizer.test.ts)
+  - Total: 266 tests across 21 files all passing
+
 ## What Comes Next
-1. P4-CASHFLOW-OPTIMIZER: FloatWindow scoring, AR discount vs facility
-2. P4-SCENARIO-ENGINE: Monte Carlo on distal/force majeure nodes
-3. P4-CLAUDE-INTEGRATION: Natural language → graph traversal
-4. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
+1. P4-SCENARIO-ENGINE: Monte Carlo on distal/force majeure nodes
+2. P4-CLAUDE-INTEGRATION: Natural language → graph traversal
+3. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container

@@ -204,7 +204,7 @@
       "id": "P4-CASHFLOW-OPTIMIZER",
       "phase": 4,
       "name": "Cashflow optimizer (FloatWindow scoring, AR discount vs facility)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P4-SCENARIO-ENGINE",
