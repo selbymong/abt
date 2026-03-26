@@ -546,8 +546,16 @@ The entire EBG v1.2 build plan has been implemented:
   - 3 new pages wired into React Router sidebar navigation
   - Vite build passes (33 modules, 252KB gzip)
 
+## Security Hardening (COMPLETE)
+- [x] Cypher injection prevention: whitelisted node labels (17) and edge types (4) in graph-crud-service
+- [x] Property key sanitization: regex validation on all dynamic property keys in createNode, updateNode, updateEdge
+- [x] Route error handling: all ~160 route handlers across 16 files wrapped with try/catch
+  - gl-routes (45), ai-routes (22), graph-routes (17+), consolidation-routes (14),
+    depreciation-routes (16), cashflow-routes (11), config-routes (2), hedge-routes (5),
+    migration-routes (4) — added across 3 commits
+
 ## What Comes Next
-- All features complete. Remaining work is production hardening and deployment.
+- All features and security hardening complete. Remaining work is production deployment.
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
