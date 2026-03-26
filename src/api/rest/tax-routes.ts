@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import type { ClaimStatus } from '../../schema/neo4j/types.js';
 import {
   getTemporaryDifferences,
   computeDeferredTax,
@@ -12,6 +13,22 @@ import {
   getApplicableTaxRate,
   getDeferredTaxSummary,
 } from '../../services/tax/tax-engine-service.js';
+import {
+  listTaxCreditPrograms,
+  getTaxCreditProgram,
+  identifyEligibleExpenditures,
+  createTaxCreditClaim,
+  getTaxCreditClaim,
+  listTaxCreditClaims,
+  updateClaimStatus,
+  updateCreditBalance,
+  getCreditBalance,
+  listCreditBalances,
+  createReducesCostEdge,
+  computeEffectiveCost,
+  generateT661Data,
+  generateForm6765Data,
+} from '../../services/tax/tax-credits-service.js';
 import {
   computeCRACorporate,
   computeGSTHST,
@@ -232,6 +249,153 @@ taxRouter.get('/modules/result/:id', async (req: Request, res: Response) => {
     const result = await getTaxModuleResult(req.params.id as string);
     if (!result) return res.status(404).json({ error: 'TaxModuleResult not found' });
     res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Tax Credits ---
+
+taxRouter.get('/credits/programs', async (req: Request, res: Response) => {
+  try {
+    const jurisdiction = req.query.jurisdiction as string | undefined;
+    const programs = await listTaxCreditPrograms(jurisdiction);
+    res.json(programs);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.get('/credits/programs/:code', async (req: Request, res: Response) => {
+  try {
+    const program = await getTaxCreditProgram(req.params.code as string);
+    if (!program) return res.status(404).json({ error: 'Program not found' });
+    res.json(program);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.post('/credits/identify', async (req: Request, res: Response) => {
+  try {
+    const result = await identifyEligibleExpenditures(req.body);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.post('/credits/claims', async (req: Request, res: Response) => {
+  try {
+    const id = await createTaxCreditClaim(req.body);
+    res.status(201).json({ id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.get('/credits/claims/:id', async (req: Request, res: Response) => {
+  try {
+    const claim = await getTaxCreditClaim(req.params.id as string);
+    if (!claim) return res.status(404).json({ error: 'Claim not found' });
+    res.json(claim);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.get('/credits/claims/by-entity/:entityId', async (req: Request, res: Response) => {
+  try {
+    const status = req.query.status as string | undefined;
+    const claims = await listTaxCreditClaims(
+      req.params.entityId as string,
+      status as ClaimStatus | undefined,
+    );
+    res.json(claims);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.post('/credits/claims/:id/status', async (req: Request, res: Response) => {
+  try {
+    const { status, assessedAmount } = req.body;
+    const result = await updateClaimStatus(req.params.id as string, status, assessedAmount);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+taxRouter.post('/credits/balances', async (req: Request, res: Response) => {
+  try {
+    const id = await updateCreditBalance(req.body);
+    res.status(201).json({ id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.get('/credits/balances/:entityId/:programCode', async (req: Request, res: Response) => {
+  try {
+    const balance = await getCreditBalance(
+      req.params.entityId as string,
+      req.params.programCode as string,
+    );
+    if (!balance) return res.status(404).json({ error: 'Balance not found' });
+    res.json(balance);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.get('/credits/balances/:entityId', async (req: Request, res: Response) => {
+  try {
+    const balances = await listCreditBalances(req.params.entityId as string);
+    res.json(balances);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.post('/credits/reduces-cost', async (req: Request, res: Response) => {
+  try {
+    const { claimId, targetNodeId, costReductionAmount, certainty } = req.body;
+    await createReducesCostEdge(claimId, targetNodeId, costReductionAmount, certainty);
+    res.status(201).json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.get('/credits/effective-cost/:nodeId', async (req: Request, res: Response) => {
+  try {
+    const result = await computeEffectiveCost(req.params.nodeId as string);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.get('/credits/filing/t661/:entityId/:fiscalYear', async (req: Request, res: Response) => {
+  try {
+    const data = await generateT661Data(
+      req.params.entityId as string,
+      req.params.fiscalYear as string,
+    );
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.get('/credits/filing/form6765/:entityId/:fiscalYear', async (req: Request, res: Response) => {
+  try {
+    const data = await generateForm6765Data(
+      req.params.entityId as string,
+      req.params.fiscalYear as string,
+    );
+    res.json(data);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

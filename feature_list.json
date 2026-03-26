@@ -234,7 +234,7 @@
       "id": "P5-TAX-CREDITS",
       "phase": 5,
       "name": "Tax credit management: identification, computation, carryforward, filing",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P5-COMPLIANCE",

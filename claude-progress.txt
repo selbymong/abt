@@ -343,8 +343,24 @@ All Phase 4 AI Engine features implemented and tested:
   - 20 integration tests (tax-modules.test.ts)
   - Total: 337 tests across 25 files all passing
 
+- [x] P5-TAX-CREDITS: Tax credit management with identification, computation, carryforward, filing
+  - TaxCreditProgram queries: list (with jurisdiction filter), get by code
+  - Eligible expenditure identification: keyword-based AI inference from Activity/Resource/Project nodes
+  - TaxCreditClaim CRUD: create (with auto-computed credit amounts), get, list, status transitions
+  - Credit computation: rate × eligible expenditure (capped at program expenditure limit)
+  - Refundable/non-refundable split: REFUNDABLE (100%), PARTIALLY_REFUNDABLE (40%), NON_REFUNDABLE (0%)
+  - TaxCreditBalance with FIFO vintage tracking: earn, apply, expire, carryback
+  - Vintage expiry enforcement based on carryforward_years
+  - REDUCES_COST_OF edge: credit-adjusted ROI computation
+  - Effective cost: original_cost - weighted reductions (REALIZED=1.0, ASSESSED=0.9, CLAIMED=0.7)
+  - Filing data export: T661 SR&ED (CRA) and Form 6765 R&D (IRS)
+  - Kafka events: CREDIT_IDENTIFIED, CREDIT_ASSESSED
+  - REST endpoints for all credit operations (/api/tax/credits/*)
+  - 20 integration tests (tax-credits.test.ts)
+  - Total: 357 tests across 26 files all passing
+
 ## What Comes Next
-1. P5-TAX-CREDITS: Tax credit management
+1. P5-COMPLIANCE: Compliance workflows
 2. P5-TAX-CREDITS: Tax credit management
 3. P5-COMPLIANCE: Compliance workflows
 4. Phase 6: Advanced Accounting (IFRS 15, inventory, equity, XBRL)
