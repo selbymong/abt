@@ -282,7 +282,7 @@
       "id": "P6-HEDGE-ACCOUNTING",
       "phase": 6,
       "name": "IFRS 9 hedge accounting (HedgeRelationship, effectiveness testing)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P6-COA-MIGRATION",

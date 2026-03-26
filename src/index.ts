@@ -19,6 +19,7 @@ import { inventoryRouter } from './api/rest/inventory-routes.js';
 import { equityRouter } from './api/rest/equity-routes.js';
 import { xbrlRouter } from './api/rest/xbrl-routes.js';
 import { bankRecRouter } from './api/rest/bank-rec-routes.js';
+import { hedgeRouter } from './api/rest/hedge-routes.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -46,6 +47,7 @@ app.use('/api/inventory', inventoryRouter);
 app.use('/api/equity', equityRouter);
 app.use('/api/xbrl', xbrlRouter);
 app.use('/api/bank-rec', bankRecRouter);
+app.use('/api/hedge', hedgeRouter);
 
 // Global error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

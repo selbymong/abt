@@ -486,12 +486,26 @@ The entire EBG v1.2 build plan has been implemented:
   - 16 integration tests (vector-embedder.test.ts)
   - Total: 470 tests across 33 files all passing
 
+- [x] P6-HEDGE-ACCOUNTING: IFRS 9 hedge accounting — FinancialInstrument, HedgeRelationship, effectiveness testing
+  - FinancialInstrument CRUD: 8 instrument types, IFRS 9 classification, fair value hierarchy, ECL staging
+  - HedgeRelationship CRUD: FAIR_VALUE, CASH_FLOW, NET_INVESTMENT hedge types
+  - Prospective test: dollar-offset method (80-125% hedge ratio range)
+  - Retrospective test: actual Δ instrument / Δ hedged item, auto-de-designate on FAIL
+  - Fair value hedge processing: both changes to P&L, hedged item carrying amount adjustment
+  - Cash flow hedge processing: effective portion to OCI, ineffective to P&L, cumulative OCI tracking
+  - Net investment hedge processing: same split as cash flow, recycle on foreign op disposal
+  - De-designation and OCI recycling to P&L
+  - Hedge accounting summary: active/total counts, by-type breakdown, OCI + ineffectiveness totals
+  - Types added: InstrumentType, FairValueHierarchy, HedgeType, EffectivenessResult, FinancialInstrument, HedgeRelationship
+  - REST endpoints for all hedge operations (/api/hedge/*)
+  - 18 integration tests (hedge-accounting.test.ts)
+  - Total: 488 tests across 34 files all passing
+
 ## What Comes Next
 - Remaining features:
-  1. P6-HEDGE-ACCOUNTING: IFRS 9 hedge accounting (HedgeRelationship, effectiveness testing)
-  2. P6-COA-MIGRATION: COA migration tooling (historical data import from traditional GL)
-  3. P6-TAX-CREDIT-AI: Tax credit AI feedback loop (reviewer rejection → eligibility refinement)
-  4. P2-ADMIN-UI-ADVANCED: Admin UI — ECL rate matrix editor, AssetClass management, restatement workflow
+  1. P6-COA-MIGRATION: COA migration tooling (historical data import from traditional GL)
+  2. P6-TAX-CREDIT-AI: Tax credit AI feedback loop (reviewer rejection → eligibility refinement)
+  3. P2-ADMIN-UI-ADVANCED: Admin UI — ECL rate matrix editor, AssetClass management, restatement workflow
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container

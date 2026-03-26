@@ -761,6 +761,44 @@ export interface InventoryLot extends TimestampedNode {
   is_depleted: boolean;
 }
 
+// --- Financial Instrument + Hedge Accounting ---
+
+export type InstrumentType = 'CASH' | 'RECEIVABLE' | 'PAYABLE' | 'LOAN' | 'BOND' | 'EQUITY_INVESTMENT' | 'DERIVATIVE' | 'HEDGE_INSTRUMENT';
+export type FairValueHierarchy = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3';
+export type HedgeType = 'FAIR_VALUE' | 'CASH_FLOW' | 'NET_INVESTMENT';
+export type EffectivenessResult = 'PASS' | 'FAIL';
+
+export interface FinancialInstrument extends TimestampedNode {
+  entity_id: string;
+  instrument_type: InstrumentType;
+  ifrs9_classification: IFRS9Classification;
+  label: string;
+  host_node_id?: string;
+  fair_value?: number;
+  fair_value_hierarchy?: FairValueHierarchy;
+  amortised_cost?: number;
+  effective_interest_rate?: number;
+  ecl_stage: ECLStage;
+  ecl_allowance: number;
+  gross_carrying_amount: number;
+  net_carrying_amount: number;
+}
+
+export interface HedgeRelationship extends TimestampedNode {
+  entity_id: string;
+  hedge_type: HedgeType;
+  hedging_instrument_id: string;
+  hedged_item_id: string;
+  designation_date: string;
+  hedge_ratio: number;
+  effectiveness_method: string;
+  prospective_test: EffectivenessResult;
+  retrospective_eff: number;
+  oci_balance: number;
+  ineffectiveness_to_pnl: number;
+  is_active: boolean;
+}
+
 export interface TaxCreditBalance extends TimestampedNode {
   entity_id: string;
   program_id: string;
