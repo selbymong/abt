@@ -554,8 +554,16 @@ The entire EBG v1.2 build plan has been implemented:
     depreciation-routes (16), cashflow-routes (11), config-routes (2), hedge-routes (5),
     migration-routes (4) — added across 3 commits
 
+- [x] Helmet security headers (XSS, clickjacking, MIME sniffing prevention)
+- [x] Rate limiting: 200 req/min per IP via express-rate-limit
+- [x] CORS restriction: configurable via CORS_ORIGIN env var (default: localhost:5173)
+- [x] JSON body size limit: 1MB
+- [x] Zod validation middleware: schemas for journal entries, temporal claims, provisions
+  - validateBody() middleware factory reusable across all routes
+
 ## What Comes Next
-- All features and security hardening complete. Remaining work is production deployment.
+- Zod validation can be extended to remaining POST routes (pattern established)
+- Remaining work is production deployment.
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
