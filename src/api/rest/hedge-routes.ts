@@ -31,17 +31,21 @@ hedgeRouter.post('/instruments', async (req: Request, res: Response) => {
 });
 
 hedgeRouter.get('/instruments/:id', async (req: Request, res: Response) => {
-  const fi = await getFinancialInstrument(req.params.id as string);
-  if (!fi) return res.status(404).json({ error: 'FinancialInstrument not found' });
-  res.json(fi);
+  try {
+    const fi = await getFinancialInstrument(req.params.id as string);
+    if (!fi) return res.status(404).json({ error: 'FinancialInstrument not found' });
+    res.json(fi);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 hedgeRouter.get('/instruments/by-entity/:entityId', async (req: Request, res: Response) => {
-  const instrumentType = req.query.instrumentType as string | undefined;
-  const instruments = await listFinancialInstruments(
-    req.params.entityId as string, instrumentType as any,
-  );
-  res.json(instruments);
+  try {
+    const instrumentType = req.query.instrumentType as string | undefined;
+    const instruments = await listFinancialInstruments(
+      req.params.entityId as string, instrumentType as any,
+    );
+    res.json(instruments);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 hedgeRouter.post('/instruments/:id/fair-value', async (req: Request, res: Response) => {
@@ -65,17 +69,21 @@ hedgeRouter.post('/hedges', async (req: Request, res: Response) => {
 });
 
 hedgeRouter.get('/hedges/:id', async (req: Request, res: Response) => {
-  const hr = await getHedgeRelationship(req.params.id as string);
-  if (!hr) return res.status(404).json({ error: 'HedgeRelationship not found' });
-  res.json(hr);
+  try {
+    const hr = await getHedgeRelationship(req.params.id as string);
+    if (!hr) return res.status(404).json({ error: 'HedgeRelationship not found' });
+    res.json(hr);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 hedgeRouter.get('/hedges/by-entity/:entityId', async (req: Request, res: Response) => {
-  const hedgeType = req.query.hedgeType as string | undefined;
-  const hedges = await listHedgeRelationships(
-    req.params.entityId as string, hedgeType as any,
-  );
-  res.json(hedges);
+  try {
+    const hedgeType = req.query.hedgeType as string | undefined;
+    const hedges = await listHedgeRelationships(
+      req.params.entityId as string, hedgeType as any,
+    );
+    res.json(hedges);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Effectiveness Testing ---
@@ -162,6 +170,8 @@ hedgeRouter.post('/hedges/:id/recycle-oci', async (req: Request, res: Response) 
 // --- Summary ---
 
 hedgeRouter.get('/summary/:entityId', async (req: Request, res: Response) => {
-  const summary = await getHedgeAccountingSummary(req.params.entityId as string);
-  res.json(summary);
+  try {
+    const summary = await getHedgeAccountingSummary(req.params.entityId as string);
+    res.json(summary);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });

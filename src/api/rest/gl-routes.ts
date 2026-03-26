@@ -111,452 +111,566 @@ glRouter.get('/journal-entries/:id', async (req: Request, res: Response) => {
 
 // POST /gl/journal-entries — post a journal entry
 glRouter.post('/journal-entries', async (req: Request, res: Response) => {
-  const input: PostJournalEntryInput = req.body;
+  try {
+    const input: PostJournalEntryInput = req.body;
 
-  if (!input.entityId || !input.periodId || !input.lines?.length) {
-    res.status(400).json({
-      error: 'Required: entityId, periodId, lines[]',
-    });
-    return;
-  }
+    if (!input.entityId || !input.periodId || !input.lines?.length) {
+      res.status(400).json({
+        error: 'Required: entityId, periodId, lines[]',
+      });
+      return;
+    }
 
-  const journalEntryId = await postJournalEntry(input);
-  res.status(201).json({ journalEntryId });
+    const journalEntryId = await postJournalEntry(input);
+    res.status(201).json({ journalEntryId });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /gl/period-balances — query TimescaleDB projection
 glRouter.get('/period-balances', async (req: Request, res: Response) => {
-  const entityId = req.query.entityId as string;
-  const periodId = req.query.periodId as string;
+  try {
+    const entityId = req.query.entityId as string;
+    const periodId = req.query.periodId as string;
 
-  if (!entityId || !periodId) {
-    res.status(400).json({ error: 'Required: entityId, periodId' });
-    return;
-  }
+    if (!entityId || !periodId) {
+      res.status(400).json({ error: 'Required: entityId, periodId' });
+      return;
+    }
 
-  const result = await query(
-    `SELECT node_ref_type, economic_category, statutory_code,
-            debit_total, credit_total, net_balance, transaction_count
-     FROM gl_period_balances
-     WHERE entity_id = $1 AND period_id = $2
-     ORDER BY economic_category, node_ref_type`,
-    [entityId, periodId],
-  );
+    const result = await query(
+      `SELECT node_ref_type, economic_category, statutory_code,
+              debit_total, credit_total, net_balance, transaction_count
+       FROM gl_period_balances
+       WHERE entity_id = $1 AND period_id = $2
+       ORDER BY economic_category, node_ref_type`,
+      [entityId, periodId],
+    );
 
-  res.json({ balances: result.rows });
+    res.json({ balances: result.rows });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /gl/trial-balance — summarized trial balance
 glRouter.get('/trial-balance', async (req: Request, res: Response) => {
-  const entityId = req.query.entityId as string;
-  const periodId = req.query.periodId as string;
+  try {
+    const entityId = req.query.entityId as string;
+    const periodId = req.query.periodId as string;
 
-  if (!entityId || !periodId) {
-    res.status(400).json({ error: 'Required: entityId, periodId' });
-    return;
-  }
+    if (!entityId || !periodId) {
+      res.status(400).json({ error: 'Required: entityId, periodId' });
+      return;
+    }
 
-  const result = await query(
-    `SELECT economic_category,
-            SUM(debit_total) AS total_debit,
-            SUM(credit_total) AS total_credit,
-            SUM(net_balance) AS net_balance
-     FROM gl_period_balances
-     WHERE entity_id = $1 AND period_id = $2
-     GROUP BY economic_category
-     ORDER BY economic_category`,
-    [entityId, periodId],
-  );
+    const result = await query(
+      `SELECT economic_category,
+              SUM(debit_total) AS total_debit,
+              SUM(credit_total) AS total_credit,
+              SUM(net_balance) AS net_balance
+       FROM gl_period_balances
+       WHERE entity_id = $1 AND period_id = $2
+       GROUP BY economic_category
+       ORDER BY economic_category`,
+      [entityId, periodId],
+    );
 
-  res.json({ trialBalance: result.rows });
+    res.json({ trialBalance: result.rows });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Period Lifecycle ---
 
 glRouter.post('/periods/:periodId/soft-close', async (req: Request, res: Response) => {
-  const result = await softClosePeriod(req.params.periodId as string, req.body.closedBy);
-  res.json(result);
+  try {
+    const result = await softClosePeriod(req.params.periodId as string, req.body.closedBy);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/periods/:periodId/hard-close', async (req: Request, res: Response) => {
-  const result = await hardClosePeriod(req.params.periodId as string, req.body.closedBy);
-  res.json(result);
+  try {
+    const result = await hardClosePeriod(req.params.periodId as string, req.body.closedBy);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/periods/:periodId/reopen', async (req: Request, res: Response) => {
-  const result = await reopenPeriod(req.params.periodId as string, req.body.reopenedBy);
-  res.json(result);
+  try {
+    const result = await reopenPeriod(req.params.periodId as string, req.body.reopenedBy);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Financial Reporting (CQRS reads from TimescaleDB) ---
 
 glRouter.get('/profit-and-loss', async (req: Request, res: Response) => {
-  const entityId = req.query.entityId as string;
-  const periodId = req.query.periodId as string;
-  const fundId = req.query.fundId as string | undefined;
+  try {
+    const entityId = req.query.entityId as string;
+    const periodId = req.query.periodId as string;
+    const fundId = req.query.fundId as string | undefined;
 
-  if (!entityId || !periodId) {
-    res.status(400).json({ error: 'Required: entityId, periodId' });
-    return;
-  }
+    if (!entityId || !periodId) {
+      res.status(400).json({ error: 'Required: entityId, periodId' });
+      return;
+    }
 
-  const pnl = await getProfitAndLoss(entityId, periodId, fundId);
-  res.json(pnl);
+    const pnl = await getProfitAndLoss(entityId, periodId, fundId);
+    res.json(pnl);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/balance-sheet', async (req: Request, res: Response) => {
-  const entityId = req.query.entityId as string;
-  const periodId = req.query.periodId as string;
-  const fundId = req.query.fundId as string | undefined;
+  try {
+    const entityId = req.query.entityId as string;
+    const periodId = req.query.periodId as string;
+    const fundId = req.query.fundId as string | undefined;
 
-  if (!entityId || !periodId) {
-    res.status(400).json({ error: 'Required: entityId, periodId' });
-    return;
-  }
+    if (!entityId || !periodId) {
+      res.status(400).json({ error: 'Required: entityId, periodId' });
+      return;
+    }
 
-  const bs = await getBalanceSheet(entityId, periodId, fundId);
-  res.json(bs);
+    const bs = await getBalanceSheet(entityId, periodId, fundId);
+    res.json(bs);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/fund-balances', async (req: Request, res: Response) => {
-  const entityId = req.query.entityId as string;
-  const periodId = req.query.periodId as string;
+  try {
+    const entityId = req.query.entityId as string;
+    const periodId = req.query.periodId as string;
 
-  if (!entityId || !periodId) {
-    res.status(400).json({ error: 'Required: entityId, periodId' });
-    return;
-  }
+    if (!entityId || !periodId) {
+      res.status(400).json({ error: 'Required: entityId, periodId' });
+      return;
+    }
 
-  const funds = await getFundBalances(entityId, periodId);
-  res.json({ funds });
+    const funds = await getFundBalances(entityId, periodId);
+    res.json({ funds });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Statutory Mappings ---
 
 glRouter.post('/statutory-mappings', async (req: Request, res: Response) => {
-  const id = await createStatutoryMapping(req.body);
-  res.status(201).json({ id });
+  try {
+    const id = await createStatutoryMapping(req.body);
+    res.status(201).json({ id });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/statutory-mappings/:id', async (req: Request, res: Response) => {
-  const mapping = await getStatutoryMapping(req.params.id as string);
-  if (!mapping) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json(mapping);
+  try {
+    const mapping = await getStatutoryMapping(req.params.id as string);
+    if (!mapping) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(mapping);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/statutory-mappings/by-jurisdiction/:jurisdiction', async (req: Request, res: Response) => {
-  const mappings = await listStatutoryMappings(req.params.jurisdiction as string);
-  res.json({ mappings });
+  try {
+    const mappings = await listStatutoryMappings(req.params.jurisdiction as string);
+    res.json({ mappings });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.patch('/statutory-mappings/:id', async (req: Request, res: Response) => {
-  const updated = await updateStatutoryMapping(req.params.id as string, req.body);
-  if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json({ success: true });
+  try {
+    const updated = await updateStatutoryMapping(req.params.id as string, req.body);
+    if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.delete('/statutory-mappings/:id', async (req: Request, res: Response) => {
-  const deleted = await deleteStatutoryMapping(req.params.id as string);
-  if (!deleted) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json({ success: true });
+  try {
+    const deleted = await deleteStatutoryMapping(req.params.id as string);
+    if (!deleted) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- TemporalClaim / Accruals ---
 
 glRouter.post('/temporal-claims', async (req: Request, res: Response) => {
-  const id = await createTemporalClaim(req.body);
-  res.status(201).json({ id });
+  try {
+    const id = await createTemporalClaim(req.body);
+    res.status(201).json({ id });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/temporal-claims/:id', async (req: Request, res: Response) => {
-  const claim = await getTemporalClaim(req.params.id as string);
-  if (!claim) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json(claim);
+  try {
+    const claim = await getTemporalClaim(req.params.id as string);
+    if (!claim) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(claim);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/temporal-claims/by-entity/:entityId', async (req: Request, res: Response) => {
-  const status = req.query.status as string | undefined;
-  const claims = await listTemporalClaims(
-    req.params.entityId as string,
-    status as any,
-  );
-  res.json({ claims });
+  try {
+    const status = req.query.status as string | undefined;
+    const claims = await listTemporalClaims(
+      req.params.entityId as string,
+      status as any,
+    );
+    res.json({ claims });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.patch('/temporal-claims/:id', async (req: Request, res: Response) => {
-  const updated = await updateTemporalClaim(req.params.id as string, req.body);
-  if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json({ success: true });
+  try {
+    const updated = await updateTemporalClaim(req.params.id as string, req.body);
+    if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/temporal-claims/:id/recognize', async (req: Request, res: Response) => {
-  const { periodId } = req.body;
-  if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
-  const result = await recognizeClaim(req.params.id as string, periodId);
-  res.json(result);
+  try {
+    const { periodId } = req.body;
+    if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
+    const result = await recognizeClaim(req.params.id as string, periodId);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/temporal-claims/recognize-all', async (req: Request, res: Response) => {
-  const { entityId, periodId } = req.body;
-  if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
-  const result = await recognizeAllClaims(entityId, periodId);
-  res.json(result);
+  try {
+    const { entityId, periodId } = req.body;
+    if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
+    const result = await recognizeAllClaims(entityId, periodId);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/temporal-claims/auto-reverse', async (req: Request, res: Response) => {
-  const { entityId, currentPeriodId, previousPeriodId } = req.body;
-  if (!entityId || !currentPeriodId || !previousPeriodId) {
-    res.status(400).json({ error: 'Required: entityId, currentPeriodId, previousPeriodId' }); return;
-  }
-  const result = await autoReverseClaims(entityId, currentPeriodId, previousPeriodId);
-  res.json(result);
+  try {
+    const { entityId, currentPeriodId, previousPeriodId } = req.body;
+    if (!entityId || !currentPeriodId || !previousPeriodId) {
+      res.status(400).json({ error: 'Required: entityId, currentPeriodId, previousPeriodId' }); return;
+    }
+    const result = await autoReverseClaims(entityId, currentPeriodId, previousPeriodId);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/temporal-claims/:id/ecl', async (req: Request, res: Response) => {
-  const { collectabilityScore, eclAllowance } = req.body;
-  const result = await updateECL(req.params.id as string, collectabilityScore, eclAllowance);
-  res.json(result);
+  try {
+    const { collectabilityScore, eclAllowance } = req.body;
+    const result = await updateECL(req.params.id as string, collectabilityScore, eclAllowance);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/temporal-claims/:id/write-off', async (req: Request, res: Response) => {
-  const result = await writeOffClaim(req.params.id as string);
-  res.json({ success: result });
+  try {
+    const result = await writeOffClaim(req.params.id as string);
+    res.json({ success: result });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/statutory-mappings/resolve', async (req: Request, res: Response) => {
-  const { jurisdiction, nodeRefType, economicCategory, asOfDate } = req.query;
-  if (!jurisdiction || !nodeRefType || !economicCategory || !asOfDate) {
-    res.status(400).json({ error: 'Required: jurisdiction, nodeRefType, economicCategory, asOfDate' });
-    return;
-  }
-  const result = await resolveStatutoryCode(
-    jurisdiction as string, nodeRefType as string,
-    economicCategory as string, asOfDate as string,
-  );
-  if (!result) { res.status(404).json({ error: 'No matching mapping' }); return; }
-  res.json(result);
+  try {
+    const { jurisdiction, nodeRefType, economicCategory, asOfDate } = req.query;
+    if (!jurisdiction || !nodeRefType || !economicCategory || !asOfDate) {
+      res.status(400).json({ error: 'Required: jurisdiction, nodeRefType, economicCategory, asOfDate' });
+      return;
+    }
+    const result = await resolveStatutoryCode(
+      jurisdiction as string, nodeRefType as string,
+      economicCategory as string, asOfDate as string,
+    );
+    if (!result) { res.status(404).json({ error: 'No matching mapping' }); return; }
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Lease Accounting ---
 
 glRouter.post('/leases', async (req: Request, res: Response) => {
-  const result = await createLease(req.body);
-  res.status(201).json(result);
+  try {
+    const result = await createLease(req.body);
+    res.status(201).json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/rou-assets/:id', async (req: Request, res: Response) => {
-  const asset = await getRightOfUseAsset(req.params.id as string);
-  if (!asset) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json(asset);
+  try {
+    const asset = await getRightOfUseAsset(req.params.id as string);
+    if (!asset) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(asset);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/rou-assets/by-entity/:entityId', async (req: Request, res: Response) => {
-  const assets = await listRightOfUseAssets(req.params.entityId as string);
-  res.json({ assets });
+  try {
+    const assets = await listRightOfUseAssets(req.params.entityId as string);
+    res.json({ assets });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/lease-liabilities/:id', async (req: Request, res: Response) => {
-  const liability = await getLeaseLiability(req.params.id as string);
-  if (!liability) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json(liability);
+  try {
+    const liability = await getLeaseLiability(req.params.id as string);
+    if (!liability) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(liability);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/lease-liabilities/by-entity/:entityId', async (req: Request, res: Response) => {
-  const liabilities = await listLeaseLiabilities(req.params.entityId as string);
-  res.json({ liabilities });
+  try {
+    const liabilities = await listLeaseLiabilities(req.params.entityId as string);
+    res.json({ liabilities });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/leases/process-payment', async (req: Request, res: Response) => {
-  const { leaseLiabilityId, rouAssetId, periodId } = req.body;
-  if (!leaseLiabilityId || !rouAssetId || !periodId) {
-    res.status(400).json({ error: 'Required: leaseLiabilityId, rouAssetId, periodId' }); return;
-  }
-  const result = await processLeasePayment(leaseLiabilityId, rouAssetId, periodId);
-  res.json(result);
+  try {
+    const { leaseLiabilityId, rouAssetId, periodId } = req.body;
+    if (!leaseLiabilityId || !rouAssetId || !periodId) {
+      res.status(400).json({ error: 'Required: leaseLiabilityId, rouAssetId, periodId' }); return;
+    }
+    const result = await processLeasePayment(leaseLiabilityId, rouAssetId, periodId);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Provisions (IAS 37) ---
 
 glRouter.post('/provisions', async (req: Request, res: Response) => {
-  const id = await createProvision(req.body);
-  res.status(201).json({ id });
+  try {
+    const id = await createProvision(req.body);
+    res.status(201).json({ id });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/provisions/:id', async (req: Request, res: Response) => {
-  const provision = await getProvision(req.params.id as string);
-  if (!provision) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json(provision);
+  try {
+    const provision = await getProvision(req.params.id as string);
+    if (!provision) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(provision);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/provisions/by-entity/:entityId', async (req: Request, res: Response) => {
-  const probability = req.query.probability as string | undefined;
-  const provisions = await listProvisions(req.params.entityId as string, probability as any);
-  res.json({ provisions });
+  try {
+    const probability = req.query.probability as string | undefined;
+    const provisions = await listProvisions(req.params.entityId as string, probability as any);
+    res.json({ provisions });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.patch('/provisions/:id', async (req: Request, res: Response) => {
-  const updated = await updateProvision(req.params.id as string, req.body);
-  if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json({ success: true });
+  try {
+    const updated = await updateProvision(req.params.id as string, req.body);
+    if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.delete('/provisions/:id', async (req: Request, res: Response) => {
-  const deleted = await deleteProvision(req.params.id as string);
-  if (!deleted) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json({ success: true });
+  try {
+    const deleted = await deleteProvision(req.params.id as string);
+    if (!deleted) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/provisions/:id/recognize', async (req: Request, res: Response) => {
-  const { periodId } = req.body;
-  if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
-  const result = await recognizeProvision(req.params.id as string, periodId);
-  res.json(result);
+  try {
+    const { periodId } = req.body;
+    if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
+    const result = await recognizeProvision(req.params.id as string, periodId);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/provisions/:id/unwind', async (req: Request, res: Response) => {
-  const { periodId } = req.body;
-  if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
-  const result = await unwindProvisionDiscount(req.params.id as string, periodId);
-  res.json(result);
+  try {
+    const { periodId } = req.body;
+    if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
+    const result = await unwindProvisionDiscount(req.params.id as string, periodId);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/provisions/:id/settle', async (req: Request, res: Response) => {
-  const { periodId, actualAmount } = req.body;
-  if (!periodId || actualAmount === undefined) {
-    res.status(400).json({ error: 'Required: periodId, actualAmount' }); return;
-  }
-  const result = await settleProvision(req.params.id as string, periodId, actualAmount);
-  res.json(result);
+  try {
+    const { periodId, actualAmount } = req.body;
+    if (!periodId || actualAmount === undefined) {
+      res.status(400).json({ error: 'Required: periodId, actualAmount' }); return;
+    }
+    const result = await settleProvision(req.params.id as string, periodId, actualAmount);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/provisions/review/:entityId', async (req: Request, res: Response) => {
-  const periodEndDate = req.query.periodEndDate as string;
-  if (!periodEndDate) { res.status(400).json({ error: 'Required: periodEndDate' }); return; }
-  const provisions = await getProvisionsNeedingReview(req.params.entityId as string, periodEndDate);
-  res.json({ provisions });
+  try {
+    const periodEndDate = req.query.periodEndDate as string;
+    if (!periodEndDate) { res.status(400).json({ error: 'Required: periodEndDate' }); return; }
+    const provisions = await getProvisionsNeedingReview(req.params.entityId as string, periodEndDate);
+    res.json({ provisions });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Related Party (IAS 24) ---
 
 glRouter.post('/related-parties', async (req: Request, res: Response) => {
-  await createRelatedParty(req.body);
-  res.status(201).json({ success: true });
+  try {
+    await createRelatedParty(req.body);
+    res.status(201).json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/related-parties/by-entity/:entityId', async (req: Request, res: Response) => {
-  const parties = await getRelatedParties(req.params.entityId as string);
-  res.json({ relatedParties: parties });
+  try {
+    const parties = await getRelatedParties(req.params.entityId as string);
+    res.json({ relatedParties: parties });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/related-parties/between', async (req: Request, res: Response) => {
-  const { entityId1, entityId2 } = req.query;
-  if (!entityId1 || !entityId2) { res.status(400).json({ error: 'Required: entityId1, entityId2' }); return; }
-  const rel = await getRelatedPartyBetween(entityId1 as string, entityId2 as string);
-  if (!rel) { res.status(404).json({ error: 'No related party relationship found' }); return; }
-  res.json(rel);
+  try {
+    const { entityId1, entityId2 } = req.query;
+    if (!entityId1 || !entityId2) { res.status(400).json({ error: 'Required: entityId1, entityId2' }); return; }
+    const rel = await getRelatedPartyBetween(entityId1 as string, entityId2 as string);
+    if (!rel) { res.status(404).json({ error: 'No related party relationship found' }); return; }
+    res.json(rel);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.patch('/related-parties', async (req: Request, res: Response) => {
-  const { sourceEntityId, targetEntityId, ...updates } = req.body;
-  if (!sourceEntityId || !targetEntityId) { res.status(400).json({ error: 'Required: sourceEntityId, targetEntityId' }); return; }
-  const updated = await updateRelatedParty(sourceEntityId, targetEntityId, updates);
-  if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json({ success: true });
+  try {
+    const { sourceEntityId, targetEntityId, ...updates } = req.body;
+    if (!sourceEntityId || !targetEntityId) { res.status(400).json({ error: 'Required: sourceEntityId, targetEntityId' }); return; }
+    const updated = await updateRelatedParty(sourceEntityId, targetEntityId, updates);
+    if (!updated) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.delete('/related-parties', async (req: Request, res: Response) => {
-  const { sourceEntityId, targetEntityId } = req.body;
-  if (!sourceEntityId || !targetEntityId) { res.status(400).json({ error: 'Required: sourceEntityId, targetEntityId' }); return; }
-  const deleted = await deleteRelatedParty(sourceEntityId, targetEntityId);
-  if (!deleted) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json({ success: true });
+  try {
+    const { sourceEntityId, targetEntityId } = req.body;
+    if (!sourceEntityId || !targetEntityId) { res.status(400).json({ error: 'Required: sourceEntityId, targetEntityId' }); return; }
+    const deleted = await deleteRelatedParty(sourceEntityId, targetEntityId);
+    if (!deleted) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/related-party-transactions', async (req: Request, res: Response) => {
-  await createRelatedPartyTransaction(req.body);
-  res.status(201).json({ success: true });
+  try {
+    await createRelatedPartyTransaction(req.body);
+    res.status(201).json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/related-party-transactions/by-entity/:entityId', async (req: Request, res: Response) => {
-  const periodId = req.query.periodId as string | undefined;
-  const transactions = await getRelatedPartyTransactions(req.params.entityId as string, periodId);
-  res.json({ transactions });
+  try {
+    const periodId = req.query.periodId as string | undefined;
+    const transactions = await getRelatedPartyTransactions(req.params.entityId as string, periodId);
+    res.json({ transactions });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/related-party-transactions/validate-arms-length', async (req: Request, res: Response) => {
-  const { entityId, periodId, method, tolerancePct } = req.body;
-  if (!entityId || !periodId || !method) {
-    res.status(400).json({ error: 'Required: entityId, periodId, method' }); return;
-  }
-  const results = await validateArmsLength(entityId, periodId, method, tolerancePct);
-  res.json({ results });
+  try {
+    const { entityId, periodId, method, tolerancePct } = req.body;
+    if (!entityId || !periodId || !method) {
+      res.status(400).json({ error: 'Required: entityId, periodId, method' }); return;
+    }
+    const results = await validateArmsLength(entityId, periodId, method, tolerancePct);
+    res.json({ results });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/related-party-transactions/disclosure/:entityId', async (req: Request, res: Response) => {
-  const periodId = req.query.periodId as string;
-  if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
-  const schedule = await generateDisclosureSchedule(req.params.entityId as string, periodId);
-  res.json({ disclosures: schedule });
+  try {
+    const periodId = req.query.periodId as string;
+    if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
+    const schedule = await generateDisclosureSchedule(req.params.entityId as string, periodId);
+    res.json({ disclosures: schedule });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Equity Close ---
 
 glRouter.post('/retained-earnings', async (req: Request, res: Response) => {
-  const id = await computeRetainedEarnings(req.body);
-  res.status(201).json({ id });
+  try {
+    const id = await computeRetainedEarnings(req.body);
+    res.status(201).json({ id });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/retained-earnings', async (req: Request, res: Response) => {
-  const { entityId, periodId, fundId } = req.query;
-  if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
-  const re = await getRetainedEarnings(entityId as string, periodId as string, fundId as string | undefined);
-  if (!re) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json(re);
+  try {
+    const { entityId, periodId, fundId } = req.query;
+    if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
+    const re = await getRetainedEarnings(entityId as string, periodId as string, fundId as string | undefined);
+    if (!re) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(re);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/oci', async (req: Request, res: Response) => {
-  const id = await recordOCI(req.body);
-  res.status(201).json({ id });
+  try {
+    const id = await recordOCI(req.body);
+    res.status(201).json({ id });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/oci/:id/recycle', async (req: Request, res: Response) => {
-  const { amount } = req.body;
-  if (amount === undefined) { res.status(400).json({ error: 'Required: amount' }); return; }
-  const result = await recycleOCI(req.params.id as string, amount);
-  if (!result) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json({ success: true });
+  try {
+    const { amount } = req.body;
+    if (amount === undefined) { res.status(400).json({ error: 'Required: amount' }); return; }
+    const result = await recycleOCI(req.params.id as string, amount);
+    if (!result) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/oci/by-entity/:entityId', async (req: Request, res: Response) => {
-  const periodId = req.query.periodId as string;
-  if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
-  const components = await getOCIComponents(req.params.entityId as string, periodId);
-  res.json({ components });
+  try {
+    const periodId = req.query.periodId as string;
+    if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
+    const components = await getOCIComponents(req.params.entityId as string, periodId);
+    res.json({ components });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/oci/recyclable/:component', async (req: Request, res: Response) => {
-  const recyclable = isRecyclable(req.params.component as any);
-  res.json({ component: req.params.component, recyclable });
+  try {
+    const recyclable = isRecyclable(req.params.component as any);
+    res.json({ component: req.params.component, recyclable });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.post('/equity-section', async (req: Request, res: Response) => {
-  const { entityId, periodId, nciEquity } = req.body;
-  if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
-  const id = await generateEquitySection(entityId, periodId, nciEquity);
-  res.status(201).json({ id });
+  try {
+    const { entityId, periodId, nciEquity } = req.body;
+    if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
+    const id = await generateEquitySection(entityId, periodId, nciEquity);
+    res.status(201).json({ id });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/equity-section', async (req: Request, res: Response) => {
-  const { entityId, periodId } = req.query;
-  if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
-  const es = await getEquitySection(entityId as string, periodId as string);
-  if (!es) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json(es);
+  try {
+    const { entityId, periodId } = req.query;
+    if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
+    const es = await getEquitySection(entityId as string, periodId as string);
+    if (!es) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(es);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 glRouter.get('/equity-breakdown', async (req: Request, res: Response) => {
-  const { entityId, periodId } = req.query;
-  if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
-  const breakdown = await getEquityBreakdown(entityId as string, periodId as string);
-  res.json({ breakdown });
+  try {
+    const { entityId, periodId } = req.query;
+    if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
+    const breakdown = await getEquityBreakdown(entityId as string, periodId as string);
+    res.json({ breakdown });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });

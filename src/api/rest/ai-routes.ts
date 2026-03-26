@@ -48,170 +48,216 @@ export const aiRouter = Router();
 // --- Weight Learner ---
 
 aiRouter.post('/realizations', async (req: Request, res: Response) => {
-  const { outcomeId, realizedDelta, periodId } = req.body;
-  if (!outcomeId || realizedDelta === undefined || !periodId) {
-    res.status(400).json({ error: 'Required: outcomeId, realizedDelta, periodId' });
-    return;
-  }
-  const result = await recordRealization({ outcomeId, realizedDelta, periodId });
-  res.status(201).json(result);
+  try {
+    const { outcomeId, realizedDelta, periodId } = req.body;
+    if (!outcomeId || realizedDelta === undefined || !periodId) {
+      res.status(400).json({ error: 'Required: outcomeId, realizedDelta, periodId' });
+      return;
+    }
+    const result = await recordRealization({ outcomeId, realizedDelta, periodId });
+    res.status(201).json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Effective Stake ---
 
 aiRouter.get('/effective-stake/:nodeId', async (req: Request, res: Response) => {
-  const stake = await computeEffectiveStake(req.params.nodeId as string);
-  if (!stake) { res.status(404).json({ error: 'Not found or no ci_point_estimate' }); return; }
-  res.json(stake);
+  try {
+    const stake = await computeEffectiveStake(req.params.nodeId as string);
+    if (!stake) { res.status(404).json({ error: 'Not found or no ci_point_estimate' }); return; }
+    res.json(stake);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.get('/effective-stakes/by-entity/:entityId', async (req: Request, res: Response) => {
-  const stakes = await computeEntityEffectiveStakes(req.params.entityId as string);
-  res.json({ stakes });
+  try {
+    const stakes = await computeEntityEffectiveStakes(req.params.entityId as string);
+    res.json({ stakes });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Effective Contribution ---
 
 aiRouter.get('/effective-contributions/:sourceId', async (req: Request, res: Response) => {
-  const contributions = await computeEffectiveContributions(req.params.sourceId as string);
-  res.json({ contributions });
+  try {
+    const contributions = await computeEffectiveContributions(req.params.sourceId as string);
+    res.json({ contributions });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Value State Transitions ---
 
 aiRouter.post('/value-state-transition', async (req: Request, res: Response) => {
-  const { nodeId, newState, epistemicActivityId } = req.body;
-  if (!nodeId || !newState) {
-    res.status(400).json({ error: 'Required: nodeId, newState' });
-    return;
-  }
-  const result = await transitionValueState({ nodeId, newState, epistemicActivityId });
-  if (!result) { res.status(404).json({ error: 'Node not found' }); return; }
-  res.json({ success: true });
+  try {
+    const { nodeId, newState, epistemicActivityId } = req.body;
+    if (!nodeId || !newState) {
+      res.status(400).json({ error: 'Required: nodeId, newState' });
+      return;
+    }
+    const result = await transitionValueState({ nodeId, newState, epistemicActivityId });
+    if (!result) { res.status(404).json({ error: 'Node not found' }); return; }
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Calibration ---
 
 aiRouter.get('/calibration/:entityId', async (req: Request, res: Response) => {
-  const outcomeType = req.query.outcomeType as string | undefined;
-  const history = await getCalibrationHistory(req.params.entityId as string, outcomeType);
-  res.json({ history });
+  try {
+    const outcomeType = req.query.outcomeType as string | undefined;
+    const history = await getCalibrationHistory(req.params.entityId as string, outcomeType);
+    res.json({ history });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.get('/calibration/:entityId/:outcomeType/current', async (req: Request, res: Response) => {
-  const factor = await getCurrentCalibration(
-    req.params.entityId as string,
-    req.params.outcomeType as string,
-  );
-  res.json({ calibrationFactor: factor });
+  try {
+    const factor = await getCurrentCalibration(
+      req.params.entityId as string,
+      req.params.outcomeType as string,
+    );
+    res.json({ calibrationFactor: factor });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Epistemic Scorer ---
 
 aiRouter.get('/evoi/:nodeId', async (req: Request, res: Response) => {
-  const result = await computeEVOI(req.params.nodeId as string);
-  if (!result) { res.status(404).json({ error: 'Not found or no ci_point_estimate' }); return; }
-  res.json(result);
+  try {
+    const result = await computeEVOI(req.params.nodeId as string);
+    if (!result) { res.status(404).json({ error: 'Not found or no ci_point_estimate' }); return; }
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.get('/evoi/by-entity/:entityId', async (req: Request, res: Response) => {
-  const minEvoi = req.query.minEvoi ? Number(req.query.minEvoi) : undefined;
-  const evois = await computeEntityEVOIs(req.params.entityId as string, minEvoi);
-  res.json({ evois });
+  try {
+    const minEvoi = req.query.minEvoi ? Number(req.query.minEvoi) : undefined;
+    const evois = await computeEntityEVOIs(req.params.entityId as string, minEvoi);
+    res.json({ evois });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.post('/epistemic-priorities/:entityId', async (req: Request, res: Response) => {
-  const updated = await updateEpistemicPriorities(req.params.entityId as string);
-  res.json({ updated });
+  try {
+    const updated = await updateEpistemicPriorities(req.params.entityId as string);
+    res.json({ updated });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.post('/epistemic-roi', async (req: Request, res: Response) => {
-  const { nodeId, activityCost } = req.body;
-  if (!nodeId || activityCost === undefined) {
-    res.status(400).json({ error: 'Required: nodeId, activityCost' }); return;
-  }
-  const result = await computeEpistemicROI(nodeId, activityCost);
-  if (!result) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json(result);
+  try {
+    const { nodeId, activityCost } = req.body;
+    if (!nodeId || activityCost === undefined) {
+      res.status(400).json({ error: 'Required: nodeId, activityCost' }); return;
+    }
+    const result = await computeEpistemicROI(nodeId, activityCost);
+    if (!result) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.get('/stale-estimates/:entityId', async (req: Request, res: Response) => {
-  const stale = await findStaleEstimates(req.params.entityId as string);
-  res.json({ staleEstimates: stale });
+  try {
+    const stale = await findStaleEstimates(req.params.entityId as string);
+    res.json({ staleEstimates: stale });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.post('/stale-estimates/:entityId/downgrade', async (req: Request, res: Response) => {
-  const count = await downgradeStaleEstimates(req.params.entityId as string);
-  res.json({ downgraded: count });
+  try {
+    const count = await downgradeStaleEstimates(req.params.entityId as string);
+    res.json({ downgraded: count });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Scenario Engine ---
 
 aiRouter.post('/scenario-sets', async (req: Request, res: Response) => {
-  const id = await createScenarioSet(req.body);
-  res.status(201).json({ id });
+  try {
+    const id = await createScenarioSet(req.body);
+    res.status(201).json({ id });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.get('/scenario-sets/:id', async (req: Request, res: Response) => {
-  const ss = await getScenarioSet(req.params.id as string);
-  if (!ss) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json(ss);
+  try {
+    const ss = await getScenarioSet(req.params.id as string);
+    if (!ss) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(ss);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.get('/scenario-sets/by-node/:nodeId', async (req: Request, res: Response) => {
-  const sets = await getScenarioSetsForNode(req.params.nodeId as string);
-  res.json({ scenarioSets: sets });
+  try {
+    const sets = await getScenarioSetsForNode(req.params.nodeId as string);
+    res.json({ scenarioSets: sets });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.post('/monte-carlo/:scenarioSetId', async (req: Request, res: Response) => {
-  const simulations = req.body.simulations ?? 10000;
-  const result = await runMonteCarlo(req.params.scenarioSetId as string, simulations);
-  if (!result) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json(result);
+  try {
+    const simulations = req.body.simulations ?? 10000;
+    const result = await runMonteCarlo(req.params.scenarioSetId as string, simulations);
+    if (!result) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.get('/risk-profiles/:entityId', async (req: Request, res: Response) => {
-  const profiles = await computeEntityRiskProfiles(req.params.entityId as string);
-  res.json({ profiles });
+  try {
+    const profiles = await computeEntityRiskProfiles(req.params.entityId as string);
+    res.json({ profiles });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.post('/scenarios/fire', async (req: Request, res: Response) => {
-  const { scenarioSetId, scenarioLabel, actualImpact } = req.body;
-  if (!scenarioSetId || !scenarioLabel || actualImpact === undefined) {
-    res.status(400).json({ error: 'Required: scenarioSetId, scenarioLabel, actualImpact' }); return;
-  }
-  const result = await fireScenario(scenarioSetId, scenarioLabel, actualImpact);
-  if (!result) { res.status(404).json({ error: 'Not found' }); return; }
-  res.json({ success: true });
+  try {
+    const { scenarioSetId, scenarioLabel, actualImpact } = req.body;
+    if (!scenarioSetId || !scenarioLabel || actualImpact === undefined) {
+      res.status(400).json({ error: 'Required: scenarioSetId, scenarioLabel, actualImpact' }); return;
+    }
+    const result = await fireScenario(scenarioSetId, scenarioLabel, actualImpact);
+    if (!result) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Graph Query (Claude Integration) ---
 
 aiRouter.get('/paths/:nodeId', async (req: Request, res: Response) => {
-  const maxHops = req.query.maxHops ? Number(req.query.maxHops) : 6;
-  const paths = await findPathsToOutcomes(req.params.nodeId as string, maxHops);
-  res.json({ paths });
+  try {
+    const maxHops = req.query.maxHops ? Number(req.query.maxHops) : 6;
+    const paths = await findPathsToOutcomes(req.params.nodeId as string, maxHops);
+    res.json({ paths });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.get('/top-contributors/:outcomeId', async (req: Request, res: Response) => {
-  const maxHops = req.query.maxHops ? Number(req.query.maxHops) : 6;
-  const limit = req.query.limit ? Number(req.query.limit) : 10;
-  const contributors = await findTopContributors(req.params.outcomeId as string, maxHops, limit);
-  res.json({ contributors });
+  try {
+    const maxHops = req.query.maxHops ? Number(req.query.maxHops) : 6;
+    const limit = req.query.limit ? Number(req.query.limit) : 10;
+    const contributors = await findTopContributors(req.params.outcomeId as string, maxHops, limit);
+    res.json({ contributors });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.post('/query', async (req: Request, res: Response) => {
-  const { query: queryText, entityId, nodeId, outcomeId } = req.body;
-  if (!queryText) { res.status(400).json({ error: 'Required: query' }); return; }
-  const intent = parseQuery(queryText);
-  if (entityId) intent.entityId = entityId;
-  const result = await executeQuery(intent, { entityId, nodeId, outcomeId });
-  res.json({ intent: intent.type, result });
+  try {
+    const { query: queryText, entityId, nodeId, outcomeId } = req.body;
+    if (!queryText) { res.status(400).json({ error: 'Required: query' }); return; }
+    const intent = parseQuery(queryText);
+    if (entityId) intent.entityId = entityId;
+    const result = await executeQuery(intent, { entityId, nodeId, outcomeId });
+    res.json({ intent: intent.type, result });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.get('/graph-summary/:entityId', async (req: Request, res: Response) => {
-  const summary = await getEntityGraphSummary(req.params.entityId as string);
-  res.json(summary);
+  try {
+    const summary = await getEntityGraphSummary(req.params.entityId as string);
+    res.json(summary);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Vector Embedder ---
@@ -230,19 +276,25 @@ aiRouter.post('/embeddings', async (req: Request, res: Response) => {
 });
 
 aiRouter.get('/embeddings/:nodeId', async (req: Request, res: Response) => {
-  const emb = await getEmbedding(req.params.nodeId as string);
-  if (!emb) { res.status(404).json({ error: 'Embedding not found' }); return; }
-  res.json(emb);
+  try {
+    const emb = await getEmbedding(req.params.nodeId as string);
+    if (!emb) { res.status(404).json({ error: 'Embedding not found' }); return; }
+    res.json(emb);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.delete('/embeddings/:nodeId', async (req: Request, res: Response) => {
-  const deleted = await deleteEmbedding(req.params.nodeId as string);
-  res.json({ deleted });
+  try {
+    const deleted = await deleteEmbedding(req.params.nodeId as string);
+    res.json({ deleted });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.get('/embeddings/count/:entityId', async (req: Request, res: Response) => {
-  const count = await countEmbeddings(req.params.entityId as string);
-  res.json({ count });
+  try {
+    const count = await countEmbeddings(req.params.entityId as string);
+    res.json({ count });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.post('/embeddings/embed-entity/:entityId', async (req: Request, res: Response) => {
@@ -255,10 +307,12 @@ aiRouter.post('/embeddings/embed-entity/:entityId', async (req: Request, res: Re
 });
 
 aiRouter.get('/embeddings/similar/:nodeId', async (req: Request, res: Response) => {
-  const threshold = req.query.threshold ? Number(req.query.threshold) : 0.82;
-  const limit = req.query.limit ? Number(req.query.limit) : 50;
-  const candidates = await findSimilarNodes(req.params.nodeId as string, threshold, limit);
-  res.json({ candidates });
+  try {
+    const threshold = req.query.threshold ? Number(req.query.threshold) : 0.82;
+    const limit = req.query.limit ? Number(req.query.limit) : 50;
+    const candidates = await findSimilarNodes(req.params.nodeId as string, threshold, limit);
+    res.json({ candidates });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 aiRouter.post('/embeddings/discover/:entityId', async (req: Request, res: Response) => {

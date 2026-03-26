@@ -32,25 +32,33 @@ migrationRouter.post('/coa-mappings', async (req: Request, res: Response) => {
 });
 
 migrationRouter.get('/coa-mappings', (_req: Request, res: Response) => {
-  res.json(listCOAMappings());
+  try {
+    res.json(listCOAMappings());
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 migrationRouter.get('/coa-mappings/:coaCode', (req: Request, res: Response) => {
-  const mapping = getCOAMapping(req.params.coaCode as string);
-  if (!mapping) return res.status(404).json({ error: 'COA mapping not found' });
-  res.json(mapping);
+  try {
+    const mapping = getCOAMapping(req.params.coaCode as string);
+    if (!mapping) return res.status(404).json({ error: 'COA mapping not found' });
+    res.json(mapping);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 migrationRouter.delete('/coa-mappings', (_req: Request, res: Response) => {
-  clearCOAMappings();
-  res.json({ cleared: true });
+  try {
+    clearCOAMappings();
+    res.json({ cleared: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Validation ---
 
 migrationRouter.post('/validate', (req: Request, res: Response) => {
-  const result = validateImport(req.body.entries ?? []);
-  res.json(result);
+  try {
+    const result = validateImport(req.body.entries ?? []);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // --- Import ---
