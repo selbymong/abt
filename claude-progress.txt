@@ -285,10 +285,21 @@ All Phase 3 features implemented and tested:
   - 14 integration tests (cashflow-optimizer.test.ts)
   - Total: 266 tests across 21 files all passing
 
+- [x] P4-SCENARIO-ENGINE: Monte Carlo on distal/force majeure nodes
+  - ScenarioSet CRUD: create (with probability validation), get, list by node
+  - Monte Carlo simulation: 10k samples from discrete probability distribution
+    - Reports mean, median, stdDev, percentiles (p5/p25/p50/p75/p95), min/max
+    - Probability-weighted expected value, tail risk (baseValue - p5)
+    - 100-point distribution sample for visualization
+  - Entity risk profiles: batch analysis of DISTAL_EXT and FORCE_MAJEURE nodes
+  - Scenario firing: emit SCENARIO_FIRED events for materialized scenarios
+  - REST endpoints for all scenario engine operations
+  - 14 integration tests (scenario-engine.test.ts)
+  - Total: 280 tests across 22 files all passing
+
 ## What Comes Next
-1. P4-SCENARIO-ENGINE: Monte Carlo on distal/force majeure nodes
-2. P4-CLAUDE-INTEGRATION: Natural language → graph traversal
-3. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
+1. P4-CLAUDE-INTEGRATION: Natural language → graph traversal
+2. Phase 5: Tax + Credits + Compliance (Sprints 28-36)
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container

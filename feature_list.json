@@ -210,7 +210,7 @@
       "id": "P4-SCENARIO-ENGINE",
       "phase": 4,
       "name": "Scenario engine (Monte Carlo on distal/force majeure nodes)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P4-CLAUDE-INTEGRATION",
