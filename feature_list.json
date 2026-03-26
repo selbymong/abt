@@ -258,7 +258,7 @@
       "id": "P6-EQUITY-EXPAND",
       "phase": 6,
       "name": "Equity expansion: ShareClass, EquityAward, EPS computation",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P6-XBRL",

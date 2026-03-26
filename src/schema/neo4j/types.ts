@@ -594,6 +594,53 @@ export interface TaxCreditClaim extends TimestampedNode {
   journal_entry_id?: string;
 }
 
+// --- Equity expansion nodes (ShareClass, EquityAward, EPS) ---
+
+export type ShareClassType = 'COMMON' | 'PREFERRED' | 'CLASS_A' | 'CLASS_B';
+export type AwardType = 'STOCK_OPTION' | 'RSU' | 'PERFORMANCE_SHARE' | 'PHANTOM_STOCK' | 'SAR';
+export type AwardStatus = 'GRANTED' | 'VESTING' | 'VESTED' | 'EXERCISED' | 'FORFEITED' | 'EXPIRED';
+export type VestingType = 'TIME_BASED' | 'PERFORMANCE_BASED' | 'CLIFF' | 'GRADED';
+
+export interface ShareClass extends TimestampedNode {
+  entity_id: string;
+  label: string;
+  share_class_type: ShareClassType;
+  par_value: number;
+  authorized_shares: number;
+  issued_shares: number;
+  outstanding_shares: number;
+  treasury_shares: number;
+  share_capital_amount: number;
+  currency: string;
+  is_voting: boolean;
+  dividend_rate?: number;
+  is_cumulative_dividend: boolean;
+  liquidation_preference?: number;
+  conversion_ratio?: number;
+  is_participating: boolean;
+}
+
+export interface EquityAward extends TimestampedNode {
+  entity_id: string;
+  share_class_id: string;
+  label: string;
+  award_type: AwardType;
+  award_status: AwardStatus;
+  grant_date: string;
+  vesting_type: VestingType;
+  vesting_period_months: number;
+  cliff_months?: number;
+  shares_granted: number;
+  shares_vested: number;
+  shares_forfeited: number;
+  exercise_price?: number;
+  fair_value_at_grant: number;
+  total_compensation_cost: number;
+  recognized_compensation: number;
+  remaining_compensation: number;
+  expiry_date?: string;
+}
+
 // --- IFRS 15 Revenue Recognition nodes ---
 
 export type ContractStatus = 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'IMPAIRED';

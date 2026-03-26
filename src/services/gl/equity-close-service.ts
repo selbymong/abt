@@ -295,7 +295,13 @@ export async function generateEquitySection(
   );
   const accumulatedOci = Number(ociResults[0]?.total ?? 0);
 
-  const shareCapital = 0; // Phase 6 — ShareClass nodes not yet implemented
+  // Sum share capital from all ShareClass nodes
+  const scResults = await runCypher<{ total: number }>(
+    `MATCH (sc:ShareClass {entity_id: $entityId})
+     RETURN COALESCE(SUM(sc.share_capital_amount), 0) AS total`,
+    { entityId },
+  );
+  const shareCapital = Number(scResults[0]?.total ?? 0);
   const totalEquity = shareCapital + retainedEarnings + accumulatedOci;
   const nci = nciEquity ?? 0;
   const totalWithNci = totalEquity + nci;

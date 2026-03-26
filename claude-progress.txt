@@ -412,10 +412,27 @@ All Phase 5 Tax + Credits + Compliance features implemented and tested:
   - 14 integration tests (inventory.test.ts)
   - Total: 413 tests across 29 files all passing
 
+- [x] P6-EQUITY-EXPAND: Equity expansion — ShareClass, EquityAward, EPS computation
+  - ShareClass CRUD: COMMON, PREFERRED, CLASS_A, CLASS_B with par value and authorized/issued shares
+  - Share issuance with authorized limit enforcement
+  - Total share capital computation across all classes
+  - EquityAward CRUD: STOCK_OPTION, RSU, PERFORMANCE_SHARE, PHANTOM_STOCK, SAR
+  - IFRS 2 vesting: straight-line compensation over vesting period with cliff support
+  - Cliff enforcement: no recognition until cliff period passes
+  - Award forfeiture tracking
+  - EPS computation (IAS 33): basic and diluted
+  - Basic EPS: (net income - preferred dividends) / weighted average common shares
+  - Diluted EPS: treasury stock method for options, full dilution for RSUs
+  - Convertible preferred share dilution
+  - Anti-dilution check
+  - Updated equity-close-service to use ShareClass data (was hardcoded 0)
+  - REST endpoints for all equity expansion operations (/api/equity/*)
+  - 15 integration tests (equity-expansion.test.ts)
+  - Total: 428 tests across 30 files all passing
+
 ## What Comes Next
-1. P6-EQUITY-EXPAND: Equity expansion (ShareClass, EquityAward, EPS)
-2. P6-XBRL: XBRL tagging on StatutoryMapping
-3. P6-BANK-REC: Bank reconciliation service
+1. P6-XBRL: XBRL tagging on StatutoryMapping
+2. P6-BANK-REC: Bank reconciliation service
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container

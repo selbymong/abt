@@ -16,6 +16,7 @@ import { taxRouter } from './api/rest/tax-routes.js';
 import { complianceRouter } from './api/rest/compliance-routes.js';
 import { revenueRouter } from './api/rest/revenue-routes.js';
 import { inventoryRouter } from './api/rest/inventory-routes.js';
+import { equityRouter } from './api/rest/equity-routes.js';
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -40,6 +41,7 @@ app.use('/api/tax', taxRouter);
 app.use('/api/compliance', complianceRouter);
 app.use('/api/revenue', revenueRouter);
 app.use('/api/inventory', inventoryRouter);
+app.use('/api/equity', equityRouter);
 
 // Global error handler
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
