@@ -32,6 +32,21 @@ function assertValidEdgeType(edgeType: string): void {
   }
 }
 
+const VALID_PROPERTY_KEY = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
+function sanitizePropertyKeys(updates: Record<string, unknown>): Record<string, unknown> {
+  const clean: Record<string, unknown> = {};
+  for (const key of Object.keys(updates)) {
+    if (!VALID_PROPERTY_KEY.test(key)) {
+      throw new Error(`Invalid property key: ${key}`);
+    }
+    // Prevent overwriting immutable fields
+    if (key === 'id' || key === 'created_at') continue;
+    clean[key] = updates[key];
+  }
+  return clean;
+}
+
 // --- Default epistemic + control property block ---
 
 const EPISTEMIC_DEFAULTS = {
@@ -69,6 +84,17 @@ async function createNode(
 ): Promise<string> {
   assertValidLabel(label);
   const id = uuid();
+  // Validate all incoming property keys before Cypher interpolation
+  for (const obj of [props, epistemicOverrides, controlOverrides]) {
+    if (obj) {
+      for (const key of Object.keys(obj)) {
+        if (!VALID_PROPERTY_KEY.test(key)) {
+          throw new Error(`Invalid property key: ${key}`);
+        }
+      }
+    }
+  }
+
   const allProps: Record<string, unknown> = {
     id,
     ...props,
@@ -128,7 +154,8 @@ async function updateNode(
   updates: Record<string, unknown>,
 ): Promise<boolean> {
   assertValidLabel(label);
-  const keys = Object.keys(updates);
+  const sanitized = sanitizePropertyKeys(updates);
+  const keys = Object.keys(sanitized);
   if (keys.length === 0) return false;
 
   const setParts = keys.map((k) => `n.${k} = $${k}`);
@@ -136,7 +163,7 @@ async function updateNode(
 
   const result = await runCypher<{ id: string }>(
     `MATCH (n:${label} {id: $id}) SET ${setParts.join(', ')} RETURN n.id AS id`,
-    { id, ...updates },
+    { id, ...sanitized },
   );
 
   return result.length > 0;
@@ -703,7 +730,8 @@ async function updateEdge(
   updates: Record<string, unknown>,
 ): Promise<boolean> {
   assertValidEdgeType(edgeType);
-  const keys = Object.keys(updates);
+  const sanitized = sanitizePropertyKeys(updates);
+  const keys = Object.keys(sanitized);
   if (keys.length === 0) return false;
   const setParts = keys.map((k) => `r.${k} = $${k}`);
 
@@ -711,7 +739,7 @@ async function updateEdge(
     `MATCH (s {id: $sourceId})-[r:${edgeType}]->(t {id: $targetId})
      SET ${setParts.join(', ')}
      RETURN s.id AS sid`,
-    { sourceId, targetId, ...updates },
+    { sourceId, targetId, ...sanitized },
   );
   return result.length > 0;
 }
