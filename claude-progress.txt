@@ -561,9 +561,13 @@ The entire EBG v1.2 build plan has been implemented:
 - [x] Zod validation middleware: schemas for journal entries, temporal claims, provisions
   - validateBody() middleware factory reusable across all routes
 
+- [x] Zod validation on ALL POST routes: ~100 schemas in validation.ts, validateBody() middleware
+  applied across all 13 route files (GL, tax, AI, hedge, bank-rec, equity, inventory,
+  revenue, compliance, consolidation, depreciation, cashflow, migration)
+
 ## What Comes Next
-- Zod validation can be extended to remaining POST routes (pattern established)
-- Remaining work is production deployment.
+- All features, security hardening, and input validation complete
+- Remaining work is production deployment
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
