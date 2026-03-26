@@ -330,8 +330,21 @@ All Phase 4 AI Engine features implemented and tested:
   - 19 integration tests (tax-engine.test.ts)
   - Total: 317 tests across 24 files all passing
 
+- [x] P5-TAX-MODULES: 7 jurisdiction-specific tax modules
+  - CRA Corporate (T2): federal tax with small business deduction, GRIP/LRIP tracking
+  - GST/HST (GST34): ITC offset for FP, 50% public service bodies rebate for NFP
+  - IRS Corporate (Form 1120): 21% federal rate, §179 expensing deduction
+  - CRA Charity (T3010): tax-exempt with disbursement quota check (3.5%)
+  - IRS Exempt (Form 990): UBIT computation ($1,000 deduction), public support test (33%)
+  - State/Provincial Tax: nexus-based with apportionment factor support
+  - Cross-border Withholding Tax: Canada-US Treaty rates (dividends 5%, interest 0%, royalties 10%)
+  - TaxModuleResult CRUD and batch computeAllModules dispatcher
+  - REST endpoints for all 7 modules + results query
+  - 20 integration tests (tax-modules.test.ts)
+  - Total: 337 tests across 25 files all passing
+
 ## What Comes Next
-1. P5-TAX-MODULES: Tax modules (CRA Corp, GST/HST, IRS Corp, etc.)
+1. P5-TAX-CREDITS: Tax credit management
 2. P5-TAX-CREDITS: Tax credit management
 3. P5-COMPLIANCE: Compliance workflows
 4. Phase 6: Advanced Accounting (IFRS 15, inventory, equity, XBRL)

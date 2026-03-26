@@ -228,7 +228,7 @@
       "id": "P5-TAX-MODULES",
       "phase": 5,
       "name": "Tax modules: CRA Corp, GST/HST, IRS Corp, CRA Charity, IRS Exempt, state tax, withholding",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P5-TAX-CREDITS",
