@@ -565,9 +565,20 @@ The entire EBG v1.2 build plan has been implemented:
   applied across all 13 route files (GL, tax, AI, hedge, bank-rec, equity, inventory,
   revenue, compliance, consolidation, depreciation, cashflow, migration)
 
+## Production Readiness (COMPLETE)
+- [x] Deep health check: /health verifies Neo4j + PostgreSQL, returns 503 when degraded
+- [x] Liveness probe: /healthz for k8s readiness/liveness separation
+- [x] Request logging: structured pino access logs (method, url, status, duration)
+- [x] Environment validation: required vars checked at startup in production mode
+- [x] Graceful shutdown: 15s timeout, connection draining, force exit on timeout
+- [x] Dockerfile: multi-stage Alpine build, non-root user, healthcheck
+- [x] GitHub Actions CI: tsc + migrations + seed + full test suite + Docker build
+- [x] .env.example for env var documentation
+- [x] .gitignore: added .next/, client/dist/, .env.*
+
 ## What Comes Next
-- All features, security hardening, and input validation complete
-- Remaining work is production deployment
+- All features, security, validation, and production readiness complete
+- Remaining: deploy to target environment
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
