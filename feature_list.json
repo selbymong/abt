@@ -1,6 +1,6 @@
 {
   "project": "Enterprise Business Graph (EBG) v1.2",
-  "updated": "2026-03-25",
+  "updated": "2026-03-26",
   "features": [
     {
       "id": "P0-SCHEMA-NEO4J",
@@ -270,7 +270,7 @@
       "id": "P6-BANK-REC",
       "phase": 6,
       "name": "Bank reconciliation service",
-      "passes": false
+      "passes": true
     }
   ]
 }

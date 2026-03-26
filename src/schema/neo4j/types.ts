@@ -594,6 +594,35 @@ export interface TaxCreditClaim extends TimestampedNode {
   journal_entry_id?: string;
 }
 
+// --- Bank Reconciliation nodes ---
+
+export type BankStatementLineStatus = 'UNMATCHED' | 'MATCHED' | 'MANUALLY_CLEARED';
+export type ReconciliationStatus = 'UNRECONCILED' | 'RECONCILED' | 'MANUALLY_CLEARED';
+
+export interface BankStatement extends TimestampedNode {
+  entity_id: string;
+  bank_account_id: string;
+  statement_date: string;
+  opening_balance: number;
+  closing_balance: number;
+  currency: string;
+  line_count: number;
+  matched_count: number;
+  is_reconciled: boolean;
+}
+
+export interface BankStatementLine extends TimestampedNode {
+  entity_id: string;
+  statement_id: string;
+  bank_account_id: string;
+  transaction_date: string;
+  amount: number;
+  description: string;
+  reference?: string;
+  status: BankStatementLineStatus;
+  matched_cfe_id?: string;
+}
+
 // --- Equity expansion nodes (ShareClass, EquityAward, EPS) ---
 
 export type ShareClassType = 'COMMON' | 'PREFERRED' | 'CLASS_A' | 'CLASS_B';

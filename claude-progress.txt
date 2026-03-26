@@ -442,8 +442,40 @@ All Phase 5 Tax + Credits + Compliance features implemented and tested:
   - 11 integration tests (xbrl.test.ts)
   - Total: 439 tests across 31 files all passing
 
+- [x] P6-BANK-REC: Bank reconciliation — statement/line CRUD, matching, auto-match, finalization, reports
+  - BankStatement CRUD: create, get, list (with bank account filter)
+  - BankStatementLine CRUD: add, get, list (with status filter), bulk import
+  - Manual matching: match line to CashFlowEvent, updates CFE reconciliation_status
+  - Manual clearing: mark line as MANUALLY_CLEARED (no matching CFE)
+  - Auto-match: matches unmatched lines to CFEs by amount (ABS difference < 0.01)
+  - Finalization: marks statement reconciled when all lines matched/cleared
+  - Reconciliation report (Q20 pattern): unmatched bank lines, unreconciled ledger entries,
+    outstanding deposits/checks, adjusted bank/ledger balances, difference
+  - REST endpoints for all bank rec operations (/api/bank-rec/*)
+  - 15 integration tests (bank-reconciliation.test.ts)
+  - Total: 454 tests across 32 files all passing
+
+## Phase 6 — COMPLETE
+All Phase 6 Advanced Accounting features implemented and tested:
+- P6-IFRS15, P6-INVENTORY, P6-EQUITY-EXPAND, P6-XBRL, P6-BANK-REC
+- 454 backend tests across 32 files all passing
+
+## ALL PHASES COMPLETE (0–6)
+The entire EBG v1.2 build plan has been implemented:
+- Phase 0: Foundation (schema, saga, Kafka, config, invariants)
+- Phase 1: Core graph + basic GL + fund accounting + admin UI
+- Phase 2: Accruals + fixed assets + depreciation engine + leases + provisions
+- Phase 3: Multi-entity + related party + equity close
+- Phase 4: AI engine services (weight learner, epistemic, cashflow, scenarios, Claude)
+- Phase 5: Tax + credits + compliance
+- Phase 6: Advanced accounting (IFRS 15, inventory, equity, XBRL, bank rec)
+
 ## What Comes Next
-1. P6-BANK-REC: Bank reconciliation service
+- All 6 phases complete. Potential future work:
+  - Performance optimization and load testing
+  - Frontend UI for Phase 2–6 features
+  - Production deployment configuration
+  - Additional IFRS/GAAP coverage gaps from docs/07-accounting-standards.md
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
