@@ -7,6 +7,31 @@ import type {
   ControlClass, ValueState,
 } from '../../schema/neo4j/types.js';
 
+// --- Whitelisted Neo4j labels and edge types (Cypher injection prevention) ---
+
+const VALID_NODE_LABELS = new Set([
+  'Entity', 'Outcome', 'Activity', 'Resource', 'Project', 'Initiative',
+  'Metric', 'Capability', 'Asset', 'CustomerRelationshipAsset',
+  'WorkforceAsset', 'StakeholderAsset', 'SocialConstraint', 'Obligation',
+  'CashFlowEvent', 'AccountingPeriod', 'Fund',
+]);
+
+const VALID_EDGE_TYPES = new Set([
+  'CONTRIBUTES_TO', 'DEPENDS_ON', 'DELEGATES_TO', 'PROHIBITS',
+]);
+
+function assertValidLabel(label: string): void {
+  if (!VALID_NODE_LABELS.has(label)) {
+    throw new Error(`Invalid node label: ${label}`);
+  }
+}
+
+function assertValidEdgeType(edgeType: string): void {
+  if (!VALID_EDGE_TYPES.has(edgeType)) {
+    throw new Error(`Invalid edge type: ${edgeType}`);
+  }
+}
+
 // --- Default epistemic + control property block ---
 
 const EPISTEMIC_DEFAULTS = {
@@ -42,6 +67,7 @@ async function createNode(
   epistemicOverrides: Partial<typeof EPISTEMIC_DEFAULTS> = {},
   controlOverrides: Partial<typeof CONTROL_DEFAULTS> = {},
 ): Promise<string> {
+  assertValidLabel(label);
   const id = uuid();
   const allProps: Record<string, unknown> = {
     id,
@@ -73,6 +99,7 @@ async function createNode(
  * Generic get-by-id for any node label.
  */
 async function getNode<T>(label: string, id: string): Promise<T | null> {
+  assertValidLabel(label);
   const results = await runCypher<{ n: T }>(
     `MATCH (n:${label} {id: $id}) RETURN properties(n) AS n`,
     { id },
@@ -84,6 +111,7 @@ async function getNode<T>(label: string, id: string): Promise<T | null> {
  * Generic list nodes by entity_id.
  */
 async function listNodesByEntity<T>(label: string, entityId: string): Promise<T[]> {
+  assertValidLabel(label);
   const results = await runCypher<{ n: T }>(
     `MATCH (n:${label} {entity_id: $entityId}) RETURN properties(n) AS n ORDER BY n.label`,
     { entityId },
@@ -99,6 +127,7 @@ async function updateNode(
   id: string,
   updates: Record<string, unknown>,
 ): Promise<boolean> {
+  assertValidLabel(label);
   const keys = Object.keys(updates);
   if (keys.length === 0) return false;
 
@@ -117,6 +146,7 @@ async function updateNode(
  * Generic delete (non-GL nodes only — JournalEntry/LedgerLine are immutable).
  */
 async function deleteNode(label: string, id: string): Promise<boolean> {
+  assertValidLabel(label);
   // Check existence first, then delete
   const exists = await runCypher<{ id: string }>(
     `MATCH (n:${label} {id: $id}) RETURN n.id AS id`,
@@ -640,6 +670,7 @@ async function getEdges<T extends EdgeRecord>(
   edgeType: string,
   sourceId: string,
 ): Promise<T[]> {
+  assertValidEdgeType(edgeType);
   const results = await runCypher<T>(
     `MATCH (s {id: $sourceId})-[r:${edgeType}]->(t)
      RETURN s.id AS sourceId, labels(s)[0] AS sourceLabel,
@@ -654,6 +685,7 @@ async function getIncomingEdges<T extends EdgeRecord>(
   edgeType: string,
   targetId: string,
 ): Promise<T[]> {
+  assertValidEdgeType(edgeType);
   const results = await runCypher<T>(
     `MATCH (s)-[r:${edgeType}]->(t {id: $targetId})
      RETURN s.id AS sourceId, labels(s)[0] AS sourceLabel,
@@ -670,6 +702,7 @@ async function updateEdge(
   targetId: string,
   updates: Record<string, unknown>,
 ): Promise<boolean> {
+  assertValidEdgeType(edgeType);
   const keys = Object.keys(updates);
   if (keys.length === 0) return false;
   const setParts = keys.map((k) => `r.${k} = $${k}`);
@@ -688,6 +721,7 @@ async function deleteEdge(
   sourceId: string,
   targetId: string,
 ): Promise<boolean> {
+  assertValidEdgeType(edgeType);
   const exists = await runCypher<{ sid: string }>(
     `MATCH (s {id: $sourceId})-[r:${edgeType}]->(t {id: $targetId})
      RETURN s.id AS sid`,
