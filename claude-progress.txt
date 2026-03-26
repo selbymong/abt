@@ -430,9 +430,20 @@ All Phase 5 Tax + Credits + Compliance features implemented and tested:
   - 15 integration tests (equity-expansion.test.ts)
   - Total: 428 tests across 30 files all passing
 
+- [x] P6-XBRL: XBRL tagging on StatutoryMapping
+  - Taxonomy catalog: IFRS full (22+ elements) and US-GAAP (11+ elements)
+  - Tag lookup by name and taxonomy
+  - Manual tagging: attach XBRL element/taxonomy to any StatutoryMapping
+  - Bulk auto-tagging: matches by node_ref_type and label keywords
+  - Validation: completeness check, balance direction mismatch detection
+  - XBRL fact generation from GL period balances
+  - iXBRL inline rendering with ix:nonFraction tags
+  - REST endpoints for all XBRL operations (/api/xbrl/*)
+  - 11 integration tests (xbrl.test.ts)
+  - Total: 439 tests across 31 files all passing
+
 ## What Comes Next
-1. P6-XBRL: XBRL tagging on StatutoryMapping
-2. P6-BANK-REC: Bank reconciliation service
+1. P6-BANK-REC: Bank reconciliation service
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
