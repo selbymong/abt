@@ -30,6 +30,19 @@ import {
   generateForm6765Data,
 } from '../../services/tax/tax-credits-service.js';
 import {
+  createQualifiesForEdge,
+  listQualifiesForEdges,
+  acceptQualification,
+  rejectQualification,
+  batchReview,
+  getFeedbackSummary,
+  refineEligibilityModel,
+  getRefinedModel,
+  clearRefinedModel,
+  reidentifyWithRefinedModel,
+  computeAccuracyMetrics,
+} from '../../services/tax/tax-credit-ai-service.js';
+import {
   computeCRACorporate,
   computeGSTHST,
   computeIRSCorporate,
@@ -396,6 +409,115 @@ taxRouter.get('/credits/filing/form6765/:entityId/:fiscalYear', async (req: Requ
       req.params.fiscalYear as string,
     );
     res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Tax Credit AI Feedback Loop ---
+
+taxRouter.post('/credits/qualifies-for', async (req: Request, res: Response) => {
+  try {
+    await createQualifiesForEdge(req.body);
+    res.status(201).json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.get('/credits/qualifies-for/:claimId', async (req: Request, res: Response) => {
+  try {
+    const edges = await listQualifiesForEdges(req.params.claimId as string);
+    res.json(edges);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.post('/credits/qualifies-for/accept', async (req: Request, res: Response) => {
+  try {
+    const { sourceNodeId, claimId } = req.body;
+    await acceptQualification(sourceNodeId, claimId);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+taxRouter.post('/credits/qualifies-for/reject', async (req: Request, res: Response) => {
+  try {
+    const { sourceNodeId, claimId, rejectionReason } = req.body;
+    if (!rejectionReason) return res.status(400).json({ error: 'rejectionReason required' });
+    await rejectQualification(sourceNodeId, claimId, rejectionReason);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+taxRouter.post('/credits/qualifies-for/batch-review', async (req: Request, res: Response) => {
+  try {
+    const result = await batchReview(req.body.reviews ?? []);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.get('/credits/feedback/:programCode', async (req: Request, res: Response) => {
+  try {
+    const summary = await getFeedbackSummary(req.params.programCode as string);
+    res.json(summary);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.post('/credits/refine-model/:programCode', async (req: Request, res: Response) => {
+  try {
+    const result = await refineEligibilityModel(req.params.programCode as string);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.get('/credits/refined-model/:programCode', async (req: Request, res: Response) => {
+  try {
+    const model = getRefinedModel(req.params.programCode as string);
+    if (!model) return res.status(404).json({ error: 'No refined model found' });
+    res.json(model);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.delete('/credits/refined-model/:programCode', async (req: Request, res: Response) => {
+  try {
+    clearRefinedModel(req.params.programCode as string);
+    res.json({ cleared: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.post('/credits/reidentify', async (req: Request, res: Response) => {
+  try {
+    const { entityId, programCode, periodId } = req.body;
+    if (!entityId || !programCode || !periodId) {
+      return res.status(400).json({ error: 'Required: entityId, programCode, periodId' });
+    }
+    const results = await reidentifyWithRefinedModel(entityId, programCode, periodId);
+    res.json(results);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+taxRouter.get('/credits/accuracy/:programCode', async (req: Request, res: Response) => {
+  try {
+    const metrics = await computeAccuracyMetrics(req.params.programCode as string);
+    res.json(metrics);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

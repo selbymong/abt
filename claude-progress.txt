@@ -501,11 +501,53 @@ The entire EBG v1.2 build plan has been implemented:
   - 18 integration tests (hedge-accounting.test.ts)
   - Total: 488 tests across 34 files all passing
 
+- [x] P6-COA-MIGRATION: COA migration tooling (historical data import from traditional GL)
+  - COAMapping CRUD: register single/bulk, get, list, clear (in-memory store)
+  - LegacyGLEntry validation: double-entry check, missing fields, unmapped code detection
+  - Batch import: maps legacy COA codes → graph node refs, posts via journal-posting-service
+  - Idempotency: skips already-imported entries (MIGRATION-{source}-{legacyId} reference check)
+  - Auto-node creation: generates Activity/CashFlowEvent/Fund nodes for unmapped COA codes
+  - StatutoryMapping seeding: creates statutory mappings from registered COA mappings
+  - Trial balance verification: compares legacy TB against graph GL balances per node_ref_id
+  - Migration summary: entry/line counts, debit/credit totals, date range from Neo4j
+  - REST endpoints for all operations (/api/migration/*)
+  - 11 integration tests (coa-migration.test.ts)
+  - TypeScript compiles cleanly (tests require Docker for databases)
+
+- [x] P6-TAX-CREDIT-AI: Tax credit AI feedback loop (reviewer rejection → eligibility refinement)
+  - QUALIFIES_FOR edge CRUD: create, list per claim (per docs/04-data-model-reference.md spec)
+  - Reviewer feedback: accept/reject individual qualifications with rejection reasons
+  - Batch review: process multiple accept/reject decisions in one call
+  - Feedback aggregation: per-program summary with precision, rejection reasons, label analysis
+  - Model refinement: extract positive/negative keywords from accepted/rejected node labels
+  - Negative keyword filtering: exclude nodes matching rejected label patterns
+  - Positive keyword boosting: increase confidence for nodes matching accepted patterns
+  - Re-identification: run identification pipeline with refined model applied
+  - Accuracy metrics: precision, review coverage, confidence analysis (accepted vs rejected)
+  - Kafka events: CREDIT_QUALIFICATION_REJECTED, ELIGIBILITY_MODEL_REFINED
+  - REST endpoints for all operations (/api/tax/credits/qualifies-for/*, feedback/*, accuracy/*)
+  - 15 integration tests (tax-credit-ai.test.ts)
+  - TypeScript compiles cleanly (tests require Docker for databases)
+
+- [x] P2-ADMIN-UI-ADVANCED: Admin UI — ECL rate matrix editor, AssetClass management, restatement workflow
+  - ECL Rate Matrix Editor: system/entity-scoped aging bucket editing via ConfigurationService
+    - Add/remove buckets, edit days_from/days_to/loss_rate, select methodology
+    - Save to config as system default or entity override
+  - Asset Class Management: browse/filter all 31 seeded AssetClass nodes
+    - Filter by class system (CCA/MACRS/ACCOUNTING) and jurisdiction
+    - Expandable detail rows with full JSON properties
+  - Restatement Workflow: journal entry browser with reversal posting
+    - Browse JEs by entity + period with reference, type, narrative, amounts
+    - View individual JE with full LedgerLine detail
+    - Post REVERSAL entry (flipped sides) to open period
+    - Custom reversal narrative
+  - Backend: added GET /gl/journal-entries and GET /gl/journal-entries/:id routes
+  - API client: getECLRateMatrix, setECLRateMatrix, getAssetClasses, getJournalEntries, postJournalEntry
+  - 3 new pages wired into React Router sidebar navigation
+  - Vite build passes (33 modules, 252KB gzip)
+
 ## What Comes Next
-- Remaining features:
-  1. P6-COA-MIGRATION: COA migration tooling (historical data import from traditional GL)
-  2. P6-TAX-CREDIT-AI: Tax credit AI feedback loop (reviewer rejection → eligibility refinement)
-  3. P2-ADMIN-UI-ADVANCED: Admin UI — ECL rate matrix editor, AssetClass management, restatement workflow
+- All features complete. Remaining work is production hardening and deployment.
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container

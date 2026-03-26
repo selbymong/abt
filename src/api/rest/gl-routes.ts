@@ -63,8 +63,51 @@ import {
   getEquityBreakdown,
 } from '../../services/gl/equity-close-service.js';
 import { query } from '../../lib/pg.js';
+import { runCypher } from '../../lib/neo4j.js';
 
 export const glRouter = Router();
+
+// GET /gl/journal-entries — list journal entries for entity/period
+glRouter.get('/journal-entries', async (req: Request, res: Response) => {
+  try {
+    const entityId = req.query.entityId as string;
+    const periodId = req.query.periodId as string;
+    if (!entityId) return res.status(400).json({ error: 'Required: entityId' });
+    const periodFilter = periodId ? 'AND je.period_id = $periodId' : '';
+    const results = await runCypher<{ je: Record<string, unknown> }>(
+      `MATCH (je:JournalEntry {entity_id: $entityId})
+       WHERE true ${periodFilter}
+       RETURN properties(je) AS je
+       ORDER BY je.created_at DESC
+       LIMIT 100`,
+      { entityId, periodId: periodId ?? null },
+    );
+    res.json({ items: results.map((r) => r.je) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /gl/journal-entries/:id — get a single journal entry with lines
+glRouter.get('/journal-entries/:id', async (req: Request, res: Response) => {
+  try {
+    const results = await runCypher<{ je: Record<string, unknown> }>(
+      `MATCH (je:JournalEntry {id: $id})
+       RETURN properties(je) AS je`,
+      { id: req.params.id },
+    );
+    if (results.length === 0) return res.status(404).json({ error: 'JournalEntry not found' });
+
+    const lines = await runCypher<{ ll: Record<string, unknown> }>(
+      `MATCH (ll:LedgerLine {journal_entry_id: $jeId})
+       RETURN properties(ll) AS ll`,
+      { jeId: req.params.id },
+    );
+    res.json({ ...results[0].je, lines: lines.map((l) => l.ll) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // POST /gl/journal-entries — post a journal entry
 glRouter.post('/journal-entries', async (req: Request, res: Response) => {

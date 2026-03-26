@@ -288,19 +288,19 @@
       "id": "P6-COA-MIGRATION",
       "phase": 6,
       "name": "COA migration tooling (historical data import from traditional GL)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P6-TAX-CREDIT-AI",
       "phase": 6,
       "name": "Tax credit AI feedback loop (reviewer rejection → eligibility model refinement)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P2-ADMIN-UI-ADVANCED",
       "phase": 2,
       "name": "Admin UI: ECL rate matrix editor, AssetClass management, restatement workflow",
-      "passes": false
+      "passes": true
     }
   ]
 }

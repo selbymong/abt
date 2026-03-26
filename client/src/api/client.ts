@@ -53,3 +53,39 @@ export const getBalanceSheet = (entityId: string, periodId: string) =>
 // Obligations
 export const getObligationAlerts = (entityId: string, days?: number) =>
   request<{ alerts: any[] }>(`/graph/obligations/alerts/${entityId}${days ? `?horizonDays=${days}` : ''}`);
+
+// ECL Rate Matrix (via config)
+export const getECLRateMatrix = (entityId?: string) =>
+  request<any>(`/config/resolve?key=ecl_rate_matrix${entityId ? `&entityId=${entityId}` : ''}`);
+export const setECLRateMatrix = (value: any, entityId?: string) =>
+  request<any>('/config', {
+    method: 'POST',
+    body: JSON.stringify({
+      key: 'ecl_rate_matrix',
+      value: JSON.stringify(value),
+      scope: entityId ? 'ENTITY' : 'SYSTEM',
+      entityId,
+    }),
+  });
+
+// AssetClass management
+export const getAssetClasses = (classSystem?: string, jurisdiction?: string) => {
+  const params = new URLSearchParams();
+  if (classSystem) params.set('classSystem', classSystem);
+  if (jurisdiction) params.set('jurisdiction', jurisdiction);
+  const qs = params.toString();
+  return request<{ assetClasses: any[] }>(`/depreciation/asset-classes${qs ? `?${qs}` : ''}`);
+};
+export const getAssetClassByCode = (code: string) =>
+  request<any>(`/depreciation/asset-classes/by-code/${code}`);
+
+// Journal entries (for restatement workflow)
+export const getJournalEntries = (entityId: string, periodId?: string) =>
+  request<{ items: any[] }>(`/gl/journal-entries?entityId=${entityId}${periodId ? `&periodId=${periodId}` : ''}`);
+export const getJournalEntry = (id: string) =>
+  request<any>(`/gl/journal-entries/${id}`);
+export const postJournalEntry = (data: any) =>
+  request<{ journalEntryId: string }>('/gl/journal-entries', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
