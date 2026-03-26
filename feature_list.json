@@ -252,7 +252,7 @@
       "id": "P6-INVENTORY",
       "phase": 6,
       "name": "Inventory accounting (FIFO/WA/LIFO, NRV testing)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P6-EQUITY-EXPAND",

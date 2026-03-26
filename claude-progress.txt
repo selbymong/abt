@@ -397,11 +397,25 @@ All Phase 5 Tax + Credits + Compliance features implemented and tested:
   - 23 integration tests (revenue-recognition.test.ts)
   - Total: 399 tests across 28 files all passing
 
+- [x] P6-INVENTORY: Inventory accounting (FIFO/WA/LIFO, NRV testing)
+  - InventoryItem CRUD: create, get, list (with category filter)
+  - InventoryLot CRUD: batch/lot tracking for cost flow methods
+  - Receive inventory: creates lot + posts DR Inventory / CR Accounts Payable
+  - Issue inventory: FIFO, LIFO, and Weighted Average cost flow methods
+  - FIFO: oldest lots consumed first by acquisition_date
+  - LIFO: newest lots consumed first by acquisition_date
+  - Weighted Average: uses recalculated weighted average unit cost
+  - NRV testing: writedown when NRV < cost, reversal when NRV recovers (IFRS)
+  - Inventory valuation report: entity-wide summary
+  - NodeRefType extended with INVENTORY_ITEM
+  - REST endpoints for all inventory operations (/api/inventory/*)
+  - 14 integration tests (inventory.test.ts)
+  - Total: 413 tests across 29 files all passing
+
 ## What Comes Next
-1. P6-INVENTORY: Inventory accounting (FIFO/WA/LIFO, NRV testing)
-2. P6-EQUITY-EXPAND: Equity expansion (ShareClass, EquityAward, EPS)
-3. P6-XBRL: XBRL tagging on StatutoryMapping
-4. P6-BANK-REC: Bank reconciliation service
+1. P6-EQUITY-EXPAND: Equity expansion (ShareClass, EquityAward, EPS)
+2. P6-XBRL: XBRL tagging on StatutoryMapping
+3. P6-BANK-REC: Bank reconciliation service
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container

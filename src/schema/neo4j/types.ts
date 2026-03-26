@@ -50,7 +50,8 @@ export type NodeRefType =
   | 'GOODWILL' | 'PROVISION' | 'WORKFORCE_ASSET'
   | 'CUSTOMER_RELATIONSHIP_ASSET' | 'FUND' | 'TAX_CREDIT_CLAIM' | 'OCI'
   | 'RIGHT_OF_USE_ASSET' | 'LEASE_LIABILITY'
-  | 'REVENUE_CONTRACT' | 'PERFORMANCE_OBLIGATION';
+  | 'REVENUE_CONTRACT' | 'PERFORMANCE_OBLIGATION'
+  | 'INVENTORY_ITEM';
 
 // --- Common property blocks ---
 
@@ -646,6 +647,42 @@ export interface VariableConsideration extends TimestampedNode {
   is_constrained: boolean;
   resolved_amount?: number;
   resolved: boolean;
+}
+
+// --- Inventory nodes (IAS 2 / ASC 330) ---
+
+export type InventoryCostMethod = 'FIFO' | 'WEIGHTED_AVG' | 'LIFO';
+export type InventoryCategory = 'RAW_MATERIAL' | 'WORK_IN_PROGRESS' | 'FINISHED_GOODS' | 'MERCHANDISE';
+
+export interface InventoryItem extends TimestampedNode {
+  entity_id: string;
+  label: string;
+  sku: string;
+  category: InventoryCategory;
+  unit_of_measure: string;
+  quantity_on_hand: number;
+  unit_cost: number;
+  total_cost: number;
+  nrv_per_unit?: number;
+  nrv_total?: number;
+  nrv_writedown: number;
+  carrying_amount: number;
+  cost_method: InventoryCostMethod;
+  currency: string;
+  reorder_point?: number;
+  is_active: boolean;
+}
+
+export interface InventoryLot extends TimestampedNode {
+  entity_id: string;
+  item_id: string;
+  lot_number: string;
+  quantity: number;
+  unit_cost: number;
+  total_cost: number;
+  acquisition_date: string;
+  remaining_quantity: number;
+  is_depleted: boolean;
 }
 
 export interface TaxCreditBalance extends TimestampedNode {
