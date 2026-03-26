@@ -240,7 +240,7 @@
       "id": "P5-COMPLIANCE",
       "phase": 5,
       "name": "Compliance: approval workflows, document hashing, access audit",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P6-IFRS15",

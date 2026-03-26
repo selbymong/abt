@@ -359,8 +359,30 @@ All Phase 4 AI Engine features implemented and tested:
   - 20 integration tests (tax-credits.test.ts)
   - Total: 357 tests across 26 files all passing
 
+- [x] P5-COMPLIANCE: Compliance — approval workflows, document hashing, access audit
+  - ApprovalWorkflow CRUD: create, get, list pending, multi-approver gate
+  - Approval enforcement: PENDING until all required approvers sign off → APPROVED
+  - Rejection with reason tracking
+  - isApproved() check for target nodes
+  - SourceDocument with SHA-256 hash tamper detection
+  - Document verification: compare content hash against stored hash
+  - Document linking to graph nodes (linkedNodeId/linkedNodeType)
+  - Access audit logging in PostgreSQL (access_audit_log table)
+  - Sensitivity levels: LOW, MEDIUM, HIGH, CRITICAL
+  - Access log queries with filters (user, action, sensitivity, date range)
+  - High-sensitivity access alert retrieval
+  - Related party disclosure auto-generation from RELATED_PARTY edges
+  - REST endpoints for all compliance operations (/api/compliance/*)
+  - 19 integration tests (compliance.test.ts)
+  - Total: 376 tests across 27 files all passing
+
+## Phase 5 — COMPLETE
+All Phase 5 Tax + Credits + Compliance features implemented and tested:
+- P5-TAX-ENGINE, P5-TAX-MODULES, P5-TAX-CREDITS, P5-COMPLIANCE
+- 376 backend tests across 27 files all passing
+
 ## What Comes Next
-1. P5-COMPLIANCE: Compliance workflows
+1. Phase 6: Advanced Accounting (IFRS 15, inventory, equity, XBRL, bank rec)
 2. P5-TAX-CREDITS: Tax credit management
 3. P5-COMPLIANCE: Compliance workflows
 4. Phase 6: Advanced Accounting (IFRS 15, inventory, equity, XBRL)
