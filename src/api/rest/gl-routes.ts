@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { postJournalEntry, PostJournalEntryInput } from '../../services/gl/journal-posting-service.js';
 import { softClosePeriod, hardClosePeriod, reopenPeriod } from '../../services/gl/period-service.js';
 import { getProfitAndLoss, getBalanceSheet, getFundBalances } from '../../services/gl/reporting-service.js';
+import { validateBody, postJournalEntrySchema, createTemporalClaimSchema, createProvisionSchema } from './validation.js';
 import {
   createStatutoryMapping,
   getStatutoryMapping,
@@ -110,18 +111,9 @@ glRouter.get('/journal-entries/:id', async (req: Request, res: Response) => {
 });
 
 // POST /gl/journal-entries — post a journal entry
-glRouter.post('/journal-entries', async (req: Request, res: Response) => {
+glRouter.post('/journal-entries', validateBody(postJournalEntrySchema), async (req: Request, res: Response) => {
   try {
-    const input: PostJournalEntryInput = req.body;
-
-    if (!input.entityId || !input.periodId || !input.lines?.length) {
-      res.status(400).json({
-        error: 'Required: entityId, periodId, lines[]',
-      });
-      return;
-    }
-
-    const journalEntryId = await postJournalEntry(input);
+    const journalEntryId = await postJournalEntry(req.body as PostJournalEntryInput);
     res.status(201).json({ journalEntryId });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -291,7 +283,7 @@ glRouter.delete('/statutory-mappings/:id', async (req: Request, res: Response) =
 
 // --- TemporalClaim / Accruals ---
 
-glRouter.post('/temporal-claims', async (req: Request, res: Response) => {
+glRouter.post('/temporal-claims', validateBody(createTemporalClaimSchema), async (req: Request, res: Response) => {
   try {
     const id = await createTemporalClaim(req.body);
     res.status(201).json({ id });
@@ -437,7 +429,7 @@ glRouter.post('/leases/process-payment', async (req: Request, res: Response) => 
 
 // --- Provisions (IAS 37) ---
 
-glRouter.post('/provisions', async (req: Request, res: Response) => {
+glRouter.post('/provisions', validateBody(createProvisionSchema), async (req: Request, res: Response) => {
   try {
     const id = await createProvision(req.body);
     res.status(201).json({ id });

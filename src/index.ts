@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import { logger } from './lib/logger.js';
 import { closeNeo4j } from './lib/neo4j.js';
 import { closePg } from './lib/pg.js';
@@ -25,8 +27,25 @@ import { migrationRouter } from './api/rest/migration-routes.js';
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
 
-app.use(cors());
-app.use(express.json());
+// Security headers
+app.use(helmet());
+
+// CORS — restrict to known origins (override with CORS_ORIGIN env var)
+const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',');
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
+
+// Rate limiting — 200 requests per minute per IP
+app.use(rateLimit({
+  windowMs: 60_000,
+  limit: 200,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+}));
+
+app.use(express.json({ limit: '1mb' }));
 
 // Health check
 app.get('/health', (_req, res) => {
