@@ -301,6 +301,146 @@
       "phase": 2,
       "name": "Admin UI: ECL rate matrix editor, AssetClass management, restatement workflow",
       "passes": true
+    },
+
+    {
+      "id": "P7-BUSINESS-COMBINATIONS",
+      "phase": 7,
+      "name": "BusinessCombination + PPA nodes: acquisition accounting, purchase price allocation, CGU assignment",
+      "passes": false
+    },
+    {
+      "id": "P7-IMPAIRMENT-CGU",
+      "phase": 7,
+      "name": "CashGeneratingUnit + ImpairmentTest: CGU CRUD, VIU from contribution paths, IAS 36 annual testing",
+      "passes": false
+    },
+    {
+      "id": "P7-OUTCOME-ATTRIBUTION-PNL",
+      "phase": 7,
+      "name": "Outcome attribution P&L: break down P&L by outcome via graph traversal (CONTRIBUTES_TO paths)",
+      "passes": false
+    },
+    {
+      "id": "P7-MACRS-TABLES",
+      "phase": 7,
+      "name": "MACRS percentage table lookup: embed IRS Pub 946 GDS/ADS tables for US depreciation",
+      "passes": false
+    },
+    {
+      "id": "P7-KAFKA-CONSUMER-LOOP",
+      "phase": 7,
+      "name": "Kafka consumer loop: continuous gl-projector and equity-projector consumers with health monitoring",
+      "passes": false
+    },
+    {
+      "id": "P7-NIGHTLY-RECONCILIATION",
+      "phase": 7,
+      "name": "Nightly reconciliation job: compare Neo4j LedgerLine sums vs TimescaleDB per (entity, period)",
+      "passes": false
+    },
+    {
+      "id": "P7-SEGMENT-REPORTING",
+      "phase": 7,
+      "name": "Segment reporting (IFRS 8): P&L and assets by Initiative/segment hierarchy",
+      "passes": false
+    },
+    {
+      "id": "P7-GOVERNMENT-GRANTS",
+      "phase": 7,
+      "name": "Government grants (IAS 20): grant flag on DEFERRED_REVENUE claims, income vs asset approach",
+      "passes": false
+    },
+    {
+      "id": "P7-BORROWING-COSTS",
+      "phase": 7,
+      "name": "Borrowing costs (IAS 23): qualifying_asset flag on FixedAsset, interest capitalization engine",
+      "passes": false
+    },
+    {
+      "id": "P7-DISCONTINUED-OPS",
+      "phase": 7,
+      "name": "Discontinued operations (IFRS 5): HELD_FOR_SALE status on Initiative, separate P&L presentation",
+      "passes": false
+    },
+    {
+      "id": "P7-NFP-RECLASSIFICATION",
+      "phase": 7,
+      "name": "NFP net asset reclassification: auto-reclassify fund balances when restrictions are met/expire",
+      "passes": false
+    },
+    {
+      "id": "P7-ASPE-LEASES",
+      "phase": 7,
+      "name": "ASPE operating lease treatment: TemporalClaim-only path for ASPE entities (no ROU/liability)",
+      "passes": false
+    },
+    {
+      "id": "P7-PENSION",
+      "phase": 7,
+      "name": "Pension (IAS 19): DefinedBenefitObligation node, actuarial inputs, remeasurements to OCI",
+      "passes": false
+    },
+
+    {
+      "id": "P8-AP-SUBLEDGER",
+      "phase": 8,
+      "name": "Accounts Payable subledger: vendor master, invoice matching, aging, payment runs, dunning",
+      "passes": false
+    },
+    {
+      "id": "P8-AR-SUBLEDGER",
+      "phase": 8,
+      "name": "Accounts Receivable subledger: customer master, invoice generation, aging, collections",
+      "passes": false
+    },
+    {
+      "id": "P8-PROCUREMENT",
+      "phase": 8,
+      "name": "Purchase Orders / Procurement: PO creation, 3-way matching (PO/receipt/invoice), approval flow",
+      "passes": false
+    },
+    {
+      "id": "P8-BUDGETING",
+      "phase": 8,
+      "name": "Budgeting & variance analysis: budget entry by node/period, actual vs budget, variance reports",
+      "passes": false
+    },
+    {
+      "id": "P8-MULTI-CURRENCY",
+      "phase": 8,
+      "name": "Multi-currency transactions: FX at transaction date, month-end revaluation, unrealized gain/loss",
+      "passes": false
+    },
+    {
+      "id": "P8-INTERCO-LOANS",
+      "phase": 8,
+      "name": "Intercompany loan tracking: loan agreements, amortization schedules, interest accrual, elimination",
+      "passes": false
+    },
+    {
+      "id": "P8-PAYROLL",
+      "phase": 8,
+      "name": "Payroll: employee compensation, statutory deductions, remittances, T4/W-2 generation",
+      "passes": false
+    },
+    {
+      "id": "P8-AUTH-RBAC",
+      "phase": 8,
+      "name": "User authentication & RBAC: JWT/OAuth2, role-based access, entity-scoped permissions",
+      "passes": false
+    },
+    {
+      "id": "P8-FINANCIAL-STATEMENTS",
+      "phase": 8,
+      "name": "Financial statement generator: templated P&L, BS, cash flow statement, notes, comparative periods",
+      "passes": false
+    },
+    {
+      "id": "P8-AUDIT-TRAIL",
+      "phase": 8,
+      "name": "Audit trail on graph nodes: change history for non-GL nodes (before/after snapshots)",
+      "passes": false
     }
   ]
 }

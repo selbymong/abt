@@ -587,9 +587,150 @@ The entire EBG v1.2 build plan has been implemented:
   - Domains: graph, GL, tax, consolidation, depreciation, cashflow, hedge,
     AI, equity, revenue, inventory, bank-rec, compliance, XBRL, config
 
+## Phase 7 — Spec Completion + Accounting Standards (PLANNED)
+Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE gaps.
+
+### High Priority (spec-required)
+- [ ] P7-BUSINESS-COMBINATIONS: BusinessCombination + PPA nodes
+  - Acquisition accounting (IFRS 3): acquirer, acquiree, consideration, PPA line items
+  - PurchasePriceAdjustment node with amortization schedule
+  - Links to existing Goodwill node (currently orphaned from acquisition context)
+  - REST + GraphQL endpoints
+
+- [ ] P7-IMPAIRMENT-CGU: CashGeneratingUnit + ImpairmentTest nodes
+  - CGU CRUD: group assets by cash-generating unit
+  - ImpairmentTest: VIU calculation from CONTRIBUTES_TO path traversal
+  - Annual testing workflow with IAS 36 compliance
+  - Connects to existing cgu_id fields on FixedAsset and Goodwill
+
+- [ ] P7-OUTCOME-ATTRIBUTION-PNL: Outcome attribution P&L
+  - Break down P&L by Outcome via CONTRIBUTES_TO graph traversal
+  - Weighted attribution across multiple paths
+  - REST + GraphQL endpoint: /gl/attributed-pnl/:entityId/:periodId
+
+- [ ] P7-MACRS-TABLES: MACRS percentage table lookup
+  - Embed IRS Publication 946 GDS and ADS recovery period tables
+  - 3/5/7/10/15/20/25/27.5/31.5/39-year property classes
+  - Half-year, mid-quarter conventions
+  - Wire into depreciation engine for US entities
+
+- [ ] P7-KAFKA-CONSUMER-LOOP: Continuous Kafka consumers
+  - Long-running gl-projector consumer on ebg.gl topic
+  - Equity projector consumer for equity_period_balances
+  - Health monitoring and restart on failure
+  - Currently only handler functions exist; no consumer loop
+
+- [ ] P7-NIGHTLY-RECONCILIATION: Neo4j ↔ TimescaleDB reconciliation job
+  - Compare LedgerLine sums in Neo4j vs gl_period_balances in TimescaleDB
+  - Per (entity_id, period_id) comparison
+  - Alert on discrepancy, halt period close until resolved
+  - Scheduled via cron or Kafka timer
+
+### Medium Priority (accounting standards)
+- [ ] P7-SEGMENT-REPORTING: IFRS 8 segment reporting
+  - P&L and assets by Initiative/segment hierarchy
+  - Segment = Initiative node; aggregation via CONTRIBUTES_TO paths
+  - Inter-segment elimination
+
+- [ ] P7-GOVERNMENT-GRANTS: IAS 20 government grants
+  - Grant flag on DEFERRED_REVENUE TemporalClaims
+  - Income approach vs asset approach (config per entity)
+  - Grant condition tracking and clawback
+
+- [ ] P7-BORROWING-COSTS: IAS 23 borrowing costs
+  - qualifying_asset flag on FixedAsset
+  - Interest capitalization engine during construction period
+  - Capitalization start/suspension/cessation rules
+
+- [ ] P7-DISCONTINUED-OPS: IFRS 5 discontinued operations
+  - HELD_FOR_SALE status on Initiative nodes
+  - Separate P&L presentation (continuing vs discontinued)
+  - Measurement at lower of carrying amount and fair value less costs to sell
+
+- [ ] P7-NFP-RECLASSIFICATION: NFP net asset reclassification
+  - Auto-reclassify fund balances when time/purpose restrictions expire
+  - TEMPORARILY_RESTRICTED → UNRESTRICTED on expiry date
+  - JournalEntry generation for reclassification
+
+- [ ] P7-ASPE-LEASES: ASPE operating lease treatment
+  - ASPE entities use TemporalClaim (straight-line expense) instead of IFRS 16 ROU
+  - Framework-aware branch in lease-service.ts
+  - No RightOfUseAsset or LeaseLiability for ASPE entities
+
+### Lower Priority
+- [ ] P7-PENSION: IAS 19 defined benefit pensions
+  - DefinedBenefitObligation node: PV of obligation, plan assets, net position
+  - Actuarial inputs: discount rate, salary growth, mortality tables
+  - Service cost → P&L, remeasurements → OCI (DB_PENSION component)
+  - Curtailment and settlement accounting
+
+## Phase 8 — ERP Expansion (PLANNED)
+Traditional ERP subledger modules not in original spec but needed for full enterprise coverage.
+
+- [ ] P8-AP-SUBLEDGER: Accounts Payable
+  - Vendor master data (graph nodes)
+  - Invoice registration, 3-way matching, aging reports
+  - Payment run generation (batch payments), early payment discounts
+  - Integration with CashFlowEvent for settlement
+
+- [ ] P8-AR-SUBLEDGER: Accounts Receivable
+  - Customer master data (graph nodes, links to CustomerRelationshipAsset)
+  - Invoice generation from RevenueContract/PerformanceObligation
+  - Aging reports, dunning letters, collections workflow
+  - Integration with ECL (TemporalClaim STAGE_1/2/3)
+
+- [ ] P8-PROCUREMENT: Purchase Orders
+  - PO creation with budget check against Initiative/Project
+  - Receipt → invoice → payment lifecycle
+  - 3-way matching (PO amount vs receipt vs invoice)
+  - Approval workflow integration
+
+- [ ] P8-BUDGETING: Budgeting & variance analysis
+  - Budget entry by node (Activity, Project, Initiative) per period
+  - Actual vs budget comparison from TimescaleDB
+  - Variance reports: favorable/unfavorable, volume/price/mix
+  - Rolling forecast capability
+
+- [ ] P8-MULTI-CURRENCY: Multi-currency transactions
+  - FX rate at transaction date on all monetary items
+  - Month-end revaluation of foreign currency balances
+  - Unrealized FX gain/loss posting
+  - Integration with CurrencyTranslation for consolidation
+
+- [ ] P8-INTERCO-LOANS: Intercompany loan tracking
+  - Loan agreement nodes between entities
+  - Amortization schedules (interest accrual, principal repayment)
+  - Automatic elimination in consolidation
+  - Withholding tax on intercompany interest
+
+- [ ] P8-PAYROLL: Payroll processing
+  - Employee master → WorkforceAsset linkage
+  - Compensation calculation, statutory deductions (CPP/EI, FICA)
+  - Remittance tracking (CRA, IRS)
+  - T4/W-2 generation, ROE/W-2c for terminations
+
+- [ ] P8-AUTH-RBAC: Authentication & authorization
+  - JWT/OAuth2 authentication middleware
+  - Role-based access control (ADMIN, CFO, CONTROLLER, BOOKKEEPER, AUDITOR)
+  - Entity-scoped permissions (user can only access assigned entities)
+  - Integration with ApprovalWorkflow thresholds
+
+- [ ] P8-FINANCIAL-STATEMENTS: Financial statement generator
+  - Templated output: P&L, balance sheet, cash flow statement, equity statement
+  - Comparative periods (current vs prior year)
+  - Notes to financial statements (auto-generated from graph)
+  - PDF/Excel export
+
+- [ ] P8-AUDIT-TRAIL: Graph node change history
+  - Before/after snapshots on node updates (non-GL nodes)
+  - Change author, timestamp, reason
+  - Queryable audit log in PostgreSQL
+  - Complements existing append-only GL (JournalEntry/LedgerLine immutable)
+
 ## What Comes Next
-- All features, security, validation, production readiness, and GraphQL complete
-- Remaining: deploy to target environment
+- Phase 7: Spec completion + accounting standards (13 features)
+- Phase 8: ERP expansion (10 features)
+- Pick highest-priority incomplete feature from feature_list.json
 
 ## Known Issues
 - Port 5432 occupied on host; using 5433 for TimescaleDB container
