@@ -1047,3 +1047,36 @@ export const runReconciliationSchema = z.object({
   periodId: z.string().uuid().optional(),
   tolerance: z.number().positive().optional(),
 });
+
+// ============================================================
+// Government Grants (IAS 20)
+// ============================================================
+
+export const createGrantSchema = z.object({
+  entityId: z.string().uuid(),
+  grantProgramName: z.string().min(1),
+  amount: z.number().positive(),
+  currency: z.string().length(3),
+  approach: z.enum(['INCOME', 'ASSET']),
+  recognitionMethod: z.enum(['STRAIGHT_LINE', 'PERCENTAGE_COMPLETE', 'MILESTONE', 'USAGE_BASED']),
+  recognitionSchedule: z.array(z.object({
+    period_id: z.string().uuid(),
+    amount: z.number(),
+    recognized_at: z.string().optional(),
+  })).min(1),
+  sourceNodeId: z.string().uuid(),
+  sourceNodeType: z.string().min(1),
+  periodIdOpened: z.string().uuid(),
+  conditionDescription: z.string().optional(),
+  relatedAssetId: z.string().uuid().optional(),
+  fundId: z.string().uuid().optional(),
+});
+
+export const recognizeGrantSchema = z.object({
+  periodId: z.string().uuid(),
+});
+
+export const assessClawbackSchema = z.object({
+  probability: z.number().min(0).max(1),
+  amount: z.number().nonnegative(),
+});

@@ -27,6 +27,7 @@ import { bankRecRouter } from './api/rest/bank-rec-routes.js';
 import { hedgeRouter } from './api/rest/hedge-routes.js';
 import { migrationRouter } from './api/rest/migration-routes.js';
 import { reconciliationRouter } from './api/rest/reconciliation-routes.js';
+import { grantsRouter } from './api/rest/grants-routes.js';
 import { startReconciliationScheduler, stopReconciliationScheduler } from './services/reconciliation/nightly-reconciliation-service.js';
 import { startConsumers, stopConsumers } from './projectors/index.js';
 import { getConsumerManager } from './projectors/consumer-manager.js';
@@ -133,6 +134,7 @@ async function main() {
   app.use('/api/hedge', hedgeRouter);
   app.use('/api/migration', migrationRouter);
   app.use('/api/reconciliation', reconciliationRouter);
+  app.use('/api/grants', grantsRouter);
 
   // --- Consumer Status ---
   app.get('/api/consumers/status', (_req, res) => {

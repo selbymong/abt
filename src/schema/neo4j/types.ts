@@ -383,7 +383,19 @@ export interface TemporalClaim extends TimestampedNode {
   ecl_stage: ECLStage;
   tax_recognition_basis: TaxRecognitionBasis;
   materiality_flag: boolean;
+  // IAS 20 government grant extensions
+  grant_flag?: boolean;
+  grant_approach?: GrantApproach;
+  grant_program_name?: string;
+  grant_condition_description?: string;
+  condition_met?: boolean;
+  condition_met_date?: string;
+  clawback_probability?: number;
+  clawback_amount?: number;
+  related_asset_id?: string;
 }
+
+export type GrantApproach = 'INCOME' | 'ASSET';
 
 // --- Provision nodes (IAS 37 / ASC 450) ---
 

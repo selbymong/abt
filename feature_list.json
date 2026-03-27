@@ -349,7 +349,7 @@
       "id": "P7-GOVERNMENT-GRANTS",
       "phase": 7,
       "name": "Government grants (IAS 20): grant flag on DEFERRED_REVENUE claims, income vs asset approach",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P7-BORROWING-COSTS",

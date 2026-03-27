@@ -676,10 +676,16 @@ Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE
   - GraphQL: segmentReport, segmentDetail queries
   - 9 integration tests (segment-reporting.test.ts) — all passing
 
-- [ ] P7-GOVERNMENT-GRANTS: IAS 20 government grants
-  - Grant flag on DEFERRED_REVENUE TemporalClaims
-  - Income approach vs asset approach (config per entity)
-  - Grant condition tracking and clawback
+- [x] P7-GOVERNMENT-GRANTS: IAS 20 government grants
+  - TemporalClaim extended with grant_flag, grant_approach, condition tracking, clawback
+  - createGrant(): DEFERRED_REVENUE claim with INCOME or ASSET approach
+  - Asset approach: auto-reduces FixedAsset carrying_amount by grant amount
+  - recognizeGrantIncome(): posts journal entry (DR Liability, CR Revenue/Asset)
+  - markConditionMet(): tracks when grant conditions are satisfied
+  - assessClawback(): probability-based provision assessment (IAS 20.14-18)
+  - REST: POST/GET /api/grants, POST /:id/recognize, /:id/condition-met, /:id/clawback
+  - GraphQL: grant/grants queries, createGrant/recognizeGrantIncome/markGrantConditionMet/assessGrantClawback mutations
+  - 15 integration tests (government-grants.test.ts) — all passing
 
 - [ ] P7-BORROWING-COSTS: IAS 23 borrowing costs
   - qualifying_asset flag on FixedAsset
