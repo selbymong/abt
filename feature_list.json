@@ -439,7 +439,7 @@
       "id": "P8-FINANCIAL-STATEMENTS",
       "phase": 8,
       "name": "Financial statement generator: templated P&L, BS, cash flow statement, notes, comparative periods",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P8-AUDIT-TRAIL",

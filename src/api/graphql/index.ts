@@ -32,6 +32,7 @@ import { multiCurrencyTypeDefs } from './schema/multiCurrency.typeDefs.js';
 import { intercoLoanTypeDefs } from './schema/intercoLoan.typeDefs.js';
 import { payrollTypeDefs } from './schema/payroll.typeDefs.js';
 import { authTypeDefs } from './schema/auth.typeDefs.js';
+import { financialStatementsTypeDefs } from './schema/financialStatements.typeDefs.js';
 
 import { graphResolvers } from './resolvers/graph.resolvers.js';
 import { glResolvers } from './resolvers/gl.resolvers.js';
@@ -62,6 +63,7 @@ import { multiCurrencyResolvers } from './resolvers/multiCurrency.resolvers.js';
 import { intercoLoanResolvers } from './resolvers/intercoLoan.resolvers.js';
 import { payrollResolvers } from './resolvers/payroll.resolvers.js';
 import { authResolvers } from './resolvers/auth.resolvers.js';
+import { financialStatementsResolvers } from './resolvers/financialStatements.resolvers.js';
 
 const baseTypeDefs = `
   type Query {
@@ -113,6 +115,7 @@ const allResolverModules = [
   intercoLoanResolvers,
   payrollResolvers,
   authResolvers,
+  financialStatementsResolvers,
 ];
 
 export function createGraphQLSchema(): {
@@ -152,6 +155,7 @@ export function createGraphQLSchema(): {
     intercoLoanTypeDefs,
     payrollTypeDefs,
     authTypeDefs,
+    financialStatementsTypeDefs,
   ].join('\n');
 
   // Merge all Query and Mutation resolvers from domain modules

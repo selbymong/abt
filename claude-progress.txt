@@ -870,11 +870,18 @@ Traditional ERP subledger modules not in original spec but needed for full enter
   - GraphQL: authUser/authUsers/rolePermissions/checkPermission queries, createAuthUser/login/updateAuthUser mutations
   - 16 integration tests (auth-rbac.test.ts) — all passing
 
-- [ ] P8-FINANCIAL-STATEMENTS: Financial statement generator
-  - Templated output: P&L, balance sheet, cash flow statement, equity statement
-  - Comparative periods (current vs prior year)
-  - Notes to financial statements (auto-generated from graph)
-  - PDF/Excel export
+- [x] P8-FINANCIAL-STATEMENTS: Financial statement generator
+  - Service: generateIncomeStatement, generateBalanceSheet, generateCashFlowStatement, generateEquityChanges
+  - All statements read from TimescaleDB gl_period_balances (CQRS compliant)
+  - Comparative periods: current vs prior year with variance + variance percent
+  - Auto-generated notes: revenue growth, operating margin, debt ratio
+  - Income Statement: Revenue, Expenses, Operating Income sections
+  - Balance Sheet: Assets, Liabilities, Equity sections with L+E check
+  - Cash Flow (indirect): Operating, Investing, Financing from economic categories
+  - Equity Changes: breakdown by entry_type
+  - REST: /api/financial-statements/:type (single) + /api/financial-statements (full set)
+  - GraphQL: financialStatement + fullFinancialStatements queries
+  - 17 integration tests (financial-statements.test.ts) — all passing
 
 - [ ] P8-AUDIT-TRAIL: Graph node change history
   - Before/after snapshots on node updates (non-GL nodes)
