@@ -113,6 +113,9 @@ export interface Entity extends TimestampedNode {
 export type MinorityInterestMethod = 'PROPORTIONATE' | 'FULL_GOODWILL';
 export type IntercompanyTransactionType = 'SALE' | 'LOAN' | 'DIVIDEND' | 'SERVICE' | 'MANAGEMENT_FEE' | 'RENTAL' | 'GUARANTEE';
 export type ImpairmentTestResult = 'PASS' | 'IMPAIRED';
+export type IntangibleCategory = 'CUSTOMER_LIST' | 'TECHNOLOGY' | 'BRAND' | 'NONCOMPETE' | 'CONTRACT_BACKLOG' | 'IN_PROCESS_RD' | 'NONE';
+export type AmortizationMethod = 'STRAIGHT_LINE' | 'ACCELERATED';
+export type PPATargetNodeType = 'FIXED_ASSET' | 'INVENTORY_ITEM' | 'TEMPORAL_CLAIM' | 'RIGHT_OF_USE_ASSET' | 'GOODWILL';
 
 export interface ConsolidationGroup extends TimestampedNode {
   label: string;
@@ -165,6 +168,69 @@ export interface Goodwill extends TimestampedNode {
   tax_deductible: boolean;
   tax_base: number;
   disposal_date?: string;
+}
+
+export interface BusinessCombination extends TimestampedNode {
+  label: string;
+  acquirer_entity_id: string;
+  acquiree_entity_id: string;
+  acquisition_date: string;
+  total_consideration: number;
+  consideration_cash: number;
+  consideration_shares: number;
+  consideration_contingent: number;
+  fair_value_net_assets: number;
+  ownership_pct_acquired: number;
+  goodwill_arising: number;
+  nci_fair_value?: number;
+  full_goodwill?: number;
+  ppa_complete: boolean;
+  functional_currency: string;
+}
+
+export interface CashGeneratingUnit extends TimestampedNode {
+  label: string;
+  entity_ids: string[];
+  goodwill_ids: string[];
+  allocated_goodwill_carrying: number;
+  last_impairment_test_date?: string;
+  last_recoverable_amount?: number;
+  viu_discount_rate: number;
+  viu_horizon_years: number;
+  viu_terminal_growth_rate: number;
+}
+
+export interface ImpairmentTest extends TimestampedNode {
+  goodwill_id: string;
+  cgu_id: string;
+  period_id: string;
+  test_date: string;
+  carrying_amount_tested: number;
+  viu_computed: number;
+  viu_discount_rate: number;
+  viu_horizon_years: number;
+  fvlcod?: number;
+  recoverable_amount: number;
+  impairment_loss: number;
+  result: ImpairmentTestResult;
+  headroom: number;
+  approved_by?: string;
+}
+
+export interface PurchasePriceAdjustment extends TimestampedNode {
+  business_combination_id: string;
+  target_node_id: string;
+  target_node_type: PPATargetNodeType;
+  book_value_at_acquisition: number;
+  fair_value_at_acquisition: number;
+  adjustment_amount: number;
+  intangible_category: IntangibleCategory;
+  useful_life_years?: number;
+  amortization_method?: AmortizationMethod;
+  amortized_to_date: number;
+  remaining_book_value: number;
+  tax_basis_adjustment?: number;
+  provisional: boolean;
 }
 
 export interface IntercompanyMatchEdge {

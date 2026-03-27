@@ -466,6 +466,59 @@ export const createCurrencyTranslationSchema = z.object({
   closingRate: z.number().positive(),
 });
 
+// --- Business Combinations ---
+
+export const createBusinessCombinationSchema = z.object({
+  label: z.string().min(1),
+  acquirerEntityId: z.string().uuid(),
+  acquireeEntityId: z.string().uuid(),
+  acquisitionDate: z.string().min(1),
+  totalConsideration: z.number().nonnegative(),
+  considerationCash: z.number().nonnegative(),
+  considerationShares: z.number().nonnegative(),
+  considerationContingent: z.number().nonnegative(),
+  fairValueNetAssets: z.number(),
+  ownershipPctAcquired: z.number().min(0).max(1),
+  nciFairValue: z.number().nonnegative().optional(),
+  functionalCurrency: z.string().length(3),
+  minorityInterestMethod: z.enum(['PROPORTIONATE', 'FULL_GOODWILL']).optional(),
+});
+
+export const createPPASchema = z.object({
+  businessCombinationId: z.string().uuid(),
+  targetNodeId: z.string().uuid(),
+  targetNodeType: z.enum(['FIXED_ASSET', 'INVENTORY_ITEM', 'TEMPORAL_CLAIM', 'RIGHT_OF_USE_ASSET', 'GOODWILL']),
+  bookValueAtAcquisition: z.number(),
+  fairValueAtAcquisition: z.number(),
+  intangibleCategory: z.enum(['CUSTOMER_LIST', 'TECHNOLOGY', 'BRAND', 'NONCOMPETE', 'CONTRACT_BACKLOG', 'IN_PROCESS_RD', 'NONE']),
+  usefulLifeYears: z.number().positive().optional(),
+  amortizationMethod: z.enum(['STRAIGHT_LINE', 'ACCELERATED']).optional(),
+  taxBasisAdjustment: z.number().optional(),
+  provisional: z.boolean().optional(),
+});
+
+export const amortizePPASchema = z.object({
+  periodCharge: z.number().positive(),
+});
+
+export const createCGUSchema = z.object({
+  label: z.string().min(1),
+  entityIds: z.array(z.string().uuid()).min(1),
+  goodwillIds: z.array(z.string().uuid()).optional(),
+  viuDiscountRate: z.number().min(0).max(1),
+  viuHorizonYears: z.number().int().min(1).max(50),
+  viuTerminalGrowthRate: z.number().min(0).max(1),
+});
+
+export const createImpairmentTestSchema = z.object({
+  goodwillId: z.string().uuid(),
+  cguId: z.string().uuid(),
+  periodId: z.string().uuid(),
+  testDate: z.string().min(1),
+  fvlcod: z.number().nonnegative().optional(),
+  approvedBy: z.string().uuid().optional(),
+});
+
 // --- Depreciation ---
 
 export const createFixedAssetSchema = z.object({

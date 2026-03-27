@@ -3,6 +3,8 @@ import {
   validateBody, createConsolidationGroupSchema, createOwnershipInterestSchema,
   createIntercompanyMatchSchema, createGoodwillSchema, impairGoodwillSchema,
   createCurrencyTranslationSchema,
+  createBusinessCombinationSchema, createPPASchema, amortizePPASchema,
+  createCGUSchema, createImpairmentTestSchema,
 } from './validation.js';
 import {
   createConsolidationGroup,
@@ -20,6 +22,22 @@ import {
   getConsolidatedPnL,
   getConsolidatedBalanceSheet,
 } from '../../services/consolidation/consolidation-service.js';
+import {
+  createBusinessCombination,
+  getBusinessCombination,
+  listBusinessCombinations,
+  completePPA,
+  createPPA,
+  getPPA,
+  listPPAs,
+  amortizePPA,
+  createCGU,
+  getCGU,
+  listCGUs,
+  runImpairmentTest,
+  getImpairmentTest,
+  listImpairmentTests,
+} from '../../services/consolidation/business-combination-service.js';
 
 export const consolidationRouter = Router();
 
@@ -144,5 +162,117 @@ consolidationRouter.get('/consolidated-balance-sheet/:groupId', async (req: Requ
     if (!periodId) { res.status(400).json({ error: 'Required: periodId' }); return; }
     const bs = await getConsolidatedBalanceSheet(req.params.groupId as string, periodId);
     res.json(bs);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// --- Business Combinations ---
+
+consolidationRouter.post('/business-combinations', validateBody(createBusinessCombinationSchema), async (req: Request, res: Response) => {
+  try {
+    const result = await createBusinessCombination(req.body);
+    res.status(201).json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+consolidationRouter.get('/business-combinations/:id', async (req: Request, res: Response) => {
+  try {
+    const bc = await getBusinessCombination(req.params.id as string);
+    if (!bc) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(bc);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+consolidationRouter.get('/business-combinations/by-acquirer/:entityId', async (req: Request, res: Response) => {
+  try {
+    const combos = await listBusinessCombinations(req.params.entityId as string);
+    res.json({ businessCombinations: combos });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+consolidationRouter.post('/business-combinations/:id/complete-ppa', async (req: Request, res: Response) => {
+  try {
+    const result = await completePPA(req.params.id as string);
+    if (!result) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// --- Purchase Price Adjustments ---
+
+consolidationRouter.post('/ppas', validateBody(createPPASchema), async (req: Request, res: Response) => {
+  try {
+    const id = await createPPA(req.body);
+    res.status(201).json({ id });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+consolidationRouter.get('/ppas/:id', async (req: Request, res: Response) => {
+  try {
+    const ppa = await getPPA(req.params.id as string);
+    if (!ppa) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(ppa);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+consolidationRouter.get('/ppas/by-combination/:bcId', async (req: Request, res: Response) => {
+  try {
+    const ppas = await listPPAs(req.params.bcId as string);
+    res.json({ ppas });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+consolidationRouter.post('/ppas/:id/amortize', validateBody(amortizePPASchema), async (req: Request, res: Response) => {
+  try {
+    const result = await amortizePPA(req.params.id as string, req.body.periodCharge);
+    if (!result) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// --- Cash Generating Units ---
+
+consolidationRouter.post('/cgus', validateBody(createCGUSchema), async (req: Request, res: Response) => {
+  try {
+    const id = await createCGU(req.body);
+    res.status(201).json({ id });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+consolidationRouter.get('/cgus/:id', async (req: Request, res: Response) => {
+  try {
+    const cgu = await getCGU(req.params.id as string);
+    if (!cgu) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(cgu);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+consolidationRouter.get('/cgus/by-entity/:entityId', async (req: Request, res: Response) => {
+  try {
+    const cgus = await listCGUs(req.params.entityId as string);
+    res.json({ cgus });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// --- Impairment Tests ---
+
+consolidationRouter.post('/impairment-tests', validateBody(createImpairmentTestSchema), async (req: Request, res: Response) => {
+  try {
+    const result = await runImpairmentTest(req.body);
+    res.status(201).json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+consolidationRouter.get('/impairment-tests/:id', async (req: Request, res: Response) => {
+  try {
+    const test = await getImpairmentTest(req.params.id as string);
+    if (!test) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(test);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+consolidationRouter.get('/impairment-tests/by-cgu/:cguId', async (req: Request, res: Response) => {
+  try {
+    const tests = await listImpairmentTests(req.params.cguId as string);
+    res.json({ impairmentTests: tests });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });

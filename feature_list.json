@@ -307,13 +307,13 @@
       "id": "P7-BUSINESS-COMBINATIONS",
       "phase": 7,
       "name": "BusinessCombination + PPA nodes: acquisition accounting, purchase price allocation, CGU assignment",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P7-IMPAIRMENT-CGU",
       "phase": 7,
       "name": "CashGeneratingUnit + ImpairmentTest: CGU CRUD, VIU from contribution paths, IAS 36 annual testing",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P7-OUTCOME-ATTRIBUTION-PNL",

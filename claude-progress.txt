@@ -1,5 +1,5 @@
 # Enterprise Business Graph (EBG) v1.2 — Progress File
-# Last updated: 2026-03-25
+# Last updated: 2026-03-26
 # Current phase: Phase 0 — Foundation (Sprint 1–3)
 
 ## What Has Been Done
@@ -587,19 +587,30 @@ The entire EBG v1.2 build plan has been implemented:
   - Domains: graph, GL, tax, consolidation, depreciation, cashflow, hedge,
     AI, equity, revenue, inventory, bank-rec, compliance, XBRL, config
 
-## Phase 7 — Spec Completion + Accounting Standards (PLANNED)
+## Phase 7 — Spec Completion + Accounting Standards (IN PROGRESS)
 Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE gaps.
 
 ### High Priority (spec-required)
-- [ ] P7-BUSINESS-COMBINATIONS: BusinessCombination + PPA nodes
-  - Acquisition accounting (IFRS 3): acquirer, acquiree, consideration, PPA line items
-  - PurchasePriceAdjustment node with amortization schedule
-  - Links to existing Goodwill node (currently orphaned from acquisition context)
-  - REST + GraphQL endpoints
+- [x] P7-BUSINESS-COMBINATIONS: BusinessCombination + PPA + CGU + ImpairmentTest
+  - Acquisition accounting (IFRS 3): acquirer, acquiree, consideration breakdown
+  - Goodwill auto-computed (proportionate and full goodwill methods)
+  - Goodwill node auto-created and linked to BusinessCombination
+  - PurchasePriceAdjustment CRUD: fair value adjustments with intangible categories
+  - PPA amortization (straight-line/accelerated)
+  - CashGeneratingUnit CRUD: entity grouping, goodwill allocation
+  - ImpairmentTest (IAS 36): VIU via DCF, FVLCOD, recoverable amount
+  - Impairment loss allocated to goodwill first per IAS 36.104
+  - CGU updated with last test date/recoverable amount
+  - TypeScript types: BusinessCombination, CashGeneratingUnit, ImpairmentTest, PurchasePriceAdjustment
+  - New enums: IntangibleCategory, AmortizationMethod, PPATargetNodeType
+  - REST endpoints: 13 new routes on /api/consolidation/
+  - GraphQL: 8 new queries, 6 new mutations
+  - Zod validation: 5 new schemas
+  - Integration tests: business-combinations.test.ts
 
-- [ ] P7-IMPAIRMENT-CGU: CashGeneratingUnit + ImpairmentTest nodes
+- [x] P7-IMPAIRMENT-CGU: (merged into P7-BUSINESS-COMBINATIONS above)
   - CGU CRUD: group assets by cash-generating unit
-  - ImpairmentTest: VIU calculation from CONTRIBUTES_TO path traversal
+  - ImpairmentTest: VIU calculation with DCF model
   - Annual testing workflow with IAS 36 compliance
   - Connects to existing cgu_id fields on FixedAsset and Goodwill
 
