@@ -343,7 +343,7 @@
       "id": "P7-SEGMENT-REPORTING",
       "phase": 7,
       "name": "Segment reporting (IFRS 8): P&L and assets by Initiative/segment hierarchy",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P7-GOVERNMENT-GRANTS",

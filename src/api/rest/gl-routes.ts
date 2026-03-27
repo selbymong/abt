@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { postJournalEntry, PostJournalEntryInput } from '../../services/gl/journal-posting-service.js';
 import { softClosePeriod, hardClosePeriod, reopenPeriod } from '../../services/gl/period-service.js';
 import { getProfitAndLoss, getBalanceSheet, getFundBalances, getOutcomeAttributedPnL } from '../../services/gl/reporting-service.js';
+import { getSegmentReport, getSegmentDetail } from '../../services/gl/segment-reporting-service.js';
 import {
   validateBody, postJournalEntrySchema, createTemporalClaimSchema, createProvisionSchema,
   periodActionSchema, createStatutoryMappingSchema, recognizeClaimSchema,
@@ -670,5 +671,30 @@ glRouter.get('/equity-breakdown', async (req: Request, res: Response) => {
     if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
     const breakdown = await getEquityBreakdown(entityId as string, periodId as string);
     res.json({ breakdown });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// --- Segment Reporting (IFRS 8) ---
+
+glRouter.get('/segment-report', async (req: Request, res: Response) => {
+  try {
+    const { entityId, periodId, fundId } = req.query;
+    if (!entityId || !periodId) { res.status(400).json({ error: 'Required: entityId, periodId' }); return; }
+    const report = await getSegmentReport(entityId as string, periodId as string, fundId as string | undefined);
+    res.json(report);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+glRouter.get('/segment-detail', async (req: Request, res: Response) => {
+  try {
+    const { entityId, periodId, initiativeId, fundId } = req.query;
+    if (!entityId || !periodId || !initiativeId) {
+      res.status(400).json({ error: 'Required: entityId, periodId, initiativeId' });
+      return;
+    }
+    const detail = await getSegmentDetail(
+      entityId as string, periodId as string, initiativeId as string, fundId as string | undefined,
+    );
+    res.json(detail);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });

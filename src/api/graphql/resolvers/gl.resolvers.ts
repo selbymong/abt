@@ -4,6 +4,7 @@ import { query } from '../../../lib/pg.js';
 import { postJournalEntry } from '../../../services/gl/journal-posting-service.js';
 import { softClosePeriod, hardClosePeriod, reopenPeriod } from '../../../services/gl/period-service.js';
 import { getProfitAndLoss, getBalanceSheet, getFundBalances, getOutcomeAttributedPnL } from '../../../services/gl/reporting-service.js';
+import { getSegmentReport, getSegmentDetail } from '../../../services/gl/segment-reporting-service.js';
 import {
   createTemporalClaim,
   getTemporalClaim,
@@ -239,6 +240,18 @@ export const glResolvers = {
     equityBreakdown: async (_: unknown, { entityId, periodId }: { entityId: string; periodId: string }) => {
       try {
         return await getEquityBreakdown(entityId, periodId);
+      } catch (err) { throw wrapError(err); }
+    },
+
+    segmentReport: async (_: unknown, { entityId, periodId, fundId }: { entityId: string; periodId: string; fundId?: string }) => {
+      try {
+        return await getSegmentReport(entityId, periodId, fundId);
+      } catch (err) { throw wrapError(err); }
+    },
+
+    segmentDetail: async (_: unknown, { entityId, periodId, initiativeId, fundId }: { entityId: string; periodId: string; initiativeId: string; fundId?: string }) => {
+      try {
+        return await getSegmentDetail(entityId, periodId, initiativeId, fundId);
       } catch (err) { throw wrapError(err); }
     },
   },

@@ -666,10 +666,15 @@ Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE
   - 11 integration tests (nightly-reconciliation.test.ts) — all passing
 
 ### Medium Priority (accounting standards)
-- [ ] P7-SEGMENT-REPORTING: IFRS 8 segment reporting
-  - P&L and assets by Initiative/segment hierarchy
-  - Segment = Initiative node; aggregation via CONTRIBUTES_TO paths
-  - Inter-segment elimination
+- [x] P7-SEGMENT-REPORTING: IFRS 8 segment reporting
+  - Segments map to Initiative nodes; Activities/Projects aggregate via initiative_id
+  - getSegmentReport(): P&L + assets/liabilities per segment with unallocated bucket
+  - getSegmentDetail(): node-level breakdown within a segment
+  - Inter-segment eliminations via INTER_SEGMENT node_ref_type
+  - Consolidated totals across all segments with elimination adjustment
+  - REST: GET /api/gl/segment-report, GET /api/gl/segment-detail
+  - GraphQL: segmentReport, segmentDetail queries
+  - 9 integration tests (segment-reporting.test.ts) — all passing
 
 - [ ] P7-GOVERNMENT-GRANTS: IAS 20 government grants
   - Grant flag on DEFERRED_REVENUE TemporalClaims

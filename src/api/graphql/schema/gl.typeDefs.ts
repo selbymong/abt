@@ -604,4 +604,77 @@ export const glTypeDefs = `
     recycleOCI(ociId: String!, amount: Float!): Boolean!
     generateEquitySection(entityId: String!, periodId: String!, nciEquity: Float): EquitySection!
   }
+
+  # ============================================================
+  # Segment Reporting (IFRS 8)
+  # ============================================================
+
+  type SegmentInfo {
+    id: ID!
+    label: String!
+    entity_id: String!
+    status: String!
+    budget: Float!
+  }
+
+  type SegmentCategoryBreakdown {
+    economic_category: String!
+    debit_total: Float!
+    credit_total: Float!
+    net_balance: Float!
+  }
+
+  type SegmentPnL {
+    segment: SegmentInfo!
+    revenue: Float!
+    expenses: Float!
+    segment_profit: Float!
+    assets: Float!
+    liabilities: Float!
+    byCategory: [SegmentCategoryBreakdown!]!
+  }
+
+  type ConsolidatedSegmentTotals {
+    revenue: Float!
+    expenses: Float!
+    segment_profit: Float!
+    assets: Float!
+    liabilities: Float!
+  }
+
+  type SegmentReportResult {
+    entity_id: String!
+    period_id: String!
+    fund_id: String
+    segments: [SegmentPnL!]!
+    unallocated: SegmentPnL!
+    consolidated: ConsolidatedSegmentTotals!
+    inter_segment_eliminations: Float!
+  }
+
+  type SegmentNodeDetail {
+    node_ref_id: String!
+    node_ref_type: String!
+    label: String!
+    revenue: Float!
+    expenses: Float!
+    net: Float!
+  }
+
+  type SegmentPnLSummary {
+    revenue: Float!
+    expenses: Float!
+    segment_profit: Float!
+  }
+
+  type SegmentDetailResult {
+    segment: SegmentInfo!
+    pnl: SegmentPnLSummary!
+    nodes: [SegmentNodeDetail!]!
+  }
+
+  extend type Query {
+    segmentReport(entityId: String!, periodId: String!, fundId: String): SegmentReportResult!
+    segmentDetail(entityId: String!, periodId: String!, initiativeId: String!, fundId: String): SegmentDetailResult!
+  }
 `;
