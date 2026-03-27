@@ -89,3 +89,41 @@ export const postJournalEntry = (data: any) =>
     method: 'POST',
     body: JSON.stringify(data),
   });
+
+// Graph exploration — nodes by entity
+export const getNodesByEntity = (label: string, entityId: string) =>
+  request<{ items: any[] }>(`/graph/${label}/by-entity/${entityId}`);
+
+// Graph edges
+export const getEdgesFrom = (edgeType: string, sourceId: string) =>
+  request<{ items: any[] }>(`/graph/edges/${edgeType}/from/${sourceId}`);
+export const getEdgesTo = (edgeType: string, targetId: string) =>
+  request<{ items: any[] }>(`/graph/edges/${edgeType}/to/${targetId}`);
+
+// Graph traversal — impact paths & graph summary
+export const getImpactPaths = (entityId: string) =>
+  request<{ paths: any[] }>(`/graph/impact-paths/${entityId}`);
+export const getGraphSummary = (entityId: string) =>
+  request<any>(`/ai/graph-summary/${entityId}`);
+export const getPathsToOutcomes = (nodeId: string) =>
+  request<any>(`/ai/paths/${nodeId}`);
+export const getTopContributors = (outcomeId: string) =>
+  request<any>(`/ai/top-contributors/${outcomeId}`);
+
+// Financial Statements
+export const getFinancialStatement = (
+  type: string, entityId: string, periodId: string, priorPeriodId?: string, currency?: string,
+) => {
+  const params = new URLSearchParams({ entityId, periodId });
+  if (priorPeriodId) params.set('priorPeriodId', priorPeriodId);
+  if (currency) params.set('currency', currency);
+  return request<any>(`/financial-statements/${type}?${params}`);
+};
+export const getFullFinancialStatements = (
+  entityId: string, periodId: string, priorPeriodId?: string, currency?: string,
+) => {
+  const params = new URLSearchParams({ entityId, periodId });
+  if (priorPeriodId) params.set('priorPeriodId', priorPeriodId);
+  if (currency) params.set('currency', currency);
+  return request<any>(`/financial-statements?${params}`);
+};

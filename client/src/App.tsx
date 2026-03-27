@@ -6,6 +6,8 @@ import { PeriodsPage } from './pages/PeriodsPage';
 import { ECLRateMatrixPage } from './pages/ECLRateMatrixPage';
 import { AssetClassesPage } from './pages/AssetClassesPage';
 import { RestatementPage } from './pages/RestatementPage';
+import { GraphExplorerPage } from './pages/GraphExplorerPage';
+import { FinancialProjectionsPage } from './pages/FinancialProjectionsPage';
 import './App.css';
 
 function App() {
@@ -15,6 +17,10 @@ function App() {
         <nav className="sidebar">
           <h1>EBG Admin</h1>
           <ul>
+            <li className="nav-section">Visualization</li>
+            <li><NavLink to="/graph">Graph Explorer</NavLink></li>
+            <li><NavLink to="/projections">Financial Projections</NavLink></li>
+            <li className="nav-section">Management</li>
             <li><NavLink to="/">Entities</NavLink></li>
             <li><NavLink to="/config">Configuration</NavLink></li>
             <li><NavLink to="/funds">Fund Management</NavLink></li>
@@ -27,6 +33,8 @@ function App() {
         <main className="content">
           <Routes>
             <Route path="/" element={<EntitiesPage />} />
+            <Route path="/graph" element={<GraphExplorerPage />} />
+            <Route path="/projections" element={<FinancialProjectionsPage />} />
             <Route path="/config" element={<ConfigPage />} />
             <Route path="/funds" element={<FundsPage />} />
             <Route path="/periods" element={<PeriodsPage />} />
