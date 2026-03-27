@@ -764,11 +764,19 @@ Traditional ERP subledger modules not in original spec but needed for full enter
   - GraphQL: vendor/apInvoice queries, createVendor/createAPInvoice/approve/post/void/executePaymentRun mutations
   - 19 integration tests (ap-subledger.test.ts) — all passing
 
-- [ ] P8-AR-SUBLEDGER: Accounts Receivable
-  - Customer master data (graph nodes, links to CustomerRelationshipAsset)
-  - Invoice generation from RevenueContract/PerformanceObligation
-  - Aging reports, dunning letters, collections workflow
-  - Integration with ECL (TemporalClaim STAGE_1/2/3)
+- [x] P8-AR-SUBLEDGER: Accounts Receivable ✓
+  - Service: ar-subledger-service.ts with full customer/invoice lifecycle
+  - Customer master: create, get, list, update (ACTIVE/INACTIVE/BLOCKED, credit limits, payment terms)
+  - Invoice lifecycle: DRAFT → POSTED → PAID/WRITTEN_OFF (with partial payments → PARTIALLY_PAID)
+  - Credit limit enforcement on invoice creation
+  - Post invoice: JE with DR Accounts Receivable (asset) / CR Revenue lines
+  - Payment recording: JE with DR Cash / CR Accounts Receivable, tracks partial payments
+  - Write-off: JE with DR Bad Debt Expense / CR Accounts Receivable (ADJUSTMENT entry)
+  - Aging report: current, 30, 60, 90, 120+ day buckets by customer
+  - Collections list: overdue invoices with days overdue calculation
+  - REST: /api/ar (customers CRUD, invoices CRUD, post/payment/write-off, aging, collections)
+  - GraphQL: customer/arInvoice queries, createCustomer/createARInvoice/post/payment/writeOff mutations
+  - 19 integration tests (ar-subledger.test.ts) — all passing
 
 - [ ] P8-PROCUREMENT: Purchase Orders
   - PO creation with budget check against Initiative/Project

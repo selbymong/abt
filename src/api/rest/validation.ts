@@ -1294,3 +1294,44 @@ export const fulfillPurposeSchema = z.object({
   fulfillmentDescription: z.string().min(1),
   approvedBy: z.string().uuid().optional(),
 });
+
+// --- AR Subledger schemas ---
+
+export const createCustomerSchema = z.object({
+  entityId: z.string().uuid(),
+  name: z.string().min(1),
+  customerCode: z.string().min(1),
+  currency: z.string().length(3),
+  paymentTermsDays: z.number().int().min(0),
+  creditLimit: z.number().min(0).optional(),
+  contactEmail: z.string().email().optional(),
+  contactPhone: z.string().optional(),
+  address: z.string().optional(),
+  taxId: z.string().optional(),
+});
+
+export const createARInvoiceSchema = z.object({
+  entityId: z.string().uuid(),
+  customerId: z.string().uuid(),
+  invoiceNumber: z.string().min(1),
+  invoiceDate: z.string().min(1),
+  dueDate: z.string().min(1),
+  amount: z.number().positive(),
+  currency: z.string().length(3),
+  description: z.string().min(1),
+  lineItems: z.array(z.object({
+    accountId: z.string().uuid(),
+    description: z.string().min(1),
+    amount: z.number().positive(),
+    fundId: z.string().uuid().optional(),
+  })).min(1),
+  periodId: z.string().uuid(),
+  fundId: z.string().uuid().optional(),
+});
+
+export const recordARPaymentSchema = z.object({
+  paymentAmount: z.number().positive(),
+  periodId: z.string().uuid(),
+  paymentDate: z.string().min(1),
+  currency: z.string().length(3),
+});

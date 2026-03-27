@@ -302,7 +302,6 @@
       "name": "Admin UI: ECL rate matrix editor, AssetClass management, restatement workflow",
       "passes": true
     },
-
     {
       "id": "P7-BUSINESS-COMBINATIONS",
       "phase": 7,
@@ -381,7 +380,6 @@
       "name": "Pension (IAS 19): DefinedBenefitObligation node, actuarial inputs, remeasurements to OCI",
       "passes": true
     },
-
     {
       "id": "P8-AP-SUBLEDGER",
       "phase": 8,
@@ -392,7 +390,8 @@
       "id": "P8-AR-SUBLEDGER",
       "phase": 8,
       "name": "Accounts Receivable subledger: customer master, invoice generation, aging, collections",
-      "passes": false
+      "passes": true,
+      "completedDate": "2026-03-26"
     },
     {
       "id": "P8-PROCUREMENT",
