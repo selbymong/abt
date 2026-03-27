@@ -194,3 +194,22 @@ CREATE INDEX idx_nfp_reclass_date ON nfp_reclassifications (reclassification_dat
 COMMENT ON TABLE nfp_reclassifications IS
   'Tracks NFP net asset reclassifications when fund restrictions are met/expire.
    Added in P7-NFP-RECLASSIFICATION.';
+
+-- --- AP Payment Runs ---
+
+CREATE TABLE IF NOT EXISTS ap_payment_runs (
+  id                UUID PRIMARY KEY,
+  entity_id         UUID NOT NULL,
+  period_id         UUID NOT NULL,
+  payment_date      DATE NOT NULL,
+  invoices_paid     INT NOT NULL DEFAULT 0,
+  total_amount      NUMERIC NOT NULL DEFAULT 0,
+  status            TEXT NOT NULL DEFAULT 'COMPLETED',
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_ap_payment_runs_entity ON ap_payment_runs (entity_id);
+CREATE INDEX idx_ap_payment_runs_date ON ap_payment_runs (payment_date DESC);
+
+COMMENT ON TABLE ap_payment_runs IS
+  'Tracks AP payment run executions. Added in P8-AP-SUBLEDGER.';

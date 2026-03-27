@@ -373,6 +373,51 @@ export const createLeaseFrameworkAwareSchema = z.object({
   fundId: z.string().uuid().optional(),
 });
 
+// --- AP Subledger ---
+
+export const createVendorSchema = z.object({
+  entityId: z.string().uuid(),
+  name: z.string().min(1),
+  vendorCode: z.string().min(1),
+  currency: z.string().length(3),
+  paymentTermsDays: z.number().int().nonnegative(),
+  contactEmail: z.string().email().optional(),
+  contactPhone: z.string().optional(),
+  address: z.string().optional(),
+  taxId: z.string().optional(),
+  bankAccount: z.string().optional(),
+  bankRouting: z.string().optional(),
+});
+
+export const createAPInvoiceSchema = z.object({
+  entityId: z.string().uuid(),
+  vendorId: z.string().uuid(),
+  invoiceNumber: z.string().min(1),
+  invoiceDate: z.string().min(1),
+  dueDate: z.string().min(1),
+  amount: z.number().positive(),
+  currency: z.string().length(3),
+  description: z.string().min(1),
+  lineItems: z.array(z.object({
+    description: z.string().min(1),
+    amount: z.number().positive(),
+    nodeRefId: z.string().uuid(),
+    nodeRefType: z.string().min(1),
+    economicCategory: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE']),
+  })).min(1),
+  periodId: z.string().uuid(),
+  fundId: z.string().uuid().optional(),
+});
+
+export const executePaymentRunSchema = z.object({
+  entityId: z.string().uuid(),
+  periodId: z.string().uuid(),
+  paymentDate: z.string().min(1),
+  currency: z.string().length(3),
+  maxDueDate: z.string().optional(),
+  vendorId: z.string().uuid().optional(),
+});
+
 // --- GL: Pension (IAS 19) ---
 
 export const createPensionPlanSchema = z.object({

@@ -24,6 +24,7 @@ import { borrowingCostsTypeDefs } from './schema/borrowingCosts.typeDefs.js';
 import { discontinuedOpsTypeDefs } from './schema/discontinuedOps.typeDefs.js';
 import { nfpReclassificationTypeDefs } from './schema/nfpReclassification.typeDefs.js';
 import { pensionTypeDefs } from './schema/pension.typeDefs.js';
+import { apTypeDefs } from './schema/ap.typeDefs.js';
 
 import { graphResolvers } from './resolvers/graph.resolvers.js';
 import { glResolvers } from './resolvers/gl.resolvers.js';
@@ -46,6 +47,7 @@ import { borrowingCostsResolvers } from './resolvers/borrowingCosts.resolvers.js
 import { discontinuedOpsResolvers } from './resolvers/discontinuedOps.resolvers.js';
 import { nfpReclassificationResolvers } from './resolvers/nfpReclassification.resolvers.js';
 import { pensionResolvers } from './resolvers/pension.resolvers.js';
+import { apResolvers } from './resolvers/ap.resolvers.js';
 
 const baseTypeDefs = `
   type Query {
@@ -89,6 +91,7 @@ const allResolverModules = [
   discontinuedOpsResolvers,
   nfpReclassificationResolvers,
   pensionResolvers,
+  apResolvers,
 ];
 
 export function createGraphQLSchema(): {
@@ -120,6 +123,7 @@ export function createGraphQLSchema(): {
     discontinuedOpsTypeDefs,
     nfpReclassificationTypeDefs,
     pensionTypeDefs,
+    apTypeDefs,
   ].join('\n');
 
   // Merge all Query and Mutation resolvers from domain modules

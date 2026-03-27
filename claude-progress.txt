@@ -751,11 +751,18 @@ Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE
 ## Phase 8 — ERP Expansion (PLANNED)
 Traditional ERP subledger modules not in original spec but needed for full enterprise coverage.
 
-- [ ] P8-AP-SUBLEDGER: Accounts Payable
-  - Vendor master data (graph nodes)
-  - Invoice registration, 3-way matching, aging reports
-  - Payment run generation (batch payments), early payment discounts
-  - Integration with CashFlowEvent for settlement
+- [x] P8-AP-SUBLEDGER: Accounts Payable ✓
+  - Service: ap-subledger-service.ts with full vendor/invoice lifecycle
+  - Vendor master: create, get, list, update (ACTIVE/INACTIVE/BLOCKED status, payment terms, bank info)
+  - Invoice lifecycle: DRAFT → APPROVED → POSTED → PAID (or VOID from DRAFT/APPROVED)
+  - Post invoice: JE with DR Expense lines / CR Accounts Payable (liability)
+  - Aging report: current, 30, 60, 90, 120+ day buckets by vendor
+  - Payment runs: batch pay all posted invoices, DR Liability / CR Cash, record in PG
+  - Dunning: list overdue invoices with days overdue calculation
+  - SQL: ap_payment_runs table for payment run history
+  - REST: /api/ap (vendors CRUD, invoices CRUD, approve/post/void, aging, payment-runs, dunning)
+  - GraphQL: vendor/apInvoice queries, createVendor/createAPInvoice/approve/post/void/executePaymentRun mutations
+  - 19 integration tests (ap-subledger.test.ts) — all passing
 
 - [ ] P8-AR-SUBLEDGER: Accounts Receivable
   - Customer master data (graph nodes, links to CustomerRelationshipAsset)

@@ -386,7 +386,7 @@
       "id": "P8-AP-SUBLEDGER",
       "phase": 8,
       "name": "Accounts Payable subledger: vendor master, invoice matching, aging, payment runs, dunning",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P8-AR-SUBLEDGER",
