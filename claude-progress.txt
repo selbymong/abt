@@ -827,11 +827,18 @@ Traditional ERP subledger modules not in original spec but needed for full enter
   - GraphQL: fxRate/fxRates/convertCurrency/revaluationHistory queries, setFXRate/batch/revaluation mutations
   - 13 integration tests (multi-currency.test.ts) — all passing
 
-- [ ] P8-INTERCO-LOANS: Intercompany loan tracking
-  - Loan agreement nodes between entities
-  - Amortization schedules (interest accrual, principal repayment)
-  - Automatic elimination in consolidation
-  - Withholding tax on intercompany interest
+- [x] P8-INTERCO-LOANS: Intercompany loan tracking ✓
+  - Service: interco-loan-service.ts with full loan lifecycle
+  - Loan CRUD: create between lender/borrower entities, get, list (filter by role)
+  - Activation: generates amortization schedule (EQUAL_PRINCIPAL, EQUAL_PAYMENT, or BULLET)
+  - Interest accrual: posts mirrored JEs (borrower DR Expense/CR Payable, lender DR Receivable/CR Revenue)
+  - Withholding tax: splits lender receivable into net + withholding components
+  - Principal repayment: posts mirrored JEs, tracks outstanding balance, auto FULLY_REPAID
+  - Elimination entries: ELIMINATION JE for consolidation (CR receivable, DR payable)
+  - SQL: interco_amortization table for schedule entries with status tracking
+  - REST: /api/interco-loans (loans CRUD, activate, accrue, repay, schedule, eliminate)
+  - GraphQL: intercoLoan/amortizationSchedule queries, create/activate/accrue/repay/eliminate mutations
+  - 12 integration tests (interco-loans.test.ts) — all passing
 
 - [ ] P8-PAYROLL: Payroll processing
   - Employee master → WorkforceAsset linkage

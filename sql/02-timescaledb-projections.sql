@@ -301,3 +301,25 @@ CREATE INDEX idx_fx_reval_runs_period ON fx_revaluation_runs (period_id);
 COMMENT ON TABLE fx_revaluation_runs IS
   'Audit trail for month-end FX revaluation runs.
    Added in P8-MULTI-CURRENCY.';
+
+-- --- Intercompany Amortization Schedule ---
+
+CREATE TABLE IF NOT EXISTS interco_amortization (
+  id                  UUID PRIMARY KEY,
+  loan_id             UUID NOT NULL,
+  period_number       INT NOT NULL,
+  payment_date        DATE NOT NULL,
+  principal_payment   NUMERIC NOT NULL DEFAULT 0,
+  interest_payment    NUMERIC NOT NULL DEFAULT 0,
+  total_payment       NUMERIC NOT NULL DEFAULT 0,
+  principal_remaining NUMERIC NOT NULL DEFAULT 0,
+  status              TEXT NOT NULL DEFAULT 'PENDING',
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_interco_amort_loan ON interco_amortization (loan_id, period_number);
+CREATE INDEX idx_interco_amort_status ON interco_amortization (loan_id, status);
+
+COMMENT ON TABLE interco_amortization IS
+  'Amortization schedule entries for intercompany loans.
+   Added in P8-INTERCO-LOANS.';

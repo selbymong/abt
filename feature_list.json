@@ -418,7 +418,8 @@
       "id": "P8-INTERCO-LOANS",
       "phase": 8,
       "name": "Intercompany loan tracking: loan agreements, amortization schedules, interest accrual, elimination",
-      "passes": false
+      "passes": true,
+      "completedDate": "2026-03-26"
     },
     {
       "id": "P8-PAYROLL",

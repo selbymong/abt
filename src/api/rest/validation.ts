@@ -1437,3 +1437,29 @@ export const performRevaluationSchema = z.object({
   functionalCurrency: z.string().length(3),
   asOfDate: z.string().min(1),
 });
+
+// --- Intercompany Loan schemas ---
+
+export const createIntercoLoanSchema = z.object({
+  lenderEntityId: z.string().uuid(),
+  borrowerEntityId: z.string().uuid(),
+  principalAmount: z.number().positive(),
+  currency: z.string().length(3),
+  interestRate: z.number().min(0).max(1),
+  startDate: z.string().min(1),
+  maturityDate: z.string().min(1),
+  amortizationType: z.enum(['EQUAL_PRINCIPAL', 'EQUAL_PAYMENT', 'BULLET']),
+  paymentFrequencyMonths: z.number().int().min(1).max(12),
+  withholdingTaxRate: z.number().min(0).max(1).optional(),
+  description: z.string().optional(),
+});
+
+export const accrueInterestSchema = z.object({
+  periodId: z.string().uuid(),
+  accrualDate: z.string().min(1),
+});
+
+export const recordRepaymentSchema = z.object({
+  periodId: z.string().uuid(),
+  paymentDate: z.string().min(1),
+});
