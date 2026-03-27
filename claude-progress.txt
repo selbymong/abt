@@ -699,10 +699,16 @@ Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE
   - GraphQL: qualifyingAssets/qualifyingAsset queries, designate/capitalize/suspend/resume/cease mutations
   - 17 integration tests (borrowing-costs.test.ts) — all passing
 
-- [ ] P7-DISCONTINUED-OPS: IFRS 5 discontinued operations
-  - HELD_FOR_SALE status on Initiative nodes
-  - Separate P&L presentation (continuing vs discontinued)
-  - Measurement at lower of carrying amount and fair value less costs to sell
+- [x] P7-DISCONTINUED-OPS: IFRS 5 discontinued operations
+  - HeldForSaleStatus: CONTINUING → HELD_FOR_SALE → DISPOSED on Initiative nodes
+  - classifyAsHeldForSale(): impairment at FVLCTS vs carrying amount, posts IMPAIRMENT JE
+  - declassifyHeldForSale(): reversal back to CONTINUING
+  - recordDisposal(): gain/loss computation, posts disposal JE
+  - getDiscontinuedOpsPnL(): splits P&L between continuing and discontinued segments
+  - Discontinued P&L includes operating profit, impairment loss, and gain/loss on disposal
+  - REST: POST /api/discontinued-ops/{classify,:id/declassify,:id/dispose}, GET /pnl, GET /initiatives
+  - GraphQL: discontinuedOpsPnL/heldForSaleInitiatives queries, classify/declassify/dispose mutations
+  - 13 integration tests (discontinued-ops.test.ts) — all passing
 
 - [ ] P7-NFP-RECLASSIFICATION: NFP net asset reclassification
   - Auto-reclassify fund balances when time/purpose restrictions expire

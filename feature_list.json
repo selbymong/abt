@@ -361,7 +361,7 @@
       "id": "P7-DISCONTINUED-OPS",
       "phase": 7,
       "name": "Discontinued operations (IFRS 5): HELD_FOR_SALE status on Initiative, separate P&L presentation",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P7-NFP-RECLASSIFICATION",

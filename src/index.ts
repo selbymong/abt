@@ -29,6 +29,7 @@ import { migrationRouter } from './api/rest/migration-routes.js';
 import { reconciliationRouter } from './api/rest/reconciliation-routes.js';
 import { grantsRouter } from './api/rest/grants-routes.js';
 import { borrowingCostsRouter } from './api/rest/borrowing-costs-routes.js';
+import { discontinuedOpsRouter } from './api/rest/discontinued-ops-routes.js';
 import { startReconciliationScheduler, stopReconciliationScheduler } from './services/reconciliation/nightly-reconciliation-service.js';
 import { startConsumers, stopConsumers } from './projectors/index.js';
 import { getConsumerManager } from './projectors/consumer-manager.js';
@@ -137,6 +138,7 @@ async function main() {
   app.use('/api/reconciliation', reconciliationRouter);
   app.use('/api/grants', grantsRouter);
   app.use('/api/borrowing-costs', borrowingCostsRouter);
+  app.use('/api/discontinued-ops', discontinuedOpsRouter);
 
   // --- Consumer Status ---
   app.get('/api/consumers/status', (_req, res) => {

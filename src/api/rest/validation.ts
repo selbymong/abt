@@ -1108,3 +1108,28 @@ export const capitalizeBorrowingCostsSchema = z.object({
 export const ceaseCapitalizationSchema = z.object({
   cessationDate: z.string().min(1),
 });
+
+// ============================================================
+// Discontinued Operations (IFRS 5)
+// ============================================================
+
+export const classifyHeldForSaleSchema = z.object({
+  initiativeId: z.string().uuid(),
+  entityId: z.string().uuid(),
+  classificationDate: z.string().min(1),
+  fairValueLessCostsToSell: z.number().nonnegative(),
+  expectedDisposalDate: z.string().optional(),
+  buyer: z.string().optional(),
+  periodId: z.string().uuid(),
+  currency: z.string().length(3),
+  fundId: z.string().uuid().optional(),
+});
+
+export const recordDisposalSchema = z.object({
+  entityId: z.string().uuid(),
+  disposalDate: z.string().min(1),
+  proceedsAmount: z.number().nonnegative(),
+  periodId: z.string().uuid(),
+  currency: z.string().length(3),
+  fundId: z.string().uuid().optional(),
+});
