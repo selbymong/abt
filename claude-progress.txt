@@ -576,8 +576,19 @@ The entire EBG v1.2 build plan has been implemented:
 - [x] .env.example for env var documentation
 - [x] .gitignore: added .next/, client/dist/, .env.*
 
+## GraphQL Layer (COMPLETE)
+- [x] Full GraphQL API surface via Apollo Server v5 at /graphql
+  - 33 files: 1 bootstrap, 2 shared (enums + common), 15 type defs, 15 resolvers
+  - 65 GraphQL enums mirroring all TypeScript union types
+  - ~120 queries and ~100 mutations covering all 15 domains
+  - Nested resolvers (JournalEntry.lines fetches LedgerLines)
+  - @as-integrations/express5 for Express v5 compatibility
+  - Server refactored to async main() for Apollo bootstrap
+  - Domains: graph, GL, tax, consolidation, depreciation, cashflow, hedge,
+    AI, equity, revenue, inventory, bank-rec, compliance, XBRL, config
+
 ## What Comes Next
-- All features, security, validation, and production readiness complete
+- All features, security, validation, production readiness, and GraphQL complete
 - Remaining: deploy to target environment
 
 ## Known Issues
