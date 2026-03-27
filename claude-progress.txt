@@ -813,11 +813,19 @@ Traditional ERP subledger modules not in original spec but needed for full enter
   - GraphQL: budget/budgetLines/varianceReport queries, create/approve/lock/addLine/updateLine/deleteLine/forecast mutations
   - 16 integration tests (budgeting.test.ts) — all passing
 
-- [ ] P8-MULTI-CURRENCY: Multi-currency transactions
-  - FX rate at transaction date on all monetary items
-  - Month-end revaluation of foreign currency balances
-  - Unrealized FX gain/loss posting
-  - Integration with CurrencyTranslation for consolidation
+- [x] P8-MULTI-CURRENCY: Multi-currency transactions ✓
+  - Service: multi-currency-service.ts with FX rate management, conversion, revaluation
+  - FX rate management: set/batch import, lookup with date fallback, inverse rate calculation
+  - Currency conversion: convert amount at transaction date rate
+  - Month-end revaluation: finds open AR/AP invoices in foreign currencies
+    - Compares original rate vs closing rate
+    - Posts ADJUSTMENT JEs for unrealized FX gain/loss
+    - Asset gain = closing > original; Liability gain = closing < original
+  - Revaluation history: audit trail in PG (fx_revaluation_runs table)
+  - SQL: fx_rates (unique pair+date, upsert), fx_revaluation_runs tables
+  - REST: /api/fx (rates CRUD/batch, convert, revaluation, history)
+  - GraphQL: fxRate/fxRates/convertCurrency/revaluationHistory queries, setFXRate/batch/revaluation mutations
+  - 13 integration tests (multi-currency.test.ts) — all passing
 
 - [ ] P8-INTERCO-LOANS: Intercompany loan tracking
   - Loan agreement nodes between entities

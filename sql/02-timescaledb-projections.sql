@@ -262,3 +262,42 @@ COMMENT ON TABLE budget_lines IS
   'Stores budget amounts by period, node, and economic category.
    Budget header is a Neo4j node; lines are in PG for efficient variance queries.
    Added in P8-BUDGETING.';
+
+-- --- FX Rates ---
+
+CREATE TABLE IF NOT EXISTS fx_rates (
+  id                UUID PRIMARY KEY,
+  from_currency     TEXT NOT NULL,
+  to_currency       TEXT NOT NULL,
+  rate              NUMERIC NOT NULL,
+  rate_date         DATE NOT NULL,
+  source            TEXT NOT NULL DEFAULT 'MANUAL',
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (from_currency, to_currency, rate_date)
+);
+
+CREATE INDEX idx_fx_rates_pair ON fx_rates (from_currency, to_currency, rate_date DESC);
+
+COMMENT ON TABLE fx_rates IS
+  'Exchange rates by currency pair and date for multi-currency transactions.
+   Added in P8-MULTI-CURRENCY.';
+
+-- --- FX Revaluation Runs ---
+
+CREATE TABLE IF NOT EXISTS fx_revaluation_runs (
+  id                  UUID PRIMARY KEY,
+  entity_id           UUID NOT NULL,
+  period_id           UUID NOT NULL,
+  functional_currency TEXT NOT NULL,
+  as_of_date          DATE NOT NULL,
+  items_count         INT NOT NULL DEFAULT 0,
+  total_gain_loss     NUMERIC NOT NULL DEFAULT 0,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_fx_reval_runs_entity ON fx_revaluation_runs (entity_id);
+CREATE INDEX idx_fx_reval_runs_period ON fx_revaluation_runs (period_id);
+
+COMMENT ON TABLE fx_revaluation_runs IS
+  'Audit trail for month-end FX revaluation runs.
+   Added in P8-MULTI-CURRENCY.';

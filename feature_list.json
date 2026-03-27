@@ -411,7 +411,8 @@
       "id": "P8-MULTI-CURRENCY",
       "phase": 8,
       "name": "Multi-currency transactions: FX at transaction date, month-end revaluation, unrealized gain/loss",
-      "passes": false
+      "passes": true,
+      "completedDate": "2026-03-26"
     },
     {
       "id": "P8-INTERCO-LOANS",

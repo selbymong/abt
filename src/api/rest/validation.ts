@@ -1403,3 +1403,37 @@ export const rollingForecastSchema = z.object({
   completedPeriodIds: z.array(z.string().uuid()),
   remainingPeriodIds: z.array(z.string().uuid()),
 });
+
+// --- Multi-Currency schemas ---
+
+export const setFXRateSchema = z.object({
+  fromCurrency: z.string().length(3),
+  toCurrency: z.string().length(3),
+  rate: z.number().positive(),
+  rateDate: z.string().min(1),
+  source: z.string().optional(),
+});
+
+export const setFXRatesBatchSchema = z.object({
+  rates: z.array(z.object({
+    fromCurrency: z.string().length(3),
+    toCurrency: z.string().length(3),
+    rate: z.number().positive(),
+    rateDate: z.string().min(1),
+    source: z.string().optional(),
+  })).min(1),
+});
+
+export const convertCurrencySchema = z.object({
+  fromCurrency: z.string().length(3),
+  toCurrency: z.string().length(3),
+  amount: z.number().positive(),
+  rateDate: z.string().min(1),
+});
+
+export const performRevaluationSchema = z.object({
+  entityId: z.string().uuid(),
+  periodId: z.string().uuid(),
+  functionalCurrency: z.string().length(3),
+  asOfDate: z.string().min(1),
+});
