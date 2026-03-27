@@ -323,3 +323,62 @@ CREATE INDEX idx_interco_amort_status ON interco_amortization (loan_id, status);
 COMMENT ON TABLE interco_amortization IS
   'Amortization schedule entries for intercompany loans.
    Added in P8-INTERCO-LOANS.';
+
+-- --- Pay Runs ---
+
+CREATE TABLE IF NOT EXISTS pay_runs (
+  id                UUID PRIMARY KEY,
+  entity_id         UUID NOT NULL,
+  period_id         UUID NOT NULL,
+  pay_date          DATE NOT NULL,
+  pay_period_start  DATE NOT NULL,
+  pay_period_end    DATE NOT NULL,
+  status            TEXT NOT NULL DEFAULT 'DRAFT',
+  total_gross       NUMERIC NOT NULL DEFAULT 0,
+  total_deductions  NUMERIC NOT NULL DEFAULT 0,
+  total_net         NUMERIC NOT NULL DEFAULT 0,
+  employee_count    INT NOT NULL DEFAULT 0,
+  journal_entry_id  UUID,
+  description       TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_pay_runs_entity ON pay_runs (entity_id);
+CREATE INDEX idx_pay_runs_date ON pay_runs (pay_date DESC);
+
+-- --- Pay Stubs ---
+
+CREATE TABLE IF NOT EXISTS pay_stubs (
+  id                UUID PRIMARY KEY,
+  pay_run_id        UUID NOT NULL REFERENCES pay_runs(id),
+  employee_id       UUID NOT NULL,
+  employee_name     TEXT NOT NULL,
+  gross_pay         NUMERIC NOT NULL DEFAULT 0,
+  deductions        JSONB NOT NULL DEFAULT '[]',
+  total_deductions  NUMERIC NOT NULL DEFAULT 0,
+  net_pay           NUMERIC NOT NULL DEFAULT 0,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_pay_stubs_run ON pay_stubs (pay_run_id);
+CREATE INDEX idx_pay_stubs_employee ON pay_stubs (employee_id);
+
+-- --- Payroll Remittances ---
+
+CREATE TABLE IF NOT EXISTS payroll_remittances (
+  id                UUID PRIMARY KEY,
+  entity_id         UUID NOT NULL,
+  remittance_type   TEXT NOT NULL,
+  amount            NUMERIC NOT NULL,
+  period_id         UUID NOT NULL,
+  due_date          DATE NOT NULL,
+  status            TEXT NOT NULL DEFAULT 'PENDING',
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_payroll_remit_entity ON payroll_remittances (entity_id);
+CREATE INDEX idx_payroll_remit_status ON payroll_remittances (status);
+
+COMMENT ON TABLE pay_runs IS 'Payroll run headers. Added in P8-PAYROLL.';
+COMMENT ON TABLE pay_stubs IS 'Individual employee pay stubs per run. Added in P8-PAYROLL.';
+COMMENT ON TABLE payroll_remittances IS 'Statutory remittance tracking (CRA, IRS). Added in P8-PAYROLL.';

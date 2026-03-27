@@ -840,11 +840,21 @@ Traditional ERP subledger modules not in original spec but needed for full enter
   - GraphQL: intercoLoan/amortizationSchedule queries, create/activate/accrue/repay/eliminate mutations
   - 12 integration tests (interco-loans.test.ts) — all passing
 
-- [ ] P8-PAYROLL: Payroll processing
-  - Employee master → WorkforceAsset linkage
-  - Compensation calculation, statutory deductions (CPP/EI, FICA)
-  - Remittance tracking (CRA, IRS)
-  - T4/W-2 generation, ROE/W-2c for terminations
+- [x] P8-PAYROLL: Payroll processing ✓
+  - Service: payroll-service.ts with full payroll lifecycle
+  - Employee CRUD: linked to WorkforceAsset, salary/hourly/contract pay types
+  - Pay run: DRAFT → CALCULATED → APPROVED → POSTED lifecycle
+  - Deduction calculation: CA (CPP, EI, fed/prov tax) and US (FICA, Medicare, fed/state tax)
+    - Annual maximums enforced (CPP max, EI max, FICA max)
+  - Pay run posting: JE with DR Salary Expense / CR Cash (net) + CR Payables (deductions)
+  - YTD tracking: updates employee ytd_gross/deductions/net after posting
+  - Pay stubs stored in PG with deduction breakdown (JSONB)
+  - Remittance tracking: create/list with PENDING/SUBMITTED/CONFIRMED status
+  - Tax slip generation: T4 (Canada) and W-2 (US) with all statutory amounts
+  - SQL: pay_runs, pay_stubs, payroll_remittances tables
+  - REST: /api/payroll (employees, pay-runs, calculate/approve/post, stubs, remittances, tax-slips)
+  - GraphQL: employee/payRun/payStubs/taxSlips queries, create/calculate/approve/post mutations
+  - 14 integration tests (payroll.test.ts) — all passing
 
 - [ ] P8-AUTH-RBAC: Authentication & authorization
   - JWT/OAuth2 authentication middleware

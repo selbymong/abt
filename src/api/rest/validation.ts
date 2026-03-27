@@ -1463,3 +1463,38 @@ export const recordRepaymentSchema = z.object({
   periodId: z.string().uuid(),
   paymentDate: z.string().min(1),
 });
+
+// --- Payroll schemas ---
+
+export const createEmployeeSchema = z.object({
+  entityId: z.string().uuid(),
+  workforceAssetId: z.string().uuid().optional(),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  employeeCode: z.string().min(1),
+  payType: z.enum(['SALARY', 'HOURLY', 'CONTRACT']),
+  annualSalary: z.number().min(0).optional(),
+  hourlyRate: z.number().min(0).optional(),
+  currency: z.string().length(3),
+  jurisdiction: z.enum(['CA', 'US']),
+  startDate: z.string().min(1),
+  department: z.string().optional(),
+  sinOrSsn: z.string().optional(),
+});
+
+export const createPayRunSchema = z.object({
+  entityId: z.string().uuid(),
+  periodId: z.string().uuid(),
+  payDate: z.string().min(1),
+  payPeriodStart: z.string().min(1),
+  payPeriodEnd: z.string().min(1),
+  description: z.string().optional(),
+});
+
+export const createRemittanceSchema = z.object({
+  entityId: z.string().uuid(),
+  remittanceType: z.string().min(1),
+  amount: z.number().positive(),
+  periodId: z.string().uuid(),
+  dueDate: z.string().min(1),
+});
