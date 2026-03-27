@@ -325,7 +325,7 @@
       "id": "P7-MACRS-TABLES",
       "phase": 7,
       "name": "MACRS percentage table lookup: embed IRS Pub 946 GDS/ADS tables for US depreciation",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P7-KAFKA-CONSUMER-LOOP",

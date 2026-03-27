@@ -153,6 +153,30 @@ export const depreciationTypeDefs = `
     openingUcc: Float!
   }
 
+  type MACRSLookupResult {
+    system: String!
+    recoveryPeriod: Float!
+    convention: String!
+    year: Int!
+    percentage: Float!
+    table: [Float!]!
+  }
+
+  type MACRSScheduleEntry {
+    year: Int!
+    percentage: Float!
+    charge: Float!
+    accumulated: Float!
+    remaining: Float!
+  }
+
+  type MACRSRecoveryPeriodInfo {
+    recoveryPeriod: Float!
+    gdsYears: Float!
+    adsYears: Float!
+    propertyType: String!
+  }
+
   extend type Query {
     fixedAsset(id: ID!): FixedAsset
     fixedAssets(entityId: String!): [FixedAsset!]!
@@ -162,6 +186,9 @@ export const depreciationTypeDefs = `
     uccPool(id: ID!): UCCPool
     uccPoolForClass(entityId: String!, assetClassId: String!, fiscalYear: String!): UCCPool
     depreciationSchedule(fixedAssetId: ID!): DepreciationSchedule
+    macrsLookup(recoveryPeriod: Float!, year: Int!, system: String, convention: String, quarterOrMonth: Int): MACRSLookupResult
+    macrsSchedule(cost: Float!, recoveryPeriod: Float!, system: String, convention: String, quarterOrMonth: Int): [MACRSScheduleEntry!]!
+    macrsRecoveryPeriods: [MACRSRecoveryPeriodInfo!]!
   }
 
   extend type Mutation {

@@ -24,6 +24,12 @@ import {
   depreciateAllAssets,
   getDepreciationSchedule,
 } from '../../services/depreciation/depreciation-engine.js';
+import {
+  lookupMACRS,
+  getMACRSSchedule,
+  getAvailableRecoveryPeriods,
+  type MACRSConvention,
+} from '../../services/depreciation/macrs-tables.js';
 
 export const depreciationRouter = Router();
 
@@ -164,5 +170,51 @@ depreciationRouter.get('/depreciation-schedule/:fixedAssetId', async (req: Reque
     const schedule = await getDepreciationSchedule(req.params.fixedAssetId as string);
     if (!schedule) { res.status(404).json({ error: 'Not found' }); return; }
     res.json(schedule);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// --- MACRS Tables ---
+
+depreciationRouter.get('/macrs/recovery-periods', (_req: Request, res: Response) => {
+  res.json({ recoveryPeriods: getAvailableRecoveryPeriods() });
+});
+
+depreciationRouter.get('/macrs/lookup', (req: Request, res: Response) => {
+  try {
+    const recoveryPeriod = Number(req.query.recoveryPeriod);
+    const year = Number(req.query.year);
+    const system = (req.query.system as 'GDS' | 'ADS') ?? 'GDS';
+    const convention = (req.query.convention as MACRSConvention) ?? 'HALF_YEAR';
+    const quarterOrMonth = req.query.quarterOrMonth ? Number(req.query.quarterOrMonth) : undefined;
+
+    if (!recoveryPeriod || !year) {
+      res.status(400).json({ error: 'Required: recoveryPeriod, year' });
+      return;
+    }
+
+    const result = lookupMACRS(recoveryPeriod, year, system, convention, quarterOrMonth);
+    if (!result) {
+      res.status(404).json({ error: 'No MACRS table found for given parameters' });
+      return;
+    }
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+depreciationRouter.get('/macrs/schedule', (req: Request, res: Response) => {
+  try {
+    const cost = Number(req.query.cost);
+    const recoveryPeriod = Number(req.query.recoveryPeriod);
+    const system = (req.query.system as 'GDS' | 'ADS') ?? 'GDS';
+    const convention = (req.query.convention as MACRSConvention) ?? 'HALF_YEAR';
+    const quarterOrMonth = req.query.quarterOrMonth ? Number(req.query.quarterOrMonth) : undefined;
+
+    if (!cost || !recoveryPeriod) {
+      res.status(400).json({ error: 'Required: cost, recoveryPeriod' });
+      return;
+    }
+
+    const schedule = getMACRSSchedule(cost, recoveryPeriod, system, convention, quarterOrMonth);
+    res.json({ schedule });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });

@@ -6,6 +6,7 @@ import {
   updateFixedAsset,
   getAssetClassesForAsset,
 } from './fixed-asset-service.js';
+import { calculateMACRSCharge, type MACRSConvention } from './macrs-tables.js';
 import type { DepreciationMethod } from '../../schema/neo4j/types.js';
 
 // ============================================================
@@ -31,6 +32,9 @@ export function calculateCharge(
   salvageValue: number,
   isFirstYear: boolean,
   firstYearRule: string,
+  macrsRecoveryYear?: number,
+  macrsConvention?: MACRSConvention,
+  macrsQuarterOrMonth?: number,
 ): number {
   const depreciableBase = cost - salvageValue;
   const remaining = depreciableBase - accumulatedDep;
@@ -63,12 +67,35 @@ export function calculateCharge(
       }
       break;
     }
+    case 'GDS_TABLE': {
+      // MACRS GDS table-based depreciation (IRS Pub 946)
+      // Uses cost basis directly (no salvage for MACRS), annual charge / 12 for monthly
+      if (!usefulLifeYears || !macrsRecoveryYear) return 0;
+      const annualCharge = calculateMACRSCharge(
+        cost, usefulLifeYears, macrsRecoveryYear,
+        'GDS', macrsConvention ?? 'HALF_YEAR', macrsQuarterOrMonth,
+      );
+      // Return monthly portion (MACRS tables are annual percentages)
+      charge = annualCharge / 12;
+      // Cap at cost minus accumulated (MACRS has no salvage concept)
+      return Math.min(charge, cost - accumulatedDep);
+    }
+    case 'ADS_TABLE': {
+      // MACRS ADS table-based depreciation (straight-line over ADS period)
+      if (!usefulLifeYears || !macrsRecoveryYear) return 0;
+      const annualCharge = calculateMACRSCharge(
+        cost, usefulLifeYears, macrsRecoveryYear,
+        'ADS', 'HALF_YEAR',
+      );
+      charge = annualCharge / 12;
+      return Math.min(charge, cost - accumulatedDep);
+    }
     default:
-      // UNITS_OF_PRODUCTION, SUM_OF_YEARS, GDS_TABLE, ADS_TABLE — not yet implemented
+      // UNITS_OF_PRODUCTION, SUM_OF_YEARS — not yet implemented
       return 0;
   }
 
-  // Apply first-year rule
+  // Apply first-year rule (for non-MACRS methods only; MACRS handles conventions in the table)
   if (isFirstYear) {
     switch (firstYearRule) {
       case 'HALF_YEAR':
@@ -169,9 +196,29 @@ export async function depreciateAsset(
 
     const taxIsFirstYear = taxAccumDep < 0.01;
 
+    // For MACRS table methods, determine the recovery year from prior depreciation
+    let macrsRecoveryYear: number | undefined;
+    if (method === 'GDS_TABLE' || method === 'ADS_TABLE') {
+      // Estimate recovery year: year 1 if first year, otherwise approximate from accumulated
+      if (taxIsFirstYear) {
+        macrsRecoveryYear = 1;
+      } else if (usefulLife && usefulLife > 0) {
+        // Approximate: each year ~= cost/life, so year = accumDep / (cost/life) + 1
+        const annualApprox = cost / usefulLife;
+        macrsRecoveryYear = annualApprox > 0 ? Math.floor(taxAccumDep / annualApprox) + 1 : 1;
+      } else {
+        macrsRecoveryYear = 1;
+      }
+    }
+
+    const macrsConvention = (tc.first_year_rule === 'MID_QUARTER' ? 'MID_QUARTER'
+      : tc.first_year_rule === 'MID_MONTH' ? 'MID_MONTH'
+      : 'HALF_YEAR') as MACRSConvention;
+
     taxCharge = calculateCharge(
       cost, taxAccumDep, method, usefulLife, ratePct, salvage,
       taxIsFirstYear, tc.first_year_rule as string,
+      macrsRecoveryYear, macrsConvention,
     );
   }
 

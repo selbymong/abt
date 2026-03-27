@@ -19,6 +19,12 @@ import {
   depreciateAllAssets,
   getDepreciationSchedule,
 } from '../../../services/depreciation/depreciation-engine.js';
+import {
+  lookupMACRS,
+  getMACRSSchedule,
+  getAvailableRecoveryPeriods,
+  type MACRSConvention,
+} from '../../../services/depreciation/macrs-tables.js';
 
 export const depreciationResolvers = {
   Query: {
@@ -55,6 +61,29 @@ export const depreciationResolvers = {
 
     async depreciationSchedule(_: unknown, args: { fixedAssetId: string }) {
       return getDepreciationSchedule(args.fixedAssetId);
+    },
+
+    macrsLookup(_: unknown, args: { recoveryPeriod: number; year: number; system?: string; convention?: string; quarterOrMonth?: number }) {
+      const result = lookupMACRS(
+        args.recoveryPeriod, args.year,
+        (args.system as 'GDS' | 'ADS') ?? 'GDS',
+        (args.convention as MACRSConvention) ?? 'HALF_YEAR',
+        args.quarterOrMonth,
+      );
+      return result;
+    },
+
+    macrsSchedule(_: unknown, args: { cost: number; recoveryPeriod: number; system?: string; convention?: string; quarterOrMonth?: number }) {
+      return getMACRSSchedule(
+        args.cost, args.recoveryPeriod,
+        (args.system as 'GDS' | 'ADS') ?? 'GDS',
+        (args.convention as MACRSConvention) ?? 'HALF_YEAR',
+        args.quarterOrMonth,
+      );
+    },
+
+    macrsRecoveryPeriods() {
+      return getAvailableRecoveryPeriods();
     },
   },
 

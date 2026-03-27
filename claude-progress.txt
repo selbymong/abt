@@ -625,11 +625,18 @@ Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE
   - GraphQL query: outcomeAttributedPnL(entityId, periodId, maxHops)
   - Integration tests: outcome-attribution-pnl.test.ts (6 tests)
 
-- [ ] P7-MACRS-TABLES: MACRS percentage table lookup
-  - Embed IRS Publication 946 GDS and ADS recovery period tables
-  - 3/5/7/10/15/20/25/27.5/31.5/39-year property classes
-  - Half-year, mid-quarter conventions
-  - Wire into depreciation engine for US entities
+- [x] P7-MACRS-TABLES: MACRS percentage table lookup
+  - GDS half-year convention: 3/5/7/10/15/20-year tables (IRS Pub 946 Table A-1)
+  - GDS mid-quarter convention: 5/7-year tables (Tables A-2..A-5)
+  - GDS mid-month convention: 27.5-year residential, 39-year nonresidential
+  - ADS straight-line tables auto-generated for all recovery periods
+  - lookupMACRS(): percentage by (recoveryPeriod, year, system, convention)
+  - calculateMACRSCharge(): cost × percentage for any year
+  - getMACRSSchedule(): full multi-year schedule with accumulated/remaining
+  - Integrated into calculateCharge() for GDS_TABLE and ADS_TABLE methods
+  - REST: GET /api/depreciation/macrs/{lookup,schedule,recovery-periods}
+  - GraphQL: macrsLookup, macrsSchedule, macrsRecoveryPeriods queries
+  - 22 integration tests (macrs-tables.test.ts) — all passing
 
 - [ ] P7-KAFKA-CONSUMER-LOOP: Continuous Kafka consumers
   - Long-running gl-projector consumer on ebg.gl topic
