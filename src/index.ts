@@ -26,6 +26,8 @@ import { xbrlRouter } from './api/rest/xbrl-routes.js';
 import { bankRecRouter } from './api/rest/bank-rec-routes.js';
 import { hedgeRouter } from './api/rest/hedge-routes.js';
 import { migrationRouter } from './api/rest/migration-routes.js';
+import { startConsumers, stopConsumers } from './projectors/index.js';
+import { getConsumerManager } from './projectors/consumer-manager.js';
 
 // --- Environment validation ---
 function validateEnv() {
@@ -129,6 +131,15 @@ async function main() {
   app.use('/api/hedge', hedgeRouter);
   app.use('/api/migration', migrationRouter);
 
+  // --- Consumer Status ---
+  app.get('/api/consumers/status', (_req, res) => {
+    const manager = getConsumerManager();
+    res.json({
+      healthy: manager.isHealthy(),
+      consumers: manager.getStatus(),
+    });
+  });
+
   // Global error handler
   app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     logger.error({ err: err.message, stack: err.stack }, 'Unhandled error');
@@ -141,6 +152,13 @@ async function main() {
 
   const server = app.listen(port, () => {
     logger.info({ port }, 'EBG API server started (REST + GraphQL)');
+
+    // Start Kafka consumers after server is listening (non-blocking)
+    if (process.env.DISABLE_CONSUMERS !== 'true') {
+      startConsumers().catch((err) => {
+        logger.error({ err: (err as Error).message }, 'Failed to start Kafka consumers');
+      });
+    }
   });
 
   // Graceful shutdown with timeout
@@ -163,6 +181,7 @@ async function main() {
     });
 
     try {
+      await stopConsumers();
       await apollo.stop();
       await Promise.all([closeNeo4j(), closePg(), closeKafka()]);
       logger.info('All connections closed');

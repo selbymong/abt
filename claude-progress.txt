@@ -638,11 +638,18 @@ Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE
   - GraphQL: macrsLookup, macrsSchedule, macrsRecoveryPeriods queries
   - 22 integration tests (macrs-tables.test.ts) — all passing
 
-- [ ] P7-KAFKA-CONSUMER-LOOP: Continuous Kafka consumers
-  - Long-running gl-projector consumer on ebg.gl topic
-  - Equity projector consumer for equity_period_balances
-  - Health monitoring and restart on failure
-  - Currently only handler functions exist; no consumer loop
+- [x] P7-KAFKA-CONSUMER-LOOP: Continuous Kafka consumers
+  - ConsumerManager: register, startAll, stopAll with per-consumer lifecycle
+  - Auto-restart on crash with exponential backoff (1s → 60s max)
+  - Per-consumer health tracking: messages processed, errors, last message/error time
+  - GL projector consumer: ebg-gl-projector group on ebg.gl topic
+  - Equity projector consumer: ebg-equity-projector group on ebg.gl topic
+  - equity-projector.ts: handles EQUITY_COMPONENT_UPDATED → equity_period_balances
+  - projectors/index.ts: central registration of all consumers
+  - Wired into main server: auto-starts after listen, graceful shutdown
+  - DISABLE_CONSUMERS=true env var to skip in dev/test
+  - REST endpoint: GET /api/consumers/status (health + per-consumer stats)
+  - 10 integration tests (kafka-consumer-loop.test.ts)
 
 - [ ] P7-NIGHTLY-RECONCILIATION: Neo4j ↔ TimescaleDB reconciliation job
   - Compare LedgerLine sums in Neo4j vs gl_period_balances in TimescaleDB

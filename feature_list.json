@@ -331,7 +331,7 @@
       "id": "P7-KAFKA-CONSUMER-LOOP",
       "phase": 7,
       "name": "Kafka consumer loop: continuous gl-projector and equity-projector consumers with health monitoring",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P7-NIGHTLY-RECONCILIATION",
