@@ -3,10 +3,13 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { ApolloServer } from '@apollo/server';
+import { expressMiddleware } from '@as-integrations/express5';
 import { logger } from './lib/logger.js';
-import { getNeo4jDriver, closeNeo4j, runCypher } from './lib/neo4j.js';
+import { closeNeo4j, runCypher } from './lib/neo4j.js';
 import { closePg, query } from './lib/pg.js';
 import { closeKafka } from './lib/kafka.js';
+import { createGraphQLSchema } from './api/graphql/index.js';
 import { configRouter } from './api/rest/config-routes.js';
 import { glRouter } from './api/rest/gl-routes.js';
 import { graphRouter } from './api/rest/graph-routes.js';
@@ -37,133 +40,145 @@ function validateEnv() {
 }
 validateEnv();
 
-const app = express();
-const port = Number(process.env.PORT ?? 4000);
+async function main() {
+  const app = express();
+  const port = Number(process.env.PORT ?? 4000);
 
-// Security headers
-app.use(helmet());
+  // Security headers
+  app.use(helmet());
 
-// CORS — restrict to known origins (override with CORS_ORIGIN env var)
-const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',');
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-}));
+  // CORS — restrict to known origins (override with CORS_ORIGIN env var)
+  const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',');
+  app.use(cors({
+    origin: allowedOrigins,
+    credentials: true,
+  }));
 
-// Rate limiting — 200 requests per minute per IP
-app.use(rateLimit({
-  windowMs: 60_000,
-  limit: 200,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-}));
+  // Rate limiting — 200 requests per minute per IP
+  app.use(rateLimit({
+    windowMs: 60_000,
+    limit: 200,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+  }));
 
-app.use(express.json({ limit: '1mb' }));
+  app.use(express.json({ limit: '1mb' }));
 
-// Request logging
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    logger.info({
-      method: req.method,
-      url: req.originalUrl,
-      status: res.statusCode,
-      duration,
-    }, 'request');
-  });
-  next();
-});
-
-// Liveness probe — always returns OK if the process is up
-app.get('/healthz', (_req, res) => {
-  res.json({ status: 'ok' });
-});
-
-// Readiness probe — checks database connectivity
-app.get('/health', async (_req, res) => {
-  const checks: Record<string, string> = {};
-  try {
-    await runCypher('RETURN 1 AS n', {});
-    checks.neo4j = 'ok';
-  } catch { checks.neo4j = 'error'; }
-
-  try {
-    await query('SELECT 1');
-    checks.postgres = 'ok';
-  } catch { checks.postgres = 'error'; }
-
-  const allOk = Object.values(checks).every((v) => v === 'ok');
-  res.status(allOk ? 200 : 503).json({
-    status: allOk ? 'ok' : 'degraded',
-    version: '1.2.0',
-    checks,
-  });
-});
-
-// API routes
-app.use('/api/config', configRouter);
-app.use('/api/gl', glRouter);
-app.use('/api/graph', graphRouter);
-app.use('/api/depreciation', depreciationRouter);
-app.use('/api/consolidation', consolidationRouter);
-app.use('/api/ai', aiRouter);
-app.use('/api/cashflow', cashflowRouter);
-app.use('/api/tax', taxRouter);
-app.use('/api/compliance', complianceRouter);
-app.use('/api/revenue', revenueRouter);
-app.use('/api/inventory', inventoryRouter);
-app.use('/api/equity', equityRouter);
-app.use('/api/xbrl', xbrlRouter);
-app.use('/api/bank-rec', bankRecRouter);
-app.use('/api/hedge', hedgeRouter);
-app.use('/api/migration', migrationRouter);
-
-// Global error handler
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  logger.error({ err: err.message, stack: err.stack }, 'Unhandled error');
-  const statusCode = (err as { statusCode?: number }).statusCode ?? 500;
-  res.status(statusCode).json({
-    error: err.message,
-    code: (err as { code?: string }).code ?? 'INTERNAL_ERROR',
-  });
-});
-
-const server = app.listen(port, () => {
-  logger.info({ port }, 'EBG API server started');
-});
-
-// Graceful shutdown with timeout
-const SHUTDOWN_TIMEOUT = 15_000;
-let shuttingDown = false;
-
-async function shutdown() {
-  if (shuttingDown) return;
-  shuttingDown = true;
-  logger.info('Shutting down...');
-
-  // Force exit after timeout
-  const forceTimer = setTimeout(() => {
-    logger.error('Shutdown timed out, forcing exit');
-    process.exit(1);
-  }, SHUTDOWN_TIMEOUT);
-  forceTimer.unref();
-
-  // Stop accepting new connections, drain existing
-  server.close(() => {
-    logger.info('HTTP server closed');
+  // Request logging
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const duration = Date.now() - start;
+      logger.info({
+        method: req.method,
+        url: req.originalUrl,
+        status: res.statusCode,
+        duration,
+      }, 'request');
+    });
+    next();
   });
 
-  try {
-    await Promise.all([closeNeo4j(), closePg(), closeKafka()]);
-    logger.info('All connections closed');
-  } catch (err) {
-    logger.error({ err }, 'Error during connection cleanup');
+  // Liveness probe
+  app.get('/healthz', (_req, res) => {
+    res.json({ status: 'ok' });
+  });
+
+  // Readiness probe — checks database connectivity
+  app.get('/health', async (_req, res) => {
+    const checks: Record<string, string> = {};
+    try {
+      await runCypher('RETURN 1 AS n', {});
+      checks.neo4j = 'ok';
+    } catch { checks.neo4j = 'error'; }
+
+    try {
+      await query('SELECT 1');
+      checks.postgres = 'ok';
+    } catch { checks.postgres = 'error'; }
+
+    const allOk = Object.values(checks).every((v) => v === 'ok');
+    res.status(allOk ? 200 : 503).json({
+      status: allOk ? 'ok' : 'degraded',
+      version: '1.2.0',
+      checks,
+    });
+  });
+
+  // --- GraphQL ---
+  const { typeDefs, resolvers } = createGraphQLSchema();
+  const apollo = new ApolloServer({ typeDefs, resolvers });
+  await apollo.start();
+  app.use('/graphql', expressMiddleware(apollo));
+
+  // --- REST API routes ---
+  app.use('/api/config', configRouter);
+  app.use('/api/gl', glRouter);
+  app.use('/api/graph', graphRouter);
+  app.use('/api/depreciation', depreciationRouter);
+  app.use('/api/consolidation', consolidationRouter);
+  app.use('/api/ai', aiRouter);
+  app.use('/api/cashflow', cashflowRouter);
+  app.use('/api/tax', taxRouter);
+  app.use('/api/compliance', complianceRouter);
+  app.use('/api/revenue', revenueRouter);
+  app.use('/api/inventory', inventoryRouter);
+  app.use('/api/equity', equityRouter);
+  app.use('/api/xbrl', xbrlRouter);
+  app.use('/api/bank-rec', bankRecRouter);
+  app.use('/api/hedge', hedgeRouter);
+  app.use('/api/migration', migrationRouter);
+
+  // Global error handler
+  app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    logger.error({ err: err.message, stack: err.stack }, 'Unhandled error');
+    const statusCode = (err as { statusCode?: number }).statusCode ?? 500;
+    res.status(statusCode).json({
+      error: err.message,
+      code: (err as { code?: string }).code ?? 'INTERNAL_ERROR',
+    });
+  });
+
+  const server = app.listen(port, () => {
+    logger.info({ port }, 'EBG API server started (REST + GraphQL)');
+  });
+
+  // Graceful shutdown with timeout
+  const SHUTDOWN_TIMEOUT = 15_000;
+  let shuttingDown = false;
+
+  async function shutdown() {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.info('Shutting down...');
+
+    const forceTimer = setTimeout(() => {
+      logger.error('Shutdown timed out, forcing exit');
+      process.exit(1);
+    }, SHUTDOWN_TIMEOUT);
+    forceTimer.unref();
+
+    server.close(() => {
+      logger.info('HTTP server closed');
+    });
+
+    try {
+      await apollo.stop();
+      await Promise.all([closeNeo4j(), closePg(), closeKafka()]);
+      logger.info('All connections closed');
+    } catch (err) {
+      logger.error({ err }, 'Error during connection cleanup');
+    }
+
+    clearTimeout(forceTimer);
+    process.exit(0);
   }
 
-  clearTimeout(forceTimer);
-  process.exit(0);
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+main().catch((err) => {
+  logger.fatal({ err }, 'Failed to start server');
+  process.exit(1);
+});
