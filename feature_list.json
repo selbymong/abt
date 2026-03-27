@@ -355,7 +355,7 @@
       "id": "P7-BORROWING-COSTS",
       "phase": 7,
       "name": "Borrowing costs (IAS 23): qualifying_asset flag on FixedAsset, interest capitalization engine",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P7-DISCONTINUED-OPS",

@@ -485,7 +485,16 @@ export interface FixedAsset extends TimestampedNode {
   tax_base: number;
   tax_accumulated_dep: number;
   activity_ref_id: string;
+  // IAS 23 borrowing costs
+  qualifying_asset?: boolean;
+  capitalization_status?: CapitalizationStatus;
+  capitalization_start_date?: string;
+  capitalization_end_date?: string;
+  borrowing_costs_capitalized?: number;
+  weighted_average_rate?: number;
 }
+
+export type CapitalizationStatus = 'NOT_STARTED' | 'ACTIVE' | 'SUSPENDED' | 'CEASED';
 
 export interface AssetClassNode extends TimestampedNode {
   class_code: string;

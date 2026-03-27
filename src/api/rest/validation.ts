@@ -1080,3 +1080,31 @@ export const assessClawbackSchema = z.object({
   probability: z.number().min(0).max(1),
   amount: z.number().nonnegative(),
 });
+
+// ============================================================
+// Borrowing Costs (IAS 23)
+// ============================================================
+
+export const designateQualifyingAssetSchema = z.object({
+  assetId: z.string().uuid(),
+  entityId: z.string().uuid(),
+  weightedAverageRate: z.number().min(0).max(1),
+  capitalizationStartDate: z.string().min(1),
+});
+
+export const capitalizeBorrowingCostsSchema = z.object({
+  assetId: z.string().uuid(),
+  entityId: z.string().uuid(),
+  periodId: z.string().uuid(),
+  expenditureAmount: z.number().nonnegative(),
+  daysInPeriod: z.number().int().positive(),
+  specificBorrowingRate: z.number().min(0).max(1).optional(),
+  specificBorrowingAmount: z.number().nonnegative().optional(),
+  investmentIncome: z.number().nonnegative().optional(),
+  currency: z.string().length(3),
+  fundId: z.string().uuid().optional(),
+});
+
+export const ceaseCapitalizationSchema = z.object({
+  cessationDate: z.string().min(1),
+});

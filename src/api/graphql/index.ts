@@ -20,6 +20,7 @@ import { xbrlTypeDefs } from './schema/xbrl.typeDefs.js';
 import { configTypeDefs } from './schema/config.typeDefs.js';
 import { reconciliationTypeDefs } from './schema/reconciliation.typeDefs.js';
 import { grantsTypeDefs } from './schema/grants.typeDefs.js';
+import { borrowingCostsTypeDefs } from './schema/borrowingCosts.typeDefs.js';
 
 import { graphResolvers } from './resolvers/graph.resolvers.js';
 import { glResolvers } from './resolvers/gl.resolvers.js';
@@ -38,6 +39,7 @@ import { xbrlResolvers } from './resolvers/xbrl.resolvers.js';
 import { configResolvers } from './resolvers/config.resolvers.js';
 import { reconciliationResolvers } from './resolvers/reconciliation.resolvers.js';
 import { grantsResolvers } from './resolvers/grants.resolvers.js';
+import { borrowingCostsResolvers } from './resolvers/borrowingCosts.resolvers.js';
 
 const baseTypeDefs = `
   type Query {
@@ -77,6 +79,7 @@ const allResolverModules = [
   configResolvers,
   reconciliationResolvers,
   grantsResolvers,
+  borrowingCostsResolvers,
 ];
 
 export function createGraphQLSchema(): {
@@ -104,6 +107,7 @@ export function createGraphQLSchema(): {
     configTypeDefs,
     reconciliationTypeDefs,
     grantsTypeDefs,
+    borrowingCostsTypeDefs,
   ].join('\n');
 
   // Merge all Query and Mutation resolvers from domain modules

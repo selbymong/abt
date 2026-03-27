@@ -687,10 +687,17 @@ Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE
   - GraphQL: grant/grants queries, createGrant/recognizeGrantIncome/markGrantConditionMet/assessGrantClawback mutations
   - 15 integration tests (government-grants.test.ts) — all passing
 
-- [ ] P7-BORROWING-COSTS: IAS 23 borrowing costs
-  - qualifying_asset flag on FixedAsset
-  - Interest capitalization engine during construction period
-  - Capitalization start/suspension/cessation rules
+- [x] P7-BORROWING-COSTS: IAS 23 borrowing costs
+  - FixedAsset extended with qualifying_asset, capitalization_status, borrowing_costs_capitalized
+  - CapitalizationStatus lifecycle: NOT_STARTED → ACTIVE → SUSPENDED/RESUMED → CEASED
+  - designateQualifyingAsset(): marks asset with weighted average rate
+  - capitalizeBorrowingCosts(): general (weighted avg rate) + specific (dedicated loan) interest
+  - Investment income deduction on specific borrowings per IAS 23.12
+  - suspendCapitalization/resumeCapitalization/ceaseCapitalization lifecycle management
+  - Posts adjustment JE: DR Asset (capitalize), CR Expense (reduce interest expense)
+  - REST: POST /api/borrowing-costs/{designate,capitalize,:id/suspend,:id/resume,:id/cease}, GET /qualifying-assets
+  - GraphQL: qualifyingAssets/qualifyingAsset queries, designate/capitalize/suspend/resume/cease mutations
+  - 17 integration tests (borrowing-costs.test.ts) — all passing
 
 - [ ] P7-DISCONTINUED-OPS: IFRS 5 discontinued operations
   - HELD_FOR_SALE status on Initiative nodes
