@@ -22,6 +22,7 @@ import { reconciliationTypeDefs } from './schema/reconciliation.typeDefs.js';
 import { grantsTypeDefs } from './schema/grants.typeDefs.js';
 import { borrowingCostsTypeDefs } from './schema/borrowingCosts.typeDefs.js';
 import { discontinuedOpsTypeDefs } from './schema/discontinuedOps.typeDefs.js';
+import { nfpReclassificationTypeDefs } from './schema/nfpReclassification.typeDefs.js';
 
 import { graphResolvers } from './resolvers/graph.resolvers.js';
 import { glResolvers } from './resolvers/gl.resolvers.js';
@@ -42,6 +43,7 @@ import { reconciliationResolvers } from './resolvers/reconciliation.resolvers.js
 import { grantsResolvers } from './resolvers/grants.resolvers.js';
 import { borrowingCostsResolvers } from './resolvers/borrowingCosts.resolvers.js';
 import { discontinuedOpsResolvers } from './resolvers/discontinuedOps.resolvers.js';
+import { nfpReclassificationResolvers } from './resolvers/nfpReclassification.resolvers.js';
 
 const baseTypeDefs = `
   type Query {
@@ -83,6 +85,7 @@ const allResolverModules = [
   grantsResolvers,
   borrowingCostsResolvers,
   discontinuedOpsResolvers,
+  nfpReclassificationResolvers,
 ];
 
 export function createGraphQLSchema(): {
@@ -112,6 +115,7 @@ export function createGraphQLSchema(): {
     grantsTypeDefs,
     borrowingCostsTypeDefs,
     discontinuedOpsTypeDefs,
+    nfpReclassificationTypeDefs,
   ].join('\n');
 
   // Merge all Query and Mutation resolvers from domain modules

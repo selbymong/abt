@@ -1133,3 +1133,39 @@ export const recordDisposalSchema = z.object({
   currency: z.string().length(3),
   fundId: z.string().uuid().optional(),
 });
+
+// ============================================================
+// NFP Reclassification
+// ============================================================
+
+export const reclassifyFundSchema = z.object({
+  fundId: z.string().uuid(),
+  entityId: z.string().uuid(),
+  periodId: z.string().uuid(),
+  currency: z.string().length(3),
+  amount: z.number().positive(),
+  fromClass: z.enum(['UNRESTRICTED', 'TEMPORARILY_RESTRICTED', 'PERMANENTLY_RESTRICTED', 'ENDOWMENT']),
+  toClass: z.enum(['UNRESTRICTED', 'TEMPORARILY_RESTRICTED', 'PERMANENTLY_RESTRICTED', 'ENDOWMENT']),
+  reason: z.string().min(1),
+  reclassificationDate: z.string().min(1),
+  approvedBy: z.string().uuid().optional(),
+});
+
+export const autoReclassifySchema = z.object({
+  entityId: z.string().uuid(),
+  periodId: z.string().uuid(),
+  currency: z.string().length(3),
+  asOfDate: z.string().min(1),
+  approvedBy: z.string().uuid().optional(),
+});
+
+export const fulfillPurposeSchema = z.object({
+  fundId: z.string().uuid(),
+  entityId: z.string().uuid(),
+  periodId: z.string().uuid(),
+  currency: z.string().length(3),
+  amount: z.number().positive(),
+  fulfillmentDate: z.string().min(1),
+  fulfillmentDescription: z.string().min(1),
+  approvedBy: z.string().uuid().optional(),
+});

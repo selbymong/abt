@@ -170,3 +170,27 @@ COMMENT ON TABLE reconciliation_runs IS
   'Stores nightly reconciliation results comparing Neo4j LedgerLine sums
    against TimescaleDB gl_period_balances per (entity_id, period_id).
    Added in P7-NIGHTLY-RECONCILIATION.';
+
+-- --- NFP Reclassification History ---
+
+CREATE TABLE IF NOT EXISTS nfp_reclassifications (
+  id                    UUID PRIMARY KEY,
+  fund_id               UUID NOT NULL,
+  entity_id             UUID NOT NULL,
+  from_class            TEXT NOT NULL,
+  to_class              TEXT NOT NULL,
+  amount                NUMERIC NOT NULL,
+  reason                TEXT NOT NULL,
+  reclassification_date DATE NOT NULL,
+  journal_entry_id      UUID NOT NULL,
+  approved_by           UUID,
+  created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_nfp_reclass_entity ON nfp_reclassifications (entity_id);
+CREATE INDEX idx_nfp_reclass_fund ON nfp_reclassifications (fund_id);
+CREATE INDEX idx_nfp_reclass_date ON nfp_reclassifications (reclassification_date DESC);
+
+COMMENT ON TABLE nfp_reclassifications IS
+  'Tracks NFP net asset reclassifications when fund restrictions are met/expire.
+   Added in P7-NFP-RECLASSIFICATION.';

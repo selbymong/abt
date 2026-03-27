@@ -367,7 +367,7 @@
       "id": "P7-NFP-RECLASSIFICATION",
       "phase": 7,
       "name": "NFP net asset reclassification: auto-reclassify fund balances when restrictions are met/expire",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P7-ASPE-LEASES",

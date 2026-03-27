@@ -710,10 +710,16 @@ Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE
   - GraphQL: discontinuedOpsPnL/heldForSaleInitiatives queries, classify/declassify/dispose mutations
   - 13 integration tests (discontinued-ops.test.ts) — all passing
 
-- [ ] P7-NFP-RECLASSIFICATION: NFP net asset reclassification
-  - Auto-reclassify fund balances when time/purpose restrictions expire
-  - TEMPORARILY_RESTRICTED → UNRESTRICTED on expiry date
-  - JournalEntry generation for reclassification
+- [x] P7-NFP-RECLASSIFICATION: NFP net asset reclassification ✓
+  - Service: nfp-reclassification-service.ts with scanExpiredRestrictions, reclassifyFund, autoReclassifyExpired, fulfillPurposeRestriction, getReclassificationHistory, getFundRestrictionSummary
+  - Auto-reclassify TEMPORARILY_RESTRICTED → UNRESTRICTED when restriction_expiry <= asOfDate
+  - Purpose restriction fulfillment with manual trigger
+  - Posts ADJUSTMENT JE (DR restricted equity, CR unrestricted equity)
+  - Updates fund_type to UNRESTRICTED when fully reclassified (balance depleted)
+  - SQL: nfp_reclassifications table for audit history
+  - REST: /api/nfp-reclassification (expired, reclassify, auto-reclassify, fulfill-purpose, history, summary)
+  - GraphQL: expiredRestrictions/reclassificationHistory/fundRestrictionSummary queries, reclassifyFund/autoReclassifyExpired/fulfillPurposeRestriction mutations
+  - 14 integration tests (nfp-reclassification.test.ts) — all passing
 
 - [ ] P7-ASPE-LEASES: ASPE operating lease treatment
   - ASPE entities use TemporalClaim (straight-line expense) instead of IFRS 16 ROU
