@@ -651,11 +651,19 @@ Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE
   - REST endpoint: GET /api/consumers/status (health + per-consumer stats)
   - 10 integration tests (kafka-consumer-loop.test.ts)
 
-- [ ] P7-NIGHTLY-RECONCILIATION: Neo4j ↔ TimescaleDB reconciliation job
-  - Compare LedgerLine sums in Neo4j vs gl_period_balances in TimescaleDB
-  - Per (entity_id, period_id) comparison
-  - Alert on discrepancy, halt period close until resolved
-  - Scheduled via cron or Kafka timer
+- [x] P7-NIGHTLY-RECONCILIATION: Neo4j ↔ TimescaleDB reconciliation job
+  - runReconciliation(): compares Neo4j LedgerLine sums vs TimescaleDB gl_period_balances
+  - Per (entity_id, period_id) comparison with configurable tolerance (default 0.01)
+  - Detects orphaned PG rows (in TimescaleDB but not Neo4j)
+  - Results persisted to reconciliation_runs table (PostgreSQL)
+  - ReconciliationStatus: BALANCED | DISCREPANCY | ERROR
+  - Query past runs: getReconciliationRun, listReconciliationRuns, getLatestReconciliationRun
+  - Scheduler: startReconciliationScheduler (configurable interval, default 24h)
+  - DISABLE_RECONCILIATION=true env var to skip in dev/test
+  - REST: POST /api/reconciliation/run, GET /runs, GET /runs/latest, GET /runs/:id
+  - GraphQL: runReconciliation mutation, reconciliationRun/runs/latest queries
+  - SQL: reconciliation_runs table added to 02-timescaledb-projections.sql
+  - 11 integration tests (nightly-reconciliation.test.ts) — all passing
 
 ### Medium Priority (accounting standards)
 - [ ] P7-SEGMENT-REPORTING: IFRS 8 segment reporting

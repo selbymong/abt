@@ -337,7 +337,7 @@
       "id": "P7-NIGHTLY-RECONCILIATION",
       "phase": 7,
       "name": "Nightly reconciliation job: compare Neo4j LedgerLine sums vs TimescaleDB per (entity, period)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P7-SEGMENT-REPORTING",

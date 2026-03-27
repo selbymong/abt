@@ -142,3 +142,31 @@ COMMENT ON TABLE statutory_mappings IS
   'Maps graph node_ref_type × economic_category to traditional COA codes.
    Jurisdiction values expanded in v1.2-A: CA-ASPE, CA-ASNFPO, US-GAAP, US-ASC958
    plus tax variants CA-TAX-CORP, CA-TAX-EXEMPT, US-TAX-1120, US-TAX-990.';
+
+-- --- Reconciliation Runs (PostgreSQL) ---
+-- Stores results of nightly Neo4j ↔ TimescaleDB reconciliation.
+
+CREATE TABLE reconciliation_runs (
+  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  run_date            TIMESTAMPTZ NOT NULL,
+  status              TEXT NOT NULL,           -- BALANCED, DISCREPANCY, ERROR
+  entity_id_filter    UUID,                    -- null = all entities
+  period_id_filter    UUID,                    -- null = all periods
+  total_pairs_checked INT NOT NULL DEFAULT 0,
+  balanced_count      INT NOT NULL DEFAULT 0,
+  discrepancy_count   INT NOT NULL DEFAULT 0,
+  tolerance           NUMERIC NOT NULL DEFAULT 0.01,
+  discrepancies       JSONB NOT NULL DEFAULT '[]'::jsonb,
+  duration_ms         INT NOT NULL DEFAULT 0,
+  error_message       TEXT,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_recon_runs_date ON reconciliation_runs (created_at DESC);
+CREATE INDEX idx_recon_runs_entity ON reconciliation_runs (entity_id_filter)
+  WHERE entity_id_filter IS NOT NULL;
+
+COMMENT ON TABLE reconciliation_runs IS
+  'Stores nightly reconciliation results comparing Neo4j LedgerLine sums
+   against TimescaleDB gl_period_balances per (entity_id, period_id).
+   Added in P7-NIGHTLY-RECONCILIATION.';

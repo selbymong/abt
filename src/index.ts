@@ -26,6 +26,8 @@ import { xbrlRouter } from './api/rest/xbrl-routes.js';
 import { bankRecRouter } from './api/rest/bank-rec-routes.js';
 import { hedgeRouter } from './api/rest/hedge-routes.js';
 import { migrationRouter } from './api/rest/migration-routes.js';
+import { reconciliationRouter } from './api/rest/reconciliation-routes.js';
+import { startReconciliationScheduler, stopReconciliationScheduler } from './services/reconciliation/nightly-reconciliation-service.js';
 import { startConsumers, stopConsumers } from './projectors/index.js';
 import { getConsumerManager } from './projectors/consumer-manager.js';
 
@@ -130,6 +132,7 @@ async function main() {
   app.use('/api/bank-rec', bankRecRouter);
   app.use('/api/hedge', hedgeRouter);
   app.use('/api/migration', migrationRouter);
+  app.use('/api/reconciliation', reconciliationRouter);
 
   // --- Consumer Status ---
   app.get('/api/consumers/status', (_req, res) => {
@@ -159,6 +162,12 @@ async function main() {
         logger.error({ err: (err as Error).message }, 'Failed to start Kafka consumers');
       });
     }
+
+    // Start nightly reconciliation scheduler (default: every 24h)
+    if (process.env.DISABLE_RECONCILIATION !== 'true') {
+      const intervalMs = Number(process.env.RECONCILIATION_INTERVAL_MS) || 24 * 60 * 60 * 1000;
+      startReconciliationScheduler(intervalMs);
+    }
   });
 
   // Graceful shutdown with timeout
@@ -181,6 +190,7 @@ async function main() {
     });
 
     try {
+      stopReconciliationScheduler();
       await stopConsumers();
       await apollo.stop();
       await Promise.all([closeNeo4j(), closePg(), closeKafka()]);

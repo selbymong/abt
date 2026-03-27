@@ -1037,3 +1037,13 @@ export const verifyTrialBalanceSchema = z.object({
     creditBalance: z.number(),
   })).min(1),
 });
+
+// ============================================================
+// Nightly Reconciliation
+// ============================================================
+
+export const runReconciliationSchema = z.object({
+  entityId: z.string().uuid().optional(),
+  periodId: z.string().uuid().optional(),
+  tolerance: z.number().positive().optional(),
+});
