@@ -26,6 +26,11 @@ import {
   getLeaseLiability,
   listLeaseLiabilities,
   processLeasePayment,
+  createAspeOperatingLease,
+  processAspeLeasePayment,
+  getAspeOperatingLease,
+  listAspeOperatingLeases,
+  createLeaseFrameworkAware,
 } from '../../../services/gl/lease-service.js';
 import {
   createProvision,
@@ -210,6 +215,18 @@ export const glResolvers = {
     leaseLiabilities: async (_: unknown, { entityId }: { entityId: string }) => {
       try {
         return await listLeaseLiabilities(entityId);
+      } catch (err) { throw wrapError(err); }
+    },
+
+    aspeOperatingLease: async (_: unknown, { id }: { id: string }) => {
+      try {
+        return await getAspeOperatingLease(id);
+      } catch (err) { throw wrapError(err); }
+    },
+
+    aspeOperatingLeases: async (_: unknown, { entityId }: { entityId: string }) => {
+      try {
+        return await listAspeOperatingLeases(entityId);
       } catch (err) { throw wrapError(err); }
     },
 
@@ -408,6 +425,24 @@ export const glResolvers = {
     processLeasePayment: async (_: unknown, { leaseLiabilityId, rouAssetId, periodId }: { leaseLiabilityId: string; rouAssetId: string; periodId: string }) => {
       try {
         return await processLeasePayment(leaseLiabilityId, rouAssetId, periodId);
+      } catch (err) { throw wrapError(err); }
+    },
+
+    createAspeOperatingLease: async (_: unknown, { input }: { input: Record<string, unknown> }) => {
+      try {
+        return await createAspeOperatingLease(input as any);
+      } catch (err) { throw wrapError(err); }
+    },
+
+    processAspeLeasePayment: async (_: unknown, { temporalClaimId, periodId }: { temporalClaimId: string; periodId: string }) => {
+      try {
+        return await processAspeLeasePayment(temporalClaimId, periodId);
+      } catch (err) { throw wrapError(err); }
+    },
+
+    createLeaseFrameworkAware: async (_: unknown, { input }: { input: Record<string, unknown> }) => {
+      try {
+        return await createLeaseFrameworkAware(input as any);
       } catch (err) { throw wrapError(err); }
     },
 

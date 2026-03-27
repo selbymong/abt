@@ -721,10 +721,15 @@ Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE
   - GraphQL: expiredRestrictions/reclassificationHistory/fundRestrictionSummary queries, reclassifyFund/autoReclassifyExpired/fulfillPurposeRestriction mutations
   - 14 integration tests (nfp-reclassification.test.ts) — all passing
 
-- [ ] P7-ASPE-LEASES: ASPE operating lease treatment
-  - ASPE entities use TemporalClaim (straight-line expense) instead of IFRS 16 ROU
-  - Framework-aware branch in lease-service.ts
-  - No RightOfUseAsset or LeaseLiability for ASPE entities
+- [x] P7-ASPE-LEASES: ASPE operating lease treatment ✓
+  - Extended lease-service.ts with ASPE operating lease functions
+  - createAspeOperatingLease: creates TemporalClaim (PREPAID_EXPENSE) with aspe_lease flag, straight-line schedule
+  - processAspeLeasePayment: posts simple DR Expense / CR Cash JE, updates claim balances
+  - createLeaseFrameworkAware: checks entity reporting_framework, routes ASPE → TemporalClaim, others → ROU+LeaseLiability
+  - getAspeOperatingLease / listAspeOperatingLeases for CRUD
+  - REST: /api/gl/leases/aspe (create, process-payment, get, list), /api/gl/leases/framework-aware
+  - GraphQL: aspeOperatingLease/aspeOperatingLeases queries, createAspeOperatingLease/processAspeLeasePayment/createLeaseFrameworkAware mutations
+  - 14 integration tests (aspe-leases.test.ts) — all passing
 
 ### Lower Priority
 - [ ] P7-PENSION: IAS 19 defined benefit pensions

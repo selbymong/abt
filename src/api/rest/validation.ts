@@ -330,6 +330,49 @@ export const processLeasePaymentSchema = z.object({
   periodId: z.string().uuid(),
 });
 
+// --- GL: ASPE Operating Leases ---
+
+export const createAspeLeaseSchema = z.object({
+  entityId: z.string().uuid(),
+  label: z.string().min(1),
+  totalLeasePayments: z.number().positive(),
+  leaseTermMonths: z.number().positive(),
+  monthlyPayment: z.number().positive(),
+  commencementDate: z.string().min(1),
+  leaseEndDate: z.string().min(1),
+  periodSchedule: z.array(z.object({
+    periodId: z.string().uuid(),
+    paymentDate: z.string().min(1),
+  })).min(1),
+  activityRefId: z.string().uuid().optional(),
+  currency: z.string().length(3),
+  fundId: z.string().uuid().optional(),
+});
+
+export const processAspeLeasePaymentSchema = z.object({
+  temporalClaimId: z.string().uuid(),
+  periodId: z.string().uuid(),
+});
+
+export const createLeaseFrameworkAwareSchema = z.object({
+  entityId: z.string().uuid(),
+  label: z.string().min(1),
+  leaseClassification: z.enum(['FINANCE', 'OPERATING']),
+  totalLeasePayments: z.number().positive(),
+  leaseTermMonths: z.number().positive(),
+  monthlyPayment: z.number().positive(),
+  incrementalBorrowingRate: z.number().positive(),
+  commencementDate: z.string().min(1),
+  leaseEndDate: z.string().min(1),
+  periodSchedule: z.array(z.object({
+    periodId: z.string().uuid(),
+    paymentDate: z.string().min(1),
+  })).min(1),
+  activityRefId: z.string().uuid().optional(),
+  currency: z.string().length(3).optional(),
+  fundId: z.string().uuid().optional(),
+});
+
 // --- GL: Provision actions ---
 
 export const provisionPeriodActionSchema = z.object({

@@ -7,7 +7,9 @@ import {
   validateBody, postJournalEntrySchema, createTemporalClaimSchema, createProvisionSchema,
   periodActionSchema, createStatutoryMappingSchema, recognizeClaimSchema,
   recognizeAllClaimsSchema, autoReverseClaimsSchema, updateECLSchema,
-  createLeaseSchema, processLeasePaymentSchema, provisionPeriodActionSchema,
+  createLeaseSchema, processLeasePaymentSchema, createAspeLeaseSchema,
+  processAspeLeasePaymentSchema, createLeaseFrameworkAwareSchema,
+  provisionPeriodActionSchema,
   settleProvisionSchema, createRelatedPartySchema, createRelatedPartyTransactionSchema,
   validateArmsLengthSchema, computeRetainedEarningsSchema, recordOCISchema,
   recycleOCISchema, generateEquitySectionSchema,
@@ -33,6 +35,11 @@ import {
 } from '../../services/gl/accruals-service.js';
 import {
   createLease,
+  createAspeOperatingLease,
+  processAspeLeasePayment,
+  getAspeOperatingLease,
+  listAspeOperatingLeases,
+  createLeaseFrameworkAware,
   getRightOfUseAsset,
   listRightOfUseAssets,
   getLeaseLiability,
@@ -441,6 +448,45 @@ glRouter.post('/leases/process-payment', validateBody(processLeasePaymentSchema)
     const { leaseLiabilityId, rouAssetId, periodId } = req.body;
     const result = await processLeasePayment(leaseLiabilityId, rouAssetId, periodId);
     res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// --- ASPE Operating Leases ---
+
+glRouter.post('/leases/aspe', validateBody(createAspeLeaseSchema), async (req: Request, res: Response) => {
+  try {
+    const result = await createAspeOperatingLease(req.body);
+    res.status(201).json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+glRouter.post('/leases/aspe/process-payment', validateBody(processAspeLeasePaymentSchema), async (req: Request, res: Response) => {
+  try {
+    const { temporalClaimId, periodId } = req.body;
+    const result = await processAspeLeasePayment(temporalClaimId, periodId);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+glRouter.get('/leases/aspe/:id', async (req: Request, res: Response) => {
+  try {
+    const lease = await getAspeOperatingLease(req.params.id as string);
+    if (!lease) { res.status(404).json({ error: 'Not found' }); return; }
+    res.json(lease);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+glRouter.get('/leases/aspe/by-entity/:entityId', async (req: Request, res: Response) => {
+  try {
+    const leases = await listAspeOperatingLeases(req.params.entityId as string);
+    res.json({ leases });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+glRouter.post('/leases/framework-aware', validateBody(createLeaseFrameworkAwareSchema), async (req: Request, res: Response) => {
+  try {
+    const result = await createLeaseFrameworkAware(req.body);
+    res.status(201).json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 

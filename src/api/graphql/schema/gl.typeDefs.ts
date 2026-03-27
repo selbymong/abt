@@ -308,6 +308,60 @@ export const glTypeDefs = `
   }
 
   # ============================================================
+  # ASPE Operating Leases (Section 3065)
+  # ============================================================
+
+  type AspeLeaseResult {
+    temporalClaimId: String!
+    totalExpense: Float!
+    monthlyExpense: Float!
+  }
+
+  type AspeLeasePaymentResult {
+    expenseAmount: Float!
+    journalEntryId: String
+  }
+
+  type FrameworkAwareLeaseResult {
+    framework: String!
+    rouAssetId: String
+    leaseLiabilityId: String
+    temporalClaimId: String
+    totalExpense: Float
+    monthlyExpense: Float
+  }
+
+  input CreateAspeLeaseInput {
+    entityId: String!
+    label: String!
+    totalLeasePayments: Float!
+    leaseTermMonths: Int!
+    monthlyPayment: Float!
+    commencementDate: String!
+    leaseEndDate: String!
+    periodSchedule: [PeriodScheduleEntryInput!]!
+    activityRefId: String
+    currency: String!
+    fundId: String
+  }
+
+  input CreateLeaseFrameworkAwareInput {
+    entityId: String!
+    label: String!
+    leaseClassification: LeaseClassification!
+    totalLeasePayments: Float!
+    leaseTermMonths: Int!
+    monthlyPayment: Float!
+    incrementalBorrowingRate: Float!
+    commencementDate: String!
+    leaseEndDate: String!
+    periodSchedule: [PeriodScheduleEntryInput!]!
+    activityRefId: String
+    currency: String
+    fundId: String
+  }
+
+  # ============================================================
   # Related Party (IAS 24)
   # ============================================================
 
@@ -567,6 +621,8 @@ export const glTypeDefs = `
     rouAssets(entityId: String!): [RightOfUseAsset!]!
     leaseLiability(id: ID!): LeaseLiability
     leaseLiabilities(entityId: String!): [LeaseLiability!]!
+    aspeOperatingLease(id: ID!): JSON
+    aspeOperatingLeases(entityId: String!): [JSON!]!
     relatedParties(entityId: String!): [RelatedPartyEdge!]!
     retainedEarnings(entityId: String!, periodId: String!): RetainedEarnings
     ociComponents(entityId: String!, periodId: String!): [OtherComprehensiveIncome!]!
@@ -592,6 +648,9 @@ export const glTypeDefs = `
     writeOffClaim(claimId: String!): Boolean!
     createLease(input: CreateLeaseInput!): LeaseCreationResult!
     processLeasePayment(leaseLiabilityId: String!, rouAssetId: String!, periodId: String!): LeasePaymentResult!
+    createAspeOperatingLease(input: CreateAspeLeaseInput!): AspeLeaseResult!
+    processAspeLeasePayment(temporalClaimId: String!, periodId: String!): AspeLeasePaymentResult!
+    createLeaseFrameworkAware(input: CreateLeaseFrameworkAwareInput!): FrameworkAwareLeaseResult!
     createProvision(input: CreateProvisionInput!): Provision!
     recognizeProvision(provisionId: String!, periodId: String!): ProvisionRecognitionResult!
     unwindProvisionDiscount(provisionId: String!, periodId: String!): ProvisionUnwindResult!

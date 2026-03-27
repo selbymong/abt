@@ -373,7 +373,7 @@
       "id": "P7-ASPE-LEASES",
       "phase": 7,
       "name": "ASPE operating lease treatment: TemporalClaim-only path for ASPE entities (no ROU/liability)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P7-PENSION",
