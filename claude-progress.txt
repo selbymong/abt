@@ -883,11 +883,17 @@ Traditional ERP subledger modules not in original spec but needed for full enter
   - GraphQL: financialStatement + fullFinancialStatements queries
   - 17 integration tests (financial-statements.test.ts) — all passing
 
-- [ ] P8-AUDIT-TRAIL: Graph node change history
-  - Before/after snapshots on node updates (non-GL nodes)
-  - Change author, timestamp, reason
-  - Queryable audit log in PostgreSQL
-  - Complements existing append-only GL (JournalEntry/LedgerLine immutable)
+- [x] P8-AUDIT-TRAIL: Graph node change history
+  - Records CREATE/UPDATE/DELETE/APPROVE/REJECT actions on non-GL graph nodes
+  - Before/after snapshots stored in audit_log.details JSONB
+  - Automatic diff computation: detects added, changed, and removed fields
+  - Sensitivity levels (0=normal, 1=financial, 2=PII, 3=restricted)
+  - Query by: node history, entity audit log (with action/nodeType/userId/date filters), user audit log
+  - Audit statistics: totals by action, node type, user
+  - Kafka event emission on audit record (NODE_AUDIT_RECORDED)
+  - REST: /api/audit (record, get, node/:nodeId, entity/:entityId, user/:userId, stats/:entityId)
+  - GraphQL: auditEntry/nodeAuditHistory/entityAuditLog/userAuditLog/auditStats queries, recordAudit mutation
+  - 16 integration tests (audit-trail.test.ts) — all passing
 
 ## What Comes Next
 - Phase 7: Spec completion + accounting standards (13 features)

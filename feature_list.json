@@ -445,7 +445,7 @@
       "id": "P8-AUDIT-TRAIL",
       "phase": 8,
       "name": "Audit trail on graph nodes: change history for non-GL nodes (before/after snapshots)",
-      "passes": false
+      "passes": true
     }
   ]
 }

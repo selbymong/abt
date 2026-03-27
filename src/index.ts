@@ -41,6 +41,7 @@ import { intercoLoanRouter } from './api/rest/interco-loan-routes.js';
 import { payrollRouter } from './api/rest/payroll-routes.js';
 import { authRouter } from './api/rest/auth-routes.js';
 import { financialStatementsRouter } from './api/rest/financial-statements-routes.js';
+import { auditTrailRouter } from './api/rest/audit-trail-routes.js';
 import { startReconciliationScheduler, stopReconciliationScheduler } from './services/reconciliation/nightly-reconciliation-service.js';
 import { startConsumers, stopConsumers } from './projectors/index.js';
 import { getConsumerManager } from './projectors/consumer-manager.js';
@@ -161,6 +162,7 @@ async function main() {
   app.use('/api/payroll', payrollRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/financial-statements', financialStatementsRouter);
+  app.use('/api/audit', auditTrailRouter);
 
   // --- Consumer Status ---
   app.get('/api/consumers/status', (_req, res) => {
