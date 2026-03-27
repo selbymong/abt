@@ -404,7 +404,8 @@
       "id": "P8-BUDGETING",
       "phase": 8,
       "name": "Budgeting & variance analysis: budget entry by node/period, actual vs budget, variance reports",
-      "passes": false
+      "passes": true,
+      "completedDate": "2026-03-26"
     },
     {
       "id": "P8-MULTI-CURRENCY",

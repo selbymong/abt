@@ -239,3 +239,26 @@ CREATE INDEX idx_procurement_matches_status ON procurement_matches (match_status
 COMMENT ON TABLE procurement_matches IS
   'Records 3-way match results between PO, goods receipt, and AP invoice.
    Added in P8-PROCUREMENT.';
+
+-- --- Budget Lines ---
+
+CREATE TABLE IF NOT EXISTS budget_lines (
+  id                UUID PRIMARY KEY,
+  budget_id         UUID NOT NULL,
+  period_id         UUID NOT NULL,
+  node_ref_id       UUID NOT NULL,
+  node_ref_type     TEXT NOT NULL,
+  economic_category TEXT NOT NULL,
+  amount            NUMERIC NOT NULL DEFAULT 0,
+  notes             TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_budget_lines_budget ON budget_lines (budget_id);
+CREATE INDEX idx_budget_lines_period ON budget_lines (period_id);
+CREATE INDEX idx_budget_lines_node ON budget_lines (node_ref_id);
+
+COMMENT ON TABLE budget_lines IS
+  'Stores budget amounts by period, node, and economic category.
+   Budget header is a Neo4j node; lines are in PG for efficient variance queries.
+   Added in P8-BUDGETING.';

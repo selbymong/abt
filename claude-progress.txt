@@ -796,11 +796,22 @@ Traditional ERP subledger modules not in original spec but needed for full enter
   - GraphQL: purchaseOrder/goodsReceipt queries, create/approve/issue/cancel/close/receipt/match mutations
   - 22 integration tests (procurement.test.ts) — all passing
 
-- [ ] P8-BUDGETING: Budgeting & variance analysis
-  - Budget entry by node (Activity, Project, Initiative) per period
-  - Actual vs budget comparison from TimescaleDB
-  - Variance reports: favorable/unfavorable, volume/price/mix
-  - Rolling forecast capability
+- [x] P8-BUDGETING: Budgeting & variance analysis ✓
+  - Service: budgeting-service.ts with budget CRUD, lines, variance, forecast
+  - Budget CRUD: create with fiscal year/currency, get, list (filter by entity/year/status)
+  - Budget approval: DRAFT → APPROVED → LOCKED workflow
+  - Budget lines: stored in PG (budget_lines table) for efficient variance queries
+    - Add/update/delete lines, LOCKED budgets reject modifications
+    - Auto-updates budget total_amount on line changes
+  - Variance analysis: compares budget lines vs gl_period_balances actuals
+    - FAVORABLE/UNFAVORABLE/ON_TARGET classification
+    - Expense: under-budget = favorable; Revenue: over-budget = favorable
+    - Amount and percentage variance per line item
+  - Rolling forecast: adjusts remaining periods based on run-rate from completed periods
+  - SQL: budget_lines table with indexes on budget/period/node
+  - REST: /api/budgeting (budgets CRUD, approve/lock, lines CRUD, variance, forecast)
+  - GraphQL: budget/budgetLines/varianceReport queries, create/approve/lock/addLine/updateLine/deleteLine/forecast mutations
+  - 16 integration tests (budgeting.test.ts) — all passing
 
 - [ ] P8-MULTI-CURRENCY: Multi-currency transactions
   - FX rate at transaction date on all monetary items

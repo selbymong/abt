@@ -27,6 +27,7 @@ import { pensionTypeDefs } from './schema/pension.typeDefs.js';
 import { apTypeDefs } from './schema/ap.typeDefs.js';
 import { arTypeDefs } from './schema/ar.typeDefs.js';
 import { procurementTypeDefs } from './schema/procurement.typeDefs.js';
+import { budgetingTypeDefs } from './schema/budgeting.typeDefs.js';
 
 import { graphResolvers } from './resolvers/graph.resolvers.js';
 import { glResolvers } from './resolvers/gl.resolvers.js';
@@ -52,6 +53,7 @@ import { pensionResolvers } from './resolvers/pension.resolvers.js';
 import { apResolvers } from './resolvers/ap.resolvers.js';
 import { arResolvers } from './resolvers/ar.resolvers.js';
 import { procurementResolvers } from './resolvers/procurement.resolvers.js';
+import { budgetingResolvers } from './resolvers/budgeting.resolvers.js';
 
 const baseTypeDefs = `
   type Query {
@@ -98,6 +100,7 @@ const allResolverModules = [
   apResolvers,
   arResolvers,
   procurementResolvers,
+  budgetingResolvers,
 ];
 
 export function createGraphQLSchema(): {
@@ -132,6 +135,7 @@ export function createGraphQLSchema(): {
     apTypeDefs,
     arTypeDefs,
     procurementTypeDefs,
+    budgetingTypeDefs,
   ].join('\n');
 
   // Merge all Query and Mutation resolvers from domain modules

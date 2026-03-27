@@ -1372,3 +1372,34 @@ export const threeWayMatchSchema = z.object({
   invoiceId: z.string().uuid(),
   tolerancePercent: z.number().min(0).max(100).optional(),
 });
+
+// --- Budgeting schemas ---
+
+export const createBudgetSchema = z.object({
+  entityId: z.string().uuid(),
+  name: z.string().min(1),
+  fiscalYear: z.number().int().min(2000).max(2100),
+  currency: z.string().length(3),
+  createdBy: z.string().min(1),
+  description: z.string().optional(),
+});
+
+export const addBudgetLineSchema = z.object({
+  budgetId: z.string().uuid(),
+  periodId: z.string().uuid(),
+  nodeRefId: z.string().uuid(),
+  nodeRefType: z.string().min(1),
+  economicCategory: z.string().min(1),
+  amount: z.number(),
+  notes: z.string().optional(),
+});
+
+export const updateBudgetLineSchema = z.object({
+  amount: z.number(),
+  notes: z.string().optional(),
+});
+
+export const rollingForecastSchema = z.object({
+  completedPeriodIds: z.array(z.string().uuid()),
+  remainingPeriodIds: z.array(z.string().uuid()),
+});
