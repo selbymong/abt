@@ -373,6 +373,43 @@ export const createLeaseFrameworkAwareSchema = z.object({
   fundId: z.string().uuid().optional(),
 });
 
+// --- GL: Pension (IAS 19) ---
+
+export const createPensionPlanSchema = z.object({
+  entityId: z.string().uuid(),
+  label: z.string().min(1),
+  currency: z.string().length(3),
+  discountRate: z.number().min(0).max(1),
+  salaryGrowthRate: z.number().min(0).max(1),
+  expectedReturnOnAssets: z.number().min(0).max(1),
+  dboOpening: z.number().nonnegative(),
+  planAssetsOpening: z.number().nonnegative(),
+  mortalityTable: z.string().optional(),
+  valuationDate: z.string().min(1),
+});
+
+export const processPensionPeriodSchema = z.object({
+  pensionPlanId: z.string().uuid(),
+  entityId: z.string().uuid(),
+  periodId: z.string().uuid(),
+  currency: z.string().length(3),
+  currentServiceCost: z.number().nonnegative(),
+  employerContributions: z.number().nonnegative(),
+  benefitsPaid: z.number().nonnegative(),
+  actuarialGainLossOnDBO: z.number(),
+  actualReturnOnAssets: z.number(),
+  periodStartDate: z.string().min(1),
+  periodEndDate: z.string().min(1),
+  fundId: z.string().uuid().optional(),
+});
+
+export const updateActuarialAssumptionsSchema = z.object({
+  discountRate: z.number().min(0).max(1).optional(),
+  salaryGrowthRate: z.number().min(0).max(1).optional(),
+  expectedReturnOnAssets: z.number().min(0).max(1).optional(),
+  mortalityTable: z.string().optional(),
+});
+
 // --- GL: Provision actions ---
 
 export const provisionPeriodActionSchema = z.object({

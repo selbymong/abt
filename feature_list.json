@@ -379,7 +379,7 @@
       "id": "P7-PENSION",
       "phase": 7,
       "name": "Pension (IAS 19): DefinedBenefitObligation node, actuarial inputs, remeasurements to OCI",
-      "passes": false
+      "passes": true
     },
 
     {

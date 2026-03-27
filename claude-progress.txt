@@ -732,7 +732,17 @@ Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE
   - 14 integration tests (aspe-leases.test.ts) — all passing
 
 ### Lower Priority
-- [ ] P7-PENSION: IAS 19 defined benefit pensions
+- [x] P7-PENSION: IAS 19 defined benefit pensions ✓
+  - Service: pension-service.ts with createPensionPlan, processPensionPeriod, updateActuarialAssumptions, getPensionSummary
+  - DefinedBenefitObligation node: DBO opening/closing, plan assets, net liability, actuarial assumptions
+  - Period processing: current service cost → P&L, net interest cost → P&L, remeasurements → OCI (DB_PENSION)
+  - Net interest = DBO × discount_rate - plan_assets × discount_rate
+  - Remeasurement = (actual return - interest on assets) - actuarial gain/loss on DBO
+  - Employer contributions JE: DR Liability / CR Cash
+  - Integrates with equity-close-service recordOCI for DB_PENSION component (never recycled)
+  - REST: /api/pension (create, get, list, process-period, update assumptions, summary)
+  - GraphQL: pensionPlan/pensionPlans/pensionSummary queries, createPensionPlan/processPensionPeriod/updateActuarialAssumptions mutations
+  - 15 integration tests (pension.test.ts) — all passing
   - DefinedBenefitObligation node: PV of obligation, plan assets, net position
   - Actuarial inputs: discount rate, salary growth, mortality tables
   - Service cost → P&L, remeasurements → OCI (DB_PENSION component)
