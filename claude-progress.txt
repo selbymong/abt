@@ -856,11 +856,19 @@ Traditional ERP subledger modules not in original spec but needed for full enter
   - GraphQL: employee/payRun/payStubs/taxSlips queries, create/calculate/approve/post mutations
   - 14 integration tests (payroll.test.ts) — all passing
 
-- [ ] P8-AUTH-RBAC: Authentication & authorization
-  - JWT/OAuth2 authentication middleware
-  - Role-based access control (ADMIN, CFO, CONTROLLER, BOOKKEEPER, AUDITOR)
-  - Entity-scoped permissions (user can only access assigned entities)
-  - Integration with ApprovalWorkflow thresholds
+- [x] P8-AUTH-RBAC: Authentication & authorization ✓
+  - Service: auth-service.ts with user management, auth, and RBAC
+  - User CRUD: create with password hashing (PBKDF2+salt), get, list, update
+  - Authentication: email/password login, HMAC-SHA256 token generation/verification
+  - Token: base64url payload + HMAC signature, 8-hour expiry, includes role + entityIds
+  - RBAC: 6 roles (ADMIN/CFO/CONTROLLER/BOOKKEEPER/AUDITOR/VIEWER) with permission matrix
+    - ADMIN: wildcard access; CFO: read/write/approve GL; BOOKKEEPER: read/write no approve
+    - AUDITOR: read-only + audit log; VIEWER: reports + budgets only
+  - Entity-scoped access: users assigned to specific entities
+  - SQL: users table with unique email, hashed passwords, JSONB entity_ids
+  - REST: /api/auth (login, verify, users CRUD, permissions, check-permission, check-entity-access)
+  - GraphQL: authUser/authUsers/rolePermissions/checkPermission queries, createAuthUser/login/updateAuthUser mutations
+  - 16 integration tests (auth-rbac.test.ts) — all passing
 
 - [ ] P8-FINANCIAL-STATEMENTS: Financial statement generator
   - Templated output: P&L, balance sheet, cash flow statement, equity statement

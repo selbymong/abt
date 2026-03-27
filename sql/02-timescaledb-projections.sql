@@ -382,3 +382,27 @@ CREATE INDEX idx_payroll_remit_status ON payroll_remittances (status);
 COMMENT ON TABLE pay_runs IS 'Payroll run headers. Added in P8-PAYROLL.';
 COMMENT ON TABLE pay_stubs IS 'Individual employee pay stubs per run. Added in P8-PAYROLL.';
 COMMENT ON TABLE payroll_remittances IS 'Statutory remittance tracking (CRA, IRS). Added in P8-PAYROLL.';
+
+-- --- Users (Auth & RBAC) ---
+
+CREATE TABLE IF NOT EXISTS users (
+  id              UUID PRIMARY KEY,
+  email           TEXT NOT NULL UNIQUE,
+  first_name      TEXT NOT NULL,
+  last_name       TEXT NOT NULL,
+  role            TEXT NOT NULL DEFAULT 'VIEWER',
+  status          TEXT NOT NULL DEFAULT 'ACTIVE',
+  entity_ids      JSONB NOT NULL DEFAULT '[]',
+  password_hash   TEXT NOT NULL,
+  last_login      TIMESTAMPTZ,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_users_email ON users (email);
+CREATE INDEX idx_users_role ON users (role);
+CREATE INDEX idx_users_status ON users (status);
+
+COMMENT ON TABLE users IS
+  'Application users with role-based access control and entity-scoped permissions.
+   Added in P8-AUTH-RBAC.';

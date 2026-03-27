@@ -432,7 +432,8 @@
       "id": "P8-AUTH-RBAC",
       "phase": 8,
       "name": "User authentication & RBAC: JWT/OAuth2, role-based access, entity-scoped permissions",
-      "passes": false
+      "passes": true,
+      "completedDate": "2026-03-26"
     },
     {
       "id": "P8-FINANCIAL-STATEMENTS",

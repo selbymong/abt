@@ -1498,3 +1498,19 @@ export const createRemittanceSchema = z.object({
   periodId: z.string().uuid(),
   dueDate: z.string().min(1),
 });
+
+// --- Auth & RBAC schemas ---
+
+export const createUserSchema = z.object({
+  email: z.string().email(),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  role: z.enum(['ADMIN', 'CFO', 'CONTROLLER', 'BOOKKEEPER', 'AUDITOR', 'VIEWER']),
+  entityIds: z.array(z.string().uuid()),
+  password: z.string().min(8),
+});
+
+export const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
