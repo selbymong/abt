@@ -614,10 +614,16 @@ Covers items specified in docs but not yet implemented, plus remaining IFRS/ASPE
   - Annual testing workflow with IAS 36 compliance
   - Connects to existing cgu_id fields on FixedAsset and Goodwill
 
-- [ ] P7-OUTCOME-ATTRIBUTION-PNL: Outcome attribution P&L
+- [x] P7-OUTCOME-ATTRIBUTION-PNL: Outcome attribution P&L
   - Break down P&L by Outcome via CONTRIBUTES_TO graph traversal
-  - Weighted attribution across multiple paths
-  - REST + GraphQL endpoint: /gl/attributed-pnl/:entityId/:periodId
+  - Batch Cypher query: node_ref_ids → CONTRIBUTES_TO paths → Outcomes
+  - Effective contribution = product of (weight × temporal_value_pct × control_score) along path
+  - Normalized attribution: multiple outcomes per node weighted proportionally
+  - Unattributed bucket for P&L lines with no graph path to any Outcome
+  - Node-level breakdown per outcome showing contributing activities
+  - REST endpoint: GET /api/gl/attributed-pnl?entityId=&periodId=&maxHops=
+  - GraphQL query: outcomeAttributedPnL(entityId, periodId, maxHops)
+  - Integration tests: outcome-attribution-pnl.test.ts (6 tests)
 
 - [ ] P7-MACRS-TABLES: MACRS percentage table lookup
   - Embed IRS Publication 946 GDS and ADS recovery period tables

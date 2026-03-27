@@ -68,6 +68,41 @@ export const glTypeDefs = `
     byCategory: [CategoryBreakdown!]!
   }
 
+  type OutcomeAttributionNodeBreakdown {
+    nodeRefId: String!
+    nodeRefType: String!
+    revenue: Float!
+    expenses: Float!
+    weight: Float!
+  }
+
+  type OutcomeAttribution {
+    outcomeId: String!
+    outcomeLabel: String!
+    outcomeType: String!
+    revenue: Float!
+    expenses: Float!
+    netIncome: Float!
+    attributionPct: Float!
+    nodeBreakdown: [OutcomeAttributionNodeBreakdown!]!
+  }
+
+  type UnattributedPnL {
+    revenue: Float!
+    expenses: Float!
+    netIncome: Float!
+  }
+
+  type OutcomeAttributedPnL {
+    entityId: String!
+    periodId: String!
+    totalRevenue: Float!
+    totalExpenses: Float!
+    totalNetIncome: Float!
+    attributedToOutcomes: [OutcomeAttribution!]!
+    unattributed: UnattributedPnL!
+  }
+
   type TrialBalanceRow {
     economic_category: String!
     total_debit: Float!
@@ -523,6 +558,7 @@ export const glTypeDefs = `
     trialBalance(entityId: String!, periodId: String!): [TrialBalanceRow!]!
     periodBalances(entityId: String!, periodId: String!): [PeriodBalance!]!
     fundBalances(entityId: String!, periodId: String!): [FundBalance!]!
+    outcomeAttributedPnL(entityId: String!, periodId: String!, maxHops: Int): OutcomeAttributedPnL!
     temporalClaim(id: ID!): TemporalClaim
     temporalClaims(entityId: String!, status: TemporalClaimStatus): [TemporalClaim!]!
     provision(id: ID!): Provision

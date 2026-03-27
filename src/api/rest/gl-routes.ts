@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { postJournalEntry, PostJournalEntryInput } from '../../services/gl/journal-posting-service.js';
 import { softClosePeriod, hardClosePeriod, reopenPeriod } from '../../services/gl/period-service.js';
-import { getProfitAndLoss, getBalanceSheet, getFundBalances } from '../../services/gl/reporting-service.js';
+import { getProfitAndLoss, getBalanceSheet, getFundBalances, getOutcomeAttributedPnL } from '../../services/gl/reporting-service.js';
 import {
   validateBody, postJournalEntrySchema, createTemporalClaimSchema, createProvisionSchema,
   periodActionSchema, createStatutoryMappingSchema, recognizeClaimSchema,
@@ -246,6 +246,22 @@ glRouter.get('/fund-balances', async (req: Request, res: Response) => {
 
     const funds = await getFundBalances(entityId, periodId);
     res.json({ funds });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+glRouter.get('/attributed-pnl', async (req: Request, res: Response) => {
+  try {
+    const entityId = req.query.entityId as string;
+    const periodId = req.query.periodId as string;
+    const maxHops = req.query.maxHops ? Number(req.query.maxHops) : 6;
+
+    if (!entityId || !periodId) {
+      res.status(400).json({ error: 'Required: entityId, periodId' });
+      return;
+    }
+
+    const result = await getOutcomeAttributedPnL(entityId, periodId, maxHops);
+    res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 

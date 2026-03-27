@@ -3,7 +3,7 @@ import { runCypher } from '../../../lib/neo4j.js';
 import { query } from '../../../lib/pg.js';
 import { postJournalEntry } from '../../../services/gl/journal-posting-service.js';
 import { softClosePeriod, hardClosePeriod, reopenPeriod } from '../../../services/gl/period-service.js';
-import { getProfitAndLoss, getBalanceSheet, getFundBalances } from '../../../services/gl/reporting-service.js';
+import { getProfitAndLoss, getBalanceSheet, getFundBalances, getOutcomeAttributedPnL } from '../../../services/gl/reporting-service.js';
 import {
   createTemporalClaim,
   getTemporalClaim,
@@ -155,6 +155,12 @@ export const glResolvers = {
     fundBalances: async (_: unknown, { entityId, periodId }: { entityId: string; periodId: string }) => {
       try {
         return await getFundBalances(entityId, periodId);
+      } catch (err) { throw wrapError(err); }
+    },
+
+    outcomeAttributedPnL: async (_: unknown, { entityId, periodId, maxHops }: { entityId: string; periodId: string; maxHops?: number }) => {
+      try {
+        return await getOutcomeAttributedPnL(entityId, periodId, maxHops ?? 6);
       } catch (err) { throw wrapError(err); }
     },
 

@@ -319,7 +319,7 @@
       "id": "P7-OUTCOME-ATTRIBUTION-PNL",
       "phase": 7,
       "name": "Outcome attribution P&L: break down P&L by outcome via graph traversal (CONTRIBUTES_TO paths)",
-      "passes": false
+      "passes": true
     },
     {
       "id": "P7-MACRS-TABLES",
