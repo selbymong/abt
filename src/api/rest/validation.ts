@@ -1335,3 +1335,40 @@ export const recordARPaymentSchema = z.object({
   paymentDate: z.string().min(1),
   currency: z.string().length(3),
 });
+
+// --- Procurement schemas ---
+
+export const createPurchaseOrderSchema = z.object({
+  entityId: z.string().uuid(),
+  vendorId: z.string().uuid(),
+  description: z.string().min(1),
+  currency: z.string().length(3),
+  requestedBy: z.string().min(1),
+  requiredDate: z.string().min(1),
+  lineItems: z.array(z.object({
+    description: z.string().min(1),
+    quantity: z.number().positive(),
+    unitPrice: z.number().positive(),
+    accountId: z.string().uuid(),
+    fundId: z.string().uuid().optional(),
+  })).min(1),
+  budgetNodeId: z.string().uuid().optional(),
+  fundId: z.string().uuid().optional(),
+});
+
+export const createGoodsReceiptSchema = z.object({
+  receivedBy: z.string().min(1),
+  receiptDate: z.string().min(1),
+  lines: z.array(z.object({
+    poLineId: z.string().uuid(),
+    quantityReceived: z.number().positive(),
+    notes: z.string().optional(),
+  })).min(1),
+  notes: z.string().optional(),
+});
+
+export const threeWayMatchSchema = z.object({
+  poId: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  tolerancePercent: z.number().min(0).max(100).optional(),
+});

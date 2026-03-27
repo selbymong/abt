@@ -397,7 +397,8 @@
       "id": "P8-PROCUREMENT",
       "phase": 8,
       "name": "Purchase Orders / Procurement: PO creation, 3-way matching (PO/receipt/invoice), approval flow",
-      "passes": false
+      "passes": true,
+      "completedDate": "2026-03-26"
     },
     {
       "id": "P8-BUDGETING",

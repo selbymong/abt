@@ -213,3 +213,29 @@ CREATE INDEX idx_ap_payment_runs_date ON ap_payment_runs (payment_date DESC);
 
 COMMENT ON TABLE ap_payment_runs IS
   'Tracks AP payment run executions. Added in P8-AP-SUBLEDGER.';
+
+-- --- Procurement 3-Way Matches ---
+
+CREATE TABLE IF NOT EXISTS procurement_matches (
+  id                UUID PRIMARY KEY,
+  po_id             UUID NOT NULL,
+  invoice_id        UUID NOT NULL,
+  receipt_id        UUID NOT NULL,
+  po_amount         NUMERIC NOT NULL,
+  receipt_amount    NUMERIC NOT NULL,
+  invoice_amount    NUMERIC NOT NULL,
+  match_status      TEXT NOT NULL DEFAULT 'UNMATCHED',
+  variance_amount   NUMERIC NOT NULL DEFAULT 0,
+  variance_percent  NUMERIC NOT NULL DEFAULT 0,
+  tolerance_percent NUMERIC NOT NULL DEFAULT 2,
+  within_tolerance  BOOLEAN NOT NULL DEFAULT false,
+  matched_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_procurement_matches_po ON procurement_matches (po_id);
+CREATE INDEX idx_procurement_matches_invoice ON procurement_matches (invoice_id);
+CREATE INDEX idx_procurement_matches_status ON procurement_matches (match_status);
+
+COMMENT ON TABLE procurement_matches IS
+  'Records 3-way match results between PO, goods receipt, and AP invoice.
+   Added in P8-PROCUREMENT.';

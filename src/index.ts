@@ -34,6 +34,7 @@ import { nfpReclassificationRouter } from './api/rest/nfp-reclassification-route
 import { pensionRouter } from './api/rest/pension-routes.js';
 import { apRouter } from './api/rest/ap-routes.js';
 import { arRouter } from './api/rest/ar-routes.js';
+import { procurementRouter } from './api/rest/procurement-routes.js';
 import { startReconciliationScheduler, stopReconciliationScheduler } from './services/reconciliation/nightly-reconciliation-service.js';
 import { startConsumers, stopConsumers } from './projectors/index.js';
 import { getConsumerManager } from './projectors/consumer-manager.js';
@@ -147,6 +148,7 @@ async function main() {
   app.use('/api/pension', pensionRouter);
   app.use('/api/ap', apRouter);
   app.use('/api/ar', arRouter);
+  app.use('/api/procurement', procurementRouter);
 
   // --- Consumer Status ---
   app.get('/api/consumers/status', (_req, res) => {
