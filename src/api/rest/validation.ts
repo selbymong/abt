@@ -1514,3 +1514,15 @@ export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 });
+
+// --- Forecast Snapshot schemas ---
+
+export const createForecastSnapshotSchema = z.object({
+  budgetId: z.string().uuid(),
+  name: z.string().min(1),
+  createdBy: z.string().min(1),
+  completedPeriodIds: z.array(z.string().uuid()),
+  remainingPeriodIds: z.array(z.string().uuid()),
+  snapshotType: z.enum(['ROLLING', 'MANUAL', 'PERIOD_CLOSE']).optional(),
+  notes: z.string().optional(),
+});

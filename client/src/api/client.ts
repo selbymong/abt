@@ -110,6 +110,32 @@ export const getPathsToOutcomes = (nodeId: string) =>
 export const getTopContributors = (outcomeId: string) =>
   request<any>(`/ai/top-contributors/${outcomeId}`);
 
+// Budgeting
+export const getBudgetsByEntity = (entityId: string, fiscalYear?: number) => {
+  const params = new URLSearchParams();
+  if (fiscalYear) params.set('fiscalYear', String(fiscalYear));
+  const qs = params.toString();
+  return request<{ budgets: any[] }>(`/budgeting/budgets/by-entity/${entityId}${qs ? `?${qs}` : ''}`);
+};
+
+// Forecast Snapshots
+export const createForecastSnapshot = (data: any) =>
+  request<any>('/forecast-snapshots', { method: 'POST', body: JSON.stringify(data) });
+export const getForecastSnapshotsByEntity = (entityId: string, budgetId?: string) => {
+  const params = new URLSearchParams();
+  if (budgetId) params.set('budgetId', budgetId);
+  const qs = params.toString();
+  return request<{ snapshots: any[] }>(`/forecast-snapshots/by-entity/${entityId}${qs ? `?${qs}` : ''}`);
+};
+export const getForecastSnapshot = (id: string) =>
+  request<any>(`/forecast-snapshots/${id}`);
+export const deleteForecastSnapshot = (id: string) =>
+  request<any>(`/forecast-snapshots/${id}`, { method: 'DELETE' });
+export const getForecastVsActual = (snapshotId: string, periodIds?: string[]) => {
+  const qs = periodIds && periodIds.length > 0 ? `?periodIds=${periodIds.join(',')}` : '';
+  return request<any>(`/forecast-snapshots/${snapshotId}/vs-actual${qs}`);
+};
+
 // Financial Statements
 export const getFinancialStatement = (
   type: string, entityId: string, periodId: string, priorPeriodId?: string, currency?: string,

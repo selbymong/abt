@@ -406,3 +406,50 @@ CREATE INDEX idx_users_status ON users (status);
 COMMENT ON TABLE users IS
   'Application users with role-based access control and entity-scoped permissions.
    Added in P8-AUTH-RBAC.';
+
+-- --- Forecast Snapshots ---
+-- Point-in-time freeze of forecast values for budget-vs-actual analysis.
+
+CREATE TABLE IF NOT EXISTS forecast_snapshots (
+  id              UUID PRIMARY KEY,
+  budget_id       UUID NOT NULL,
+  entity_id       UUID NOT NULL,
+  name            TEXT NOT NULL,
+  fiscal_year     INT NOT NULL,
+  currency        TEXT NOT NULL,
+  snapshot_type   TEXT NOT NULL DEFAULT 'ROLLING',  -- ROLLING | MANUAL | PERIOD_CLOSE
+  created_by      TEXT NOT NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  notes           TEXT
+);
+
+CREATE INDEX idx_forecast_snap_entity ON forecast_snapshots (entity_id);
+CREATE INDEX idx_forecast_snap_budget ON forecast_snapshots (budget_id);
+CREATE INDEX idx_forecast_snap_year ON forecast_snapshots (entity_id, fiscal_year);
+
+COMMENT ON TABLE forecast_snapshots IS
+  'Point-in-time capture of forecast values during a budgetary cycle.
+   Preserves forecast assumptions so they can be compared against actuals
+   after the fact. Added in P8-FORECAST-SNAPSHOTS.';
+
+-- --- Forecast Snapshot Lines ---
+
+CREATE TABLE IF NOT EXISTS forecast_snapshot_lines (
+  id                UUID PRIMARY KEY,
+  snapshot_id       UUID NOT NULL REFERENCES forecast_snapshots(id) ON DELETE CASCADE,
+  period_id         UUID NOT NULL,
+  node_ref_id       UUID NOT NULL,
+  node_ref_type     TEXT NOT NULL,
+  economic_category TEXT NOT NULL,
+  forecast_amount   NUMERIC NOT NULL,
+  budget_amount     NUMERIC NOT NULL,
+  adjustment_reason TEXT
+);
+
+CREATE INDEX idx_forecast_snap_lines_snap ON forecast_snapshot_lines (snapshot_id);
+CREATE INDEX idx_forecast_snap_lines_period ON forecast_snapshot_lines (snapshot_id, period_id);
+
+COMMENT ON TABLE forecast_snapshot_lines IS
+  'Individual forecast line items frozen at snapshot time. Includes both
+   the forecasted amount and original budget for three-way comparison
+   (budget vs forecast vs actual). Added in P8-FORECAST-SNAPSHOTS.';

@@ -68,7 +68,7 @@ export async function generateIncomeStatement(
 
   // Get current period balances by economic category
   const currentResult = await query(
-    `SELECT economic_category, SUM(CASE WHEN side = 'CREDIT' THEN amount ELSE -amount END) AS net
+    `SELECT economic_category, SUM(net_balance) AS net
      FROM gl_period_balances
      WHERE entity_id = $1 AND period_id = $2
      GROUP BY economic_category`,
@@ -80,7 +80,7 @@ export async function generateIncomeStatement(
   let prior: Record<string, number> = {};
   if (priorPeriodId) {
     const priorResult = await query(
-      `SELECT economic_category, SUM(CASE WHEN side = 'CREDIT' THEN amount ELSE -amount END) AS net
+      `SELECT economic_category, SUM(net_balance) AS net
        FROM gl_period_balances
        WHERE entity_id = $1 AND period_id = $2
        GROUP BY economic_category`,
@@ -136,7 +136,7 @@ export async function generateBalanceSheet(
   const cur = currency ?? 'CAD';
 
   const currentResult = await query(
-    `SELECT economic_category, SUM(CASE WHEN side = 'DEBIT' THEN amount ELSE -amount END) AS net
+    `SELECT economic_category, SUM(net_balance) AS net
      FROM gl_period_balances
      WHERE entity_id = $1 AND period_id = $2
      GROUP BY economic_category`,
@@ -147,7 +147,7 @@ export async function generateBalanceSheet(
   let prior: Record<string, number> = {};
   if (priorPeriodId) {
     const priorResult = await query(
-      `SELECT economic_category, SUM(CASE WHEN side = 'DEBIT' THEN amount ELSE -amount END) AS net
+      `SELECT economic_category, SUM(net_balance) AS net
        FROM gl_period_balances
        WHERE entity_id = $1 AND period_id = $2
        GROUP BY economic_category`,
@@ -204,22 +204,22 @@ export async function generateCashFlowStatement(
   const cur = currency ?? 'CAD';
 
   const result = await query(
-    `SELECT economic_category, entry_type,
-            SUM(CASE WHEN side = 'DEBIT' THEN amount ELSE -amount END) AS net
+    `SELECT economic_category, node_ref_type,
+            SUM(net_balance) AS net
      FROM gl_period_balances
      WHERE entity_id = $1 AND period_id = $2
-     GROUP BY economic_category, entry_type`,
+     GROUP BY economic_category, node_ref_type`,
     [entityId, periodId],
   );
 
   let priorResult = { rows: [] as any[] };
   if (priorPeriodId) {
     priorResult = await query(
-      `SELECT economic_category, entry_type,
-              SUM(CASE WHEN side = 'DEBIT' THEN amount ELSE -amount END) AS net
+      `SELECT economic_category, node_ref_type,
+              SUM(net_balance) AS net
        FROM gl_period_balances
        WHERE entity_id = $1 AND period_id = $2
-       GROUP BY economic_category, entry_type`,
+       GROUP BY economic_category, node_ref_type`,
       [entityId, priorPeriodId],
     );
   }
@@ -275,26 +275,26 @@ export async function generateEquityChanges(
   const cur = currency ?? 'CAD';
 
   const result = await query(
-    `SELECT entry_type, SUM(CASE WHEN side = 'CREDIT' THEN amount ELSE -amount END) AS net
+    `SELECT node_ref_type, SUM(net_balance) AS net
      FROM gl_period_balances
      WHERE entity_id = $1 AND period_id = $2 AND economic_category = 'EQUITY'
-     GROUP BY entry_type`,
+     GROUP BY node_ref_type`,
     [entityId, periodId],
   );
 
   let priorResult = { rows: [] as any[] };
   if (priorPeriodId) {
     priorResult = await query(
-      `SELECT entry_type, SUM(CASE WHEN side = 'CREDIT' THEN amount ELSE -amount END) AS net
+      `SELECT node_ref_type, SUM(net_balance) AS net
        FROM gl_period_balances
        WHERE entity_id = $1 AND period_id = $2 AND economic_category = 'EQUITY'
-       GROUP BY entry_type`,
+       GROUP BY node_ref_type`,
       [entityId, priorPeriodId],
     );
   }
 
   const currentItems = result.rows.map((r: any) => buildLineItem(
-    r.entry_type ?? 'Other', r.entry_type ?? 'OTHER', Number(r.net), 0,
+    r.node_ref_type ?? 'Other', r.node_ref_type ?? 'OTHER', Number(r.net), 0,
   ));
   const totalEquityChange = result.rows.reduce((s: number, r: any) => s + Number(r.net), 0);
 
@@ -331,11 +331,10 @@ function mapCashFlowBalances(rows: any[]): Record<string, number> {
   for (const row of rows) {
     const amount = Number(row.net);
     const category = row.economic_category;
-    const entryType = row.entry_type;
 
     if (category === 'REVENUE' || category === 'EXPENSE') {
       operating += amount;
-    } else if (entryType === 'ELIMINATION' || category === 'EQUITY') {
+    } else if (category === 'EQUITY' || category === 'LIABILITY') {
       financing += amount;
     } else {
       investing += amount;

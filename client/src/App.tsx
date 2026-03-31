@@ -8,6 +8,7 @@ import { AssetClassesPage } from './pages/AssetClassesPage';
 import { RestatementPage } from './pages/RestatementPage';
 import { GraphExplorerPage } from './pages/GraphExplorerPage';
 import { FinancialProjectionsPage } from './pages/FinancialProjectionsPage';
+import { ForecastSnapshotsPage } from './pages/ForecastSnapshotsPage';
 import './App.css';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
             <li className="nav-section">Visualization</li>
             <li><NavLink to="/graph">Graph Explorer</NavLink></li>
             <li><NavLink to="/projections">Financial Projections</NavLink></li>
+            <li><NavLink to="/forecast-snapshots">Forecast Snapshots</NavLink></li>
             <li className="nav-section">Management</li>
             <li><NavLink to="/">Entities</NavLink></li>
             <li><NavLink to="/config">Configuration</NavLink></li>
@@ -35,6 +37,7 @@ function App() {
             <Route path="/" element={<EntitiesPage />} />
             <Route path="/graph" element={<GraphExplorerPage />} />
             <Route path="/projections" element={<FinancialProjectionsPage />} />
+            <Route path="/forecast-snapshots" element={<ForecastSnapshotsPage />} />
             <Route path="/config" element={<ConfigPage />} />
             <Route path="/funds" element={<FundsPage />} />
             <Route path="/periods" element={<PeriodsPage />} />

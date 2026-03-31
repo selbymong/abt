@@ -34,6 +34,7 @@ import { payrollTypeDefs } from './schema/payroll.typeDefs.js';
 import { authTypeDefs } from './schema/auth.typeDefs.js';
 import { financialStatementsTypeDefs } from './schema/financialStatements.typeDefs.js';
 import { auditTrailTypeDefs } from './schema/auditTrail.typeDefs.js';
+import { forecastSnapshotTypeDefs } from './schema/forecastSnapshot.typeDefs.js';
 
 import { graphResolvers } from './resolvers/graph.resolvers.js';
 import { glResolvers } from './resolvers/gl.resolvers.js';
@@ -66,6 +67,7 @@ import { payrollResolvers } from './resolvers/payroll.resolvers.js';
 import { authResolvers } from './resolvers/auth.resolvers.js';
 import { financialStatementsResolvers } from './resolvers/financialStatements.resolvers.js';
 import { auditTrailResolvers } from './resolvers/auditTrail.resolvers.js';
+import { forecastSnapshotResolvers } from './resolvers/forecastSnapshot.resolvers.js';
 
 const baseTypeDefs = `
   type Query {
@@ -119,6 +121,7 @@ const allResolverModules = [
   authResolvers,
   financialStatementsResolvers,
   auditTrailResolvers,
+  forecastSnapshotResolvers,
 ];
 
 export function createGraphQLSchema(): {
@@ -160,6 +163,7 @@ export function createGraphQLSchema(): {
     authTypeDefs,
     financialStatementsTypeDefs,
     auditTrailTypeDefs,
+    forecastSnapshotTypeDefs,
   ].join('\n');
 
   // Merge all Query and Mutation resolvers from domain modules

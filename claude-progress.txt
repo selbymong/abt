@@ -895,9 +895,27 @@ Traditional ERP subledger modules not in original spec but needed for full enter
   - GraphQL: auditEntry/nodeAuditHistory/entityAuditLog/userAuditLog/auditStats queries, recordAudit mutation
   - 16 integration tests (audit-trail.test.ts) — all passing
 
+- [x] P8-FORECAST-SNAPSHOTS: Forecast snapshots ✓
+  - Service: forecast-snapshot-service.ts with create, list, get, delete, forecast-vs-actual report
+  - Point-in-time freeze of rolling forecast values (budget → forecast → actual three-way)
+  - SnapshotType: ROLLING, MANUAL, PERIOD_CLOSE
+  - Completed periods: captures actual from gl_period_balances at snapshot time
+  - Remaining periods: captures rolling forecast adjustment from budgeting-service
+  - Forecast vs Actual report: joins frozen forecast against current gl_period_balances
+  - Variance classification: FAVORABLE/UNFAVORABLE/ON_TARGET with expense/revenue logic
+  - Variance percent computation
+  - Period filtering on reports
+  - SQL: forecast_snapshots + forecast_snapshot_lines tables (CASCADE delete)
+  - Zod validation: createForecastSnapshotSchema
+  - REST: /api/forecast-snapshots (create, by-entity, get, delete, vs-actual)
+  - GraphQL: forecastSnapshots/forecastSnapshot/forecastVsActualReport queries, createForecastSnapshot/deleteForecastSnapshot mutations
+  - Frontend: ForecastSnapshotsPage with entity/budget selectors, create form, snapshot list, vs-actual report table
+  - Client API: 5 new functions in client.ts
+  - Seed script: seed-harness-projection.ts for Harness Exchange 5-year cost model
+  - Fixed financial-statements-service.ts to use net_balance column instead of CASE expressions
+  - 20 integration tests (forecast-snapshots.test.ts) — all passing
+
 ## What Comes Next
-- Phase 7: Spec completion + accounting standards (13 features)
-- Phase 8: ERP expansion (10 features)
 - Pick highest-priority incomplete feature from feature_list.json
 
 ## Known Issues
