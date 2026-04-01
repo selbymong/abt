@@ -77,7 +77,7 @@ async function main() {
   // Rate limiting — 200 requests per minute per IP
   app.use(rateLimit({
     windowMs: 60_000,
-    limit: 200,
+    limit: process.env.NODE_ENV === 'development' ? 1000 : 200,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
   }));
