@@ -18,9 +18,9 @@ export const getEntity = (id: string) => request<any>(`/graph/entities/${id}`);
 
 // Config
 export const getConfig = (key: string, entityId?: string) =>
-  request<any>(`/config/resolve?key=${key}${entityId ? `&entityId=${entityId}` : ''}`);
-export const setConfig = (data: any) =>
-  request<any>('/config', { method: 'POST', body: JSON.stringify(data) });
+  request<any>(`/config/${encodeURIComponent(key)}${entityId ? `?entityId=${entityId}` : ''}`);
+export const setConfig = (key: string, data: any) =>
+  request<any>(`/config/${encodeURIComponent(key)}`, { method: 'PUT', body: JSON.stringify(data) });
 
 // Funds
 export const getFunds = (entityId: string) =>
@@ -56,16 +56,15 @@ export const getObligationAlerts = (entityId: string, days?: number) =>
 
 // ECL Rate Matrix (via config)
 export const getECLRateMatrix = (entityId?: string) =>
-  request<any>(`/config/resolve?key=ecl_rate_matrix${entityId ? `&entityId=${entityId}` : ''}`);
+  request<any>(`/config/ecl_rate_matrix${entityId ? `?entityId=${entityId}` : ''}`);
 export const setECLRateMatrix = (value: any, entityId?: string) =>
-  request<any>('/config', {
-    method: 'POST',
-    body: JSON.stringify({
-      key: 'ecl_rate_matrix',
-      value: JSON.stringify(value),
-      scope: entityId ? 'ENTITY' : 'SYSTEM',
-      entityId,
-    }),
+  setConfig('ecl_rate_matrix', {
+    scopeType: entityId ? 'ENTITY' : 'SYSTEM',
+    scopeId: entityId,
+    valueType: 'JSON',
+    valueJson: value,
+    validFrom: new Date().toISOString().slice(0, 10),
+    changedBy: '00000000-0000-0000-0000-000000000001',
   });
 
 // AssetClass management

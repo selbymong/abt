@@ -28,11 +28,13 @@ export function ConfigPage() {
   const handleSave = async () => {
     setSaveMsg('');
     try {
-      await setConfig({
-        key: newKey,
-        value: newValue,
-        scope: newScope,
-        entityId: newEntityId || undefined,
+      await setConfig(newKey, {
+        scopeType: newScope,
+        scopeId: newScope === 'ENTITY' ? newEntityId : undefined,
+        valueType: 'STRING',
+        valueString: newValue,
+        validFrom: new Date().toISOString().slice(0, 10),
+        changedBy: '00000000-0000-0000-0000-000000000001',
       });
       setSaveMsg('Saved successfully');
     } catch (e: any) {

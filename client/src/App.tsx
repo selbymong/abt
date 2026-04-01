@@ -9,6 +9,7 @@ import { RestatementPage } from './pages/RestatementPage';
 import { GraphExplorerPage } from './pages/GraphExplorerPage';
 import { FinancialProjectionsPage } from './pages/FinancialProjectionsPage';
 import { ForecastSnapshotsPage } from './pages/ForecastSnapshotsPage';
+import { FiscalYearPage } from './pages/FiscalYearPage';
 import './App.css';
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
             <li className="nav-section">Management</li>
             <li><NavLink to="/">Entities</NavLink></li>
             <li><NavLink to="/config">Configuration</NavLink></li>
+            <li><NavLink to="/fiscal-year">Fiscal Year</NavLink></li>
             <li><NavLink to="/funds">Fund Management</NavLink></li>
             <li><NavLink to="/periods">Accounting Periods</NavLink></li>
             <li><NavLink to="/ecl-rates">ECL Rate Matrix</NavLink></li>
@@ -39,6 +41,7 @@ function App() {
             <Route path="/projections" element={<FinancialProjectionsPage />} />
             <Route path="/forecast-snapshots" element={<ForecastSnapshotsPage />} />
             <Route path="/config" element={<ConfigPage />} />
+            <Route path="/fiscal-year" element={<FiscalYearPage />} />
             <Route path="/funds" element={<FundsPage />} />
             <Route path="/periods" element={<PeriodsPage />} />
             <Route path="/ecl-rates" element={<ECLRateMatrixPage />} />
