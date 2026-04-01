@@ -280,6 +280,17 @@ export async function deleteBudgetLine(lineId: string): Promise<void> {
   );
 }
 
+export async function deleteBudget(budgetId: string): Promise<void> {
+  // Delete all budget lines from PostgreSQL
+  await query('DELETE FROM budget_lines WHERE budget_id = $1', [budgetId]);
+
+  // Delete the Budget node from Neo4j
+  await runCypher(
+    `MATCH (b:Budget {id: $id}) DETACH DELETE b`,
+    { id: budgetId },
+  );
+}
+
 // ============================================================
 // Variance Analysis
 // ============================================================

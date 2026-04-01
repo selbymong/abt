@@ -3,15 +3,19 @@ export {};
 /**
  * CI (Charity Intelligence) Monthly Visitor Projection — 2026, 2027, 2028
  *
- * Two growth channels, three scenarios each:
- *   - Organic:  Conservative / Realistic / Ambitious
- *   - Paid Media: Conservative / Realistic / Ambitious
+ * Three layers, each loaded separately:
+ *   1. BASELINE — straight-line trend (what happens with zero intervention)
+ *   2. ORGANIC GROWTH — incremental lift above baseline from SEO/content (3 scenarios)
+ *   3. PAID MEDIA — incremental lift from ad spend (3 scenarios)
+ *
+ * Total users = Baseline + Organic scenario + Paid scenario
  *
  * Methodology:
  *   1. Straight-line monthly trend from 36 months of GA4 data (2023-2025)
  *   2. Seasonal decomposition: multiplicative seasonal indices from 3-year average
- *   3. Organic scenarios: adjust the trend slope
- *   4. Paid media scenarios: additive new-user acquisition channel
+ *   3. Baseline = the straight-line projection (loaded as its own budget)
+ *   4. Organic growth scenarios = incremental users above baseline
+ *   5. Paid media scenarios = incremental new-user acquisition channel
  *
  * ══════════════════════════════════════════════════════════════════════════
  * ASSUMPTIONS LOG — read this when projections diverge from reality
@@ -36,21 +40,28 @@ export {};
  *   - Assumes seasonality is STABLE — if CI changes its content calendar
  *     (e.g., major spring campaign), seasonality will shift
  *
- * ORGANIC SCENARIOS:
- *   - Conservative: straight-line extrapolation, no intervention
- *     Source: CI's own 2023-2025 trajectory (avg -3.3% YoY)
- *   - Realistic: trend flattens to 0% by end of 2027
- *     Source: M+R Benchmarks — nonprofits investing in SEO see stabilization
- *     within 12-18 months; CI Web Strategy docs suggest investment planned
- *   - Ambitious: 10% annual growth after stabilization
- *     Source: M+R Benchmarks — nonprofits with active content marketing
- *     achieve 15-25% organic growth; CanadaHelps achieved ~25-30% CAGR
- *     during growth years; discounted for CI's established base
+ * BASELINE:
+ *   - Loaded as its own budget (1 budget, 36 monthly lines)
+ *   - Represents CI's existing user base projected forward with no intervention
+ *   - This is NOT a scenario — it is always present as the foundation
+ *
+ * ORGANIC GROWTH SCENARIOS (incremental above baseline):
+ *   - All scenarios are ADDITIVE to the baseline
+ *   - Conservative: 0 incremental users — no SEO/content investment
+ *     Baseline alone captures the trajectory. Conservative = do nothing.
+ *   - Realistic: ~10K incremental users/year growing to ~24K by year 3
+ *     Source: M+R Benchmarks — nonprofits investing in SEO see 5-15%
+ *     annual growth; 3% lift in year 2, 8% lift by year 3
+ *     CanadaHelps achieved 25-30% CAGR during growth years
+ *   - Ambitious: ~10K year 1, ~31K year 2, ~66K year 3 incremental
+ *     Source: M+R Benchmarks — active content marketing yields 15-25%;
+ *     Airbnb achieved 80-100% via supply-driven SEO (listing pages);
+ *     LinkedIn grew 50-60% via viral loops. Discounted 70% for nonprofit.
  *   - RISK: Organic growth depends on SEO investment, content velocity,
  *     and Google algorithm stability. A core update could negate gains.
  *
- * PAID MEDIA SCENARIOS:
- *   - All scenarios assume INCREMENTAL users (additive to organic)
+ * PAID MEDIA SCENARIOS (incremental above baseline):
+ *   - All scenarios are ADDITIVE to baseline + organic
  *   - Conservative: Google Ad Grants only ($10K/mo free ads)
  *     ~2,500 incremental users/month growing 5%/year
  *     Source: Google Ad Grants benchmark for well-optimized nonprofits
@@ -86,14 +97,20 @@ const BASE = 'http://localhost:4000/api';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+let apiCallCount = 0;
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
-  for (let attempt = 0; attempt < 3; attempt++) {
+  // Throttle: pause every 50 calls to stay under rate limit
+  apiCallCount++;
+  if (apiCallCount % 50 === 0) {
+    await sleep(1000);
+  }
+  for (let attempt = 0; attempt < 5; attempt++) {
     const res = await fetch(`${BASE}${path}`, {
       headers: { 'Content-Type': 'application/json' },
       ...options,
     });
     if (res.status === 429) {
-      await sleep(2000 + attempt * 1000);
+      await sleep(5000 + attempt * 3000);
       continue;
     }
     if (!res.ok) {
@@ -172,8 +189,8 @@ interface MonthProjection {
 }
 
 interface ScenarioResult {
-  channel: 'ORGANIC' | 'PAID_MEDIA';
-  scenario: 'CONSERVATIVE' | 'REALISTIC' | 'AMBITIOUS';
+  channel: 'BASELINE' | 'ORGANIC_GROWTH' | 'PAID_MEDIA';
+  scenario: 'BASELINE' | 'CONSERVATIVE' | 'REALISTIC' | 'AMBITIOUS';
   name: string;
   description: string;
   months: MonthProjection[];
@@ -181,7 +198,6 @@ interface ScenarioResult {
 }
 
 function projectMonths(
-  baseMonthOffset: number, // month index where projection starts (36 = Jan 2026)
   seasonalIndices: number[],
   annualUsersByYear: Record<number, number>,
 ): MonthProjection[] {
@@ -208,9 +224,7 @@ function buildAllScenarios(): ScenarioResult[] {
   const seasonalIndices = computeSeasonalIndices();
   const trend = computeLinearTrend(seasonalIndices);
 
-  // Straight-line annualized values:
-  // Month 36 = Jan 2026, so projection year centers:
-  //   2026 center = month 41.5, 2027 = 53.5, 2028 = 65.5
+  // Straight-line annualized values
   const straightLineAnnual = (year: number): number => {
     let total = 0;
     for (let m = 0; m < 12; m++) {
@@ -226,65 +240,83 @@ function buildAllScenarios(): ScenarioResult[] {
   const sl2028 = straightLineAnnual(2028);
 
   console.log(`\nStraight-line trend: slope = ${trend.slope.toFixed(1)} deseasonalized users/month`);
-  console.log(`  Straight-line projections: 2026=${sl2026.toLocaleString()}, 2027=${sl2027.toLocaleString()}, 2028=${sl2028.toLocaleString()}`);
+  console.log(`  Baseline projections: 2026=${sl2026.toLocaleString()}, 2027=${sl2027.toLocaleString()}, 2028=${sl2028.toLocaleString()}`);
 
-  // ── Organic Scenarios ──
+  // ── 1. BASELINE (straight-line, no intervention) ──
 
-  const organicConservative: ScenarioResult = {
-    channel: 'ORGANIC',
-    scenario: 'CONSERVATIVE',
-    name: 'Organic — Conservative (straight-line decline)',
-    description: 'No intervention. Current decline continues at the same monthly rate. Based on linear regression of 36-month GA4 data.',
+  const baseline: ScenarioResult = {
+    channel: 'BASELINE',
+    scenario: 'BASELINE',
+    name: 'Baseline — Straight-line trend (no intervention)',
+    description: 'Linear regression on 36 months of GA4 data (2023-2025). ' +
+      'Slope = ' + trend.slope.toFixed(1) + ' deseasonalized users/month. ' +
+      'Represents CI existing user base with zero new investment. ' +
+      'Source: CI GA4 monthly active users 2023-2025.',
     annualTotals: { 2026: sl2026, 2027: sl2027, 2028: sl2028 },
-    months: projectMonths(36, seasonalIndices, { 2026: sl2026, 2027: sl2027, 2028: sl2028 }),
+    months: projectMonths(seasonalIndices, { 2026: sl2026, 2027: sl2027, 2028: sl2028 }),
   };
 
-  // Realistic: decline halves each year (SEO investment stabilizes)
-  const real2026 = Math.round(sl2026 * 1.00); // same as straight-line for year 1
-  const real2027 = Math.round(sl2027 * 1.03); // 3% lift from SEO investment kicking in
-  const real2028 = Math.round(sl2028 * 1.08); // cumulative 8% lift as content matures
+  // ── 2. ORGANIC GROWTH (incremental above baseline) ──
+
+  // Conservative: zero incremental — do nothing beyond baseline
+  const organicConservative: ScenarioResult = {
+    channel: 'ORGANIC_GROWTH',
+    scenario: 'CONSERVATIVE',
+    name: 'Organic Growth — Conservative (no investment)',
+    description: 'Zero incremental organic users. No SEO/content investment beyond current state. ' +
+      'Total users = baseline only. This is the "do nothing" scenario.',
+    annualTotals: { 2026: 0, 2027: 0, 2028: 0 },
+    months: projectMonths(seasonalIndices, { 2026: 0, 2027: 0, 2028: 0 }),
+  };
+
+  // Realistic: SEO investment starts producing lift in year 2
+  // 0% lift year 1 (lag), 3% of baseline year 2, 8% of baseline year 3
+  const orgRealLift2026 = 0;
+  const orgRealLift2027 = Math.round(sl2027 * 0.03); // ~9,300
+  const orgRealLift2028 = Math.round(sl2028 * 0.08); // ~24,000
   const organicRealistic: ScenarioResult = {
-    channel: 'ORGANIC',
+    channel: 'ORGANIC_GROWTH',
     scenario: 'REALISTIC',
-    name: 'Organic — Realistic (SEO + content investment)',
-    description: 'Moderate SEO and content investment stabilizes decline by mid-2027. ' +
+    name: 'Organic Growth — Realistic (SEO + content investment)',
+    description: 'Incremental organic users from moderate SEO and content investment. ' +
+      'Year 1: 0 lift (12-18 month lag for SEO results). ' +
+      'Year 2: +3% of baseline (~9K incremental). Year 3: +8% (~24K). ' +
       'Source: M+R Benchmarks — nonprofits investing in SEO see 5-15% annual growth; ' +
       'CanadaHelps achieved 25-30% CAGR during growth years. ' +
-      'Discounted for CI established base. Assumes 12-18 month lag for SEO results.',
-    annualTotals: { 2026: real2026, 2027: real2027, 2028: real2028 },
-    months: projectMonths(36, seasonalIndices, { 2026: real2026, 2027: real2027, 2028: real2028 }),
+      'Discounted for CI established base and 12-18 month SEO lag.',
+    annualTotals: { 2026: orgRealLift2026, 2027: orgRealLift2027, 2028: orgRealLift2028 },
+    months: projectMonths(seasonalIndices, { 2026: orgRealLift2026, 2027: orgRealLift2027, 2028: orgRealLift2028 }),
   };
 
-  // Ambitious: significant content strategy lifts growth
-  const amb2026 = Math.round(sl2026 * 1.03); // small early lift
-  const amb2027 = Math.round(sl2027 * 1.10); // 10% lift as strategy matures
-  const amb2028 = Math.round(sl2028 * 1.22); // compounding 22% lift by year 3
+  // Ambitious: aggressive content strategy with faster ramp
+  // 3% lift year 1, 10% year 2, 22% year 3
+  const orgAmbLift2026 = Math.round(sl2026 * 0.03); // ~9,600
+  const orgAmbLift2027 = Math.round(sl2027 * 0.10); // ~31,000
+  const orgAmbLift2028 = Math.round(sl2028 * 0.22); // ~66,000
   const organicAmbitious: ScenarioResult = {
-    channel: 'ORGANIC',
+    channel: 'ORGANIC_GROWTH',
     scenario: 'AMBITIOUS',
-    name: 'Organic — Ambitious (full content + SEO strategy)',
-    description: 'Heavy content marketing, charity listing expansion, and SEO investment. ' +
+    name: 'Organic Growth — Ambitious (full content + SEO strategy)',
+    description: 'Incremental organic users from heavy content marketing + SEO + charity listing expansion. ' +
+      'Year 1: +3% of baseline (~10K). Year 2: +10% (~31K). Year 3: +22% (~66K). ' +
       'Source: M+R Benchmarks — active content marketing yields 15-25% organic growth; ' +
       'Airbnb achieved 80-100% via supply-driven SEO (listing pages); ' +
       'LinkedIn grew 50-60% via viral loops. Discounted 70% for nonprofit sector ceiling. ' +
       'Assumes dedicated content team and 6-month ramp.',
-    annualTotals: { 2026: amb2026, 2027: amb2027, 2028: amb2028 },
-    months: projectMonths(36, seasonalIndices, { 2026: amb2026, 2027: amb2027, 2028: amb2028 }),
+    annualTotals: { 2026: orgAmbLift2026, 2027: orgAmbLift2027, 2028: orgAmbLift2028 },
+    months: projectMonths(seasonalIndices, { 2026: orgAmbLift2026, 2027: orgAmbLift2027, 2028: orgAmbLift2028 }),
   };
 
-  // ── Paid Media Scenarios (incremental users) ──
-  // Paid media follows different seasonality — heavier in giving season but more even
+  // ── 3. PAID MEDIA (incremental above baseline) ──
+  // Paid media follows dampened seasonality
   const paidSeasonalIndices = seasonalIndices.map((idx) => {
-    // Dampen seasonality: paid is more even but still follows giving season
     const dampened = (idx + 1 / 12) / 2;
     return dampened;
   });
-  // Normalize
   const paidSum = paidSeasonalIndices.reduce((a, b) => a + b, 0);
   const paidSeasonal = paidSeasonalIndices.map((v) => v / paidSum);
 
   // Conservative: Google Ad Grants only ($10K/mo free)
-  // ~2,500 incremental users/month × 12 = 30,000/year, growing 5%/year
   const paidCon2026 = 30000;
   const paidCon2027 = Math.round(paidCon2026 * 1.05);
   const paidCon2028 = Math.round(paidCon2027 * 1.05);
@@ -298,11 +330,10 @@ function buildAllScenarios(): ScenarioResult[] {
       'at CI base of ~27K/month, 2,500 = ~9% lift. ' +
       'Risk: Google Ad Grants has strict policy compliance — account can be suspended.',
     annualTotals: { 2026: paidCon2026, 2027: paidCon2027, 2028: paidCon2028 },
-    months: projectMonths(36, paidSeasonal, { 2026: paidCon2026, 2027: paidCon2027, 2028: paidCon2028 }),
+    months: projectMonths(paidSeasonal, { 2026: paidCon2026, 2027: paidCon2027, 2028: paidCon2028 }),
   };
 
   // Realistic: Ad Grants + $2K/mo social spend
-  // ~6,000 incremental users/month × 12 = 72,000/year, growing 15%/year
   const paidReal2026 = 72000;
   const paidReal2027 = Math.round(paidReal2026 * 1.15);
   const paidReal2028 = Math.round(paidReal2027 * 1.15);
@@ -317,11 +348,10 @@ function buildAllScenarios(): ScenarioResult[] {
       'CanadaHelps achieved 25-30% CAGR with moderate marketing investment. ' +
       'Risk: Social CPAs rising ~10-15%/year; audience saturation in Canadian charity space.',
     annualTotals: { 2026: paidReal2026, 2027: paidReal2027, 2028: paidReal2028 },
-    months: projectMonths(36, paidSeasonal, { 2026: paidReal2026, 2027: paidReal2027, 2028: paidReal2028 }),
+    months: projectMonths(paidSeasonal, { 2026: paidReal2026, 2027: paidReal2027, 2028: paidReal2028 }),
   };
 
   // Ambitious: Full paid strategy ($5K/mo + Ad Grants)
-  // ~12,000 incremental users/month × 12 = 144,000/year, growing 25%/year
   const paidAmb2026 = 144000;
   const paidAmb2027 = Math.round(paidAmb2026 * 1.25);
   const paidAmb2028 = Math.round(paidAmb2027 * 1.25);
@@ -334,15 +364,16 @@ function buildAllScenarios(): ScenarioResult[] {
       'Source: LinkedIn early growth ~50-60%/yr via viral + paid; ' +
       'Airbnb achieved 80-100% via localized landing pages + paid. ' +
       'CanadaHelps ~25-30% CAGR is the best comp. Discounted for: ' +
-      'diminishing marginal returns (2x spend ≈ 1.5-1.7x users), ' +
+      'diminishing marginal returns (2x spend = 1.5-1.7x users), ' +
       'nonprofit sector ceiling, Canadian charity market size (~86K charities). ' +
       'Risk: Paid users may have 30-50% lower engagement than organic. ' +
       'CAC will rise as easy audiences exhaust in years 2-3.',
     annualTotals: { 2026: paidAmb2026, 2027: paidAmb2027, 2028: paidAmb2028 },
-    months: projectMonths(36, paidSeasonal, { 2026: paidAmb2026, 2027: paidAmb2027, 2028: paidAmb2028 }),
+    months: projectMonths(paidSeasonal, { 2026: paidAmb2026, 2027: paidAmb2027, 2028: paidAmb2028 }),
   };
 
   return [
+    baseline,
     organicConservative, organicRealistic, organicAmbitious,
     paidConservative, paidRealistic, paidAmbitious,
   ];
@@ -353,7 +384,7 @@ function buildAllScenarios(): ScenarioResult[] {
 function printSummary(scenarios: ScenarioResult[]) {
   console.log('\n══════════════════════════════════════════════════════════════');
   console.log('  CI Website — User Growth Projection (2026-2028)');
-  console.log('  6 Scenarios: 2 channels × 3 scenarios');
+  console.log('  Total = Baseline + Organic Growth + Paid Media');
   console.log('══════════════════════════════════════════════════════════════');
 
   const seasonalIndices = computeSeasonalIndices();
@@ -371,46 +402,59 @@ function printSummary(scenarios: ScenarioResult[]) {
     console.log(`  ${year}: ${total.toLocaleString()}${yoy}${year === 2025 ? ' (Dec estimated)' : ''}`);
   }
 
-  for (const channel of ['ORGANIC', 'PAID_MEDIA'] as const) {
-    const channelScenarios = scenarios.filter((s) => s.channel === channel);
-    console.log(`\n── ${channel === 'ORGANIC' ? 'ORGANIC' : 'PAID MEDIA (incremental)'} ──`);
+  // Baseline
+  const bl = scenarios.find((s) => s.channel === 'BASELINE')!;
+  console.log('\n── BASELINE (straight-line, no intervention) ──');
+  console.log(`  2026: ${bl.annualTotals[2026].toLocaleString()}  2027: ${bl.annualTotals[2027].toLocaleString()}  2028: ${bl.annualTotals[2028].toLocaleString()}`);
 
-    console.log('\n┌──────────────┬────────────┬────────────┬────────────┐');
-    console.log('│  Scenario    │    2026    │    2027    │    2028    │');
-    console.log('├──────────────┼────────────┼────────────┼────────────┤');
-    for (const s of channelScenarios) {
-      const label = s.scenario.slice(0, 12).padEnd(12);
-      console.log(
-        `│  ${label}│ ${String(s.annualTotals[2026].toLocaleString()).padStart(10)} │ ${String(s.annualTotals[2027].toLocaleString()).padStart(10)} │ ${String(s.annualTotals[2028].toLocaleString()).padStart(10)} │`,
-      );
-    }
-    console.log('└──────────────┴────────────┴────────────┴────────────┘');
-
-    // Monthly detail for realistic scenario
-    const realistic = channelScenarios.find((s) => s.scenario === 'REALISTIC')!;
-    console.log(`\n  Monthly detail (${realistic.scenario}):`);
-    console.log('  ┌──────────┬──────────┬──────────┬──────────┐');
-    console.log('  │  Month   │   2026   │   2027   │   2028   │');
-    console.log('  ├──────────┼──────────┼──────────┼──────────┤');
-    for (let m = 0; m < 12; m++) {
-      const v26 = realistic.months.find((p) => p.year === 2026 && p.month === m + 1)!.users;
-      const v27 = realistic.months.find((p) => p.year === 2027 && p.month === m + 1)!.users;
-      const v28 = realistic.months.find((p) => p.year === 2028 && p.month === m + 1)!.users;
-      console.log(
-        `  │  ${MONTHS[m].padEnd(6)} │ ${String(v26.toLocaleString()).padStart(8)} │ ${String(v27.toLocaleString()).padStart(8)} │ ${String(v28.toLocaleString()).padStart(8)} │`,
-      );
-    }
-    console.log('  └──────────┴──────────┴──────────┴──────────┘');
+  // Organic Growth (incremental)
+  const orgScenarios = scenarios.filter((s) => s.channel === 'ORGANIC_GROWTH');
+  console.log('\n── ORGANIC GROWTH (incremental above baseline) ──');
+  console.log('\n┌──────────────┬────────────┬────────────┬────────────┐');
+  console.log('│  Scenario    │    2026    │    2027    │    2028    │');
+  console.log('├──────────────┼────────────┼────────────┼────────────┤');
+  for (const s of orgScenarios) {
+    const label = s.scenario.slice(0, 12).padEnd(12);
+    console.log(
+      `│  ${label}│ ${String(s.annualTotals[2026] === 0 ? '—' : '+' + s.annualTotals[2026].toLocaleString()).padStart(10)} │ ${String(s.annualTotals[2027] === 0 ? '—' : '+' + s.annualTotals[2027].toLocaleString()).padStart(10)} │ ${String(s.annualTotals[2028] === 0 ? '—' : '+' + s.annualTotals[2028].toLocaleString()).padStart(10)} │`,
+    );
   }
+  console.log('└──────────────┴────────────┴────────────┴────────────┘');
 
-  // Combined totals
-  console.log('\n── COMBINED (Organic Realistic + Paid Realistic) ──');
-  const orgReal = scenarios.find((s) => s.channel === 'ORGANIC' && s.scenario === 'REALISTIC')!;
-  const paidReal = scenarios.find((s) => s.channel === 'PAID_MEDIA' && s.scenario === 'REALISTIC')!;
-  for (const year of [2026, 2027, 2028]) {
-    const total = orgReal.annualTotals[year] + paidReal.annualTotals[year];
-    console.log(`  ${year}: ${total.toLocaleString()} (organic ${orgReal.annualTotals[year].toLocaleString()} + paid ${paidReal.annualTotals[year].toLocaleString()})`);
+  // Paid Media (incremental)
+  const paidScenarios = scenarios.filter((s) => s.channel === 'PAID_MEDIA');
+  console.log('\n── PAID MEDIA (incremental above baseline) ──');
+  console.log('\n┌──────────────┬────────────┬────────────┬────────────┐');
+  console.log('│  Scenario    │    2026    │    2027    │    2028    │');
+  console.log('├──────────────┼────────────┼────────────┼────────────┤');
+  for (const s of paidScenarios) {
+    const label = s.scenario.slice(0, 12).padEnd(12);
+    console.log(
+      `│  ${label}│ ${('+' + s.annualTotals[2026].toLocaleString()).padStart(10)} │ ${('+' + s.annualTotals[2027].toLocaleString()).padStart(10)} │ ${('+' + s.annualTotals[2028].toLocaleString()).padStart(10)} │`,
+    );
   }
+  console.log('└──────────────┴────────────┴────────────┴────────────┘');
+
+  // Combined totals table
+  console.log('\n── COMBINED TOTALS (Baseline + Organic + Paid) ──');
+  console.log('\n┌─────────────────────────┬────────────┬────────────┬────────────┐');
+  console.log('│  Combination            │    2026    │    2027    │    2028    │');
+  console.log('├─────────────────────────┼────────────┼────────────┼────────────┤');
+  for (const org of orgScenarios) {
+    for (const paid of paidScenarios) {
+      const label = `${org.scenario.slice(0, 3)}+${paid.scenario.slice(0, 3)}`.padEnd(23);
+      for (const year of [2026]) { // just print one line for each combo
+        const t26 = bl.annualTotals[2026] + org.annualTotals[2026] + paid.annualTotals[2026];
+        const t27 = bl.annualTotals[2027] + org.annualTotals[2027] + paid.annualTotals[2027];
+        const t28 = bl.annualTotals[2028] + org.annualTotals[2028] + paid.annualTotals[2028];
+        console.log(
+          `│  ${label}│ ${String(t26.toLocaleString()).padStart(10)} │ ${String(t27.toLocaleString()).padStart(10)} │ ${String(t28.toLocaleString()).padStart(10)} │`,
+        );
+      }
+    }
+  }
+  console.log('└─────────────────────────┴────────────┴────────────┴────────────┘');
+  console.log('  (CON=Conservative, REA=Realistic, AMB=Ambitious)');
 }
 
 // ── Delete Old Data ───────────────────────────────────────────
@@ -426,40 +470,19 @@ async function deleteOldProjectionData(entityId: string) {
   );
 
   for (const budget of ciProjectionBudgets) {
-    const budgetId = budget.id;
-    // First delete all budget lines
     try {
-      const linesResp = await api<{ lines: any[] }>(`/budgeting/lines/${budgetId}`);
-      for (const line of linesResp.lines || []) {
-        await api(`/budgeting/lines/${line.id}`, { method: 'DELETE' });
-      }
+      await api(`/budgeting/budgets/${budget.id}`, { method: 'DELETE' });
+      console.log(`  Deleted budget: ${budget.name}`);
     } catch (e: any) {
-      console.log(`  Could not delete lines for ${budgetId}: ${e.message}`);
+      console.log(`  Could not delete budget ${budget.name}: ${e.message}`);
     }
-    // Then delete the Budget node from Neo4j
-    try {
-      await api(`/graph/nodes/${budgetId}`, { method: 'DELETE' });
-    } catch {
-      // Try via GraphQL as fallback
-      try {
-        const gqlRes = await fetch('http://localhost:4000/graphql', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: `mutation { __deleteNode: deleteBudget(id: "${budgetId}") }`,
-          }),
-        });
-        // If GraphQL doesn't have this mutation, just note it
-      } catch { /* ok */ }
-    }
-    console.log(`  Deleted budget: ${budget.name}`);
   }
 
   // Delete old metric nodes
   const metricsResp = await api<{ items: any[] }>(`/graph/metrics/by-entity/${entityId}`);
   const metricsArr = metricsResp.items || [];
   for (const m of metricsArr) {
-    if (m.label === 'Website Active Users' || m.label === 'CI Organic Website Users' || m.label === 'CI Paid Media Users') {
+    if (m.label === 'Website Active Users' || m.label === 'CI Organic Website Users' || m.label === 'CI Paid Media Users' || m.label === 'CI Baseline Website Users') {
       try {
         await api(`/graph/metrics/${m.id}`, { method: 'DELETE' });
         console.log(`  Deleted metric: ${m.label}`);
@@ -474,6 +497,7 @@ async function deleteOldProjectionData(entityId: string) {
   const ciPeriods = (periods.items || []).filter(
     (p: any) =>
       p.label?.includes('CI Website') ||
+      p.label?.includes('(Base') ||
       p.label?.includes('Org-') ||
       p.label?.includes('Paid-') ||
       /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) 20(2[3-8])$/.test(p.label || ''),
@@ -490,30 +514,35 @@ async function deleteOldProjectionData(entityId: string) {
 // ── Seed Scenarios ────────────────────────────────────────────
 
 async function seedScenarios(entityId: string, scenarios: ScenarioResult[]) {
-  console.log('\n── Seeding 6 forecast scenarios into EBG ──\n');
+  console.log('\n── Seeding 7 forecast budgets into EBG ──\n');
 
   // Create metric nodes for each channel
   const metricIds: Record<string, string> = {};
 
-  for (const channel of ['ORGANIC', 'PAID_MEDIA'] as const) {
-    const label = channel === 'ORGANIC' ? 'CI Organic Website Users' : 'CI Paid Media Users';
+  const channelDefs = [
+    { key: 'BASELINE', label: 'CI Baseline Website Users', currentValue: 331301, targetValue: 300000 },
+    { key: 'ORGANIC_GROWTH', label: 'CI Organic Website Users', currentValue: 0, targetValue: 50000 },
+    { key: 'PAID_MEDIA', label: 'CI Paid Media Users', currentValue: 0, targetValue: 100000 },
+  ];
+
+  for (const ch of channelDefs) {
     try {
       const metric = await api<{ id: string }>('/graph/metrics', {
         method: 'POST',
         body: JSON.stringify({
           entityId,
-          label,
+          label: ch.label,
           metricType: 'VOLUME',
-          currentValue: channel === 'ORGANIC' ? 331301 : 0,
-          targetValue: channel === 'ORGANIC' ? 400000 : 100000,
+          currentValue: ch.currentValue,
+          targetValue: ch.targetValue,
           unit: 'active_users_monthly',
         }),
       });
-      metricIds[channel] = metric.id;
-      console.log(`  Created metric: ${label} (${metric.id})`);
+      metricIds[ch.key] = metric.id;
+      console.log(`  Created metric: ${ch.label} (${metric.id})`);
     } catch (e: any) {
       console.log(`  Metric error: ${e.message}`);
-      metricIds[channel] = entityId; // fallback
+      metricIds[ch.key] = entityId; // fallback
     }
   }
 
@@ -537,13 +566,19 @@ async function seedScenarios(entityId: string, scenarios: ScenarioResult[]) {
 
     const metricId = metricIds[scenario.channel];
 
+    // Period label prefix based on channel
+    const channelPrefix = scenario.channel === 'BASELINE' ? 'Base'
+      : scenario.channel === 'ORGANIC_GROWTH' ? 'Org'
+      : 'Paid';
+    const scenarioSuffix = scenario.scenario === 'BASELINE' ? '' : `-${scenario.scenario.slice(0, 3)}`;
+
     // Create monthly periods and budget lines
     for (const proj of scenario.months) {
       const period = await api<{ id: string }>('/graph/periods', {
         method: 'POST',
         body: JSON.stringify({
           entityId,
-          label: `${proj.label} (${scenario.channel === 'ORGANIC' ? 'Org' : 'Paid'}-${scenario.scenario.slice(0, 3)})`,
+          label: `${proj.label} (${channelPrefix}${scenarioSuffix})`,
           startDate: proj.periodStart,
           endDate: proj.periodEnd,
         }),
@@ -591,10 +626,12 @@ async function main() {
   // Seed new scenarios
   await seedScenarios(entityId, scenarios);
 
-  console.log('\n✓ 6 CI visitor projection scenarios seeded successfully.');
-  console.log('  Organic: Conservative / Realistic / Ambitious');
-  console.log('  Paid Media: Conservative / Realistic / Ambitious');
-  console.log('  Each with 36 monthly budget lines (2026-2028).\n');
+  console.log('\n✓ 7 CI visitor projection budgets seeded successfully.');
+  console.log('  1 Baseline (straight-line trend)');
+  console.log('  3 Organic Growth: Conservative / Realistic / Ambitious (incremental)');
+  console.log('  3 Paid Media: Conservative / Realistic / Ambitious (incremental)');
+  console.log('  Each with 36 monthly budget lines (2026-2028).');
+  console.log('  Total users = Baseline + Organic scenario + Paid scenario\n');
 }
 
 main().catch((err) => {

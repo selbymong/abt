@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import {
   createBudget, getBudget, listBudgets, approveBudget, lockBudget,
-  addBudgetLine, getBudgetLines, updateBudgetLine, deleteBudgetLine,
+  addBudgetLine, getBudgetLines, updateBudgetLine, deleteBudgetLine, deleteBudget,
   getVarianceReport, generateRollingForecast,
 } from '../../services/gl/budgeting-service.js';
 import {
@@ -65,6 +65,11 @@ budgetingRouter.patch('/lines/:id', validateBody(updateBudgetLineSchema), wrap(a
 
 budgetingRouter.delete('/lines/:id', wrap(async (req, res) => {
   await deleteBudgetLine(req.params.id as string);
+  res.json({ status: 'deleted' });
+}));
+
+budgetingRouter.delete('/budgets/:id', wrap(async (req, res) => {
+  await deleteBudget(req.params.id as string);
   res.json({ status: 'deleted' });
 }));
 
