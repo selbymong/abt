@@ -138,7 +138,7 @@ export function GraphExplorerPage() {
       const edgePromises = allNodes.map(async (node) => {
         try {
           const data = await getEdgesFrom('contributes-to', node.id);
-          return (data.items || []).map((e: any) => ({
+          return ((data as any).edges || (data as any).items || []).map((e: any) => ({
             source: e.source_id || e.sourceId || node.id,
             target: e.target_id || e.targetId,
             edgeType: 'CONTRIBUTES_TO',
@@ -343,11 +343,11 @@ export function GraphExplorerPage() {
       {/* Summary stats */}
       {summary && (
         <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-          {summary.nodeCounts && Object.entries(summary.nodeCounts).map(([type, count]) => (
-            <div key={type} className="card" style={{ padding: '10px 16px', marginBottom: 0, minWidth: 100 }}>
-              <div style={{ fontSize: '0.75rem', color: '#888' }}>{type}</div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 700, color: NODE_COLORS[type] || '#333' }}>
-                {count as number}
+          {summary.nodeCounts && (Array.isArray(summary.nodeCounts) ? summary.nodeCounts : Object.entries(summary.nodeCounts).map(([label, count]) => ({ label, count }))).map((item: any) => (
+            <div key={item.label} className="card" style={{ padding: '10px 16px', marginBottom: 0, minWidth: 100 }}>
+              <div style={{ fontSize: '0.75rem', color: '#888' }}>{item.label}</div>
+              <div style={{ fontSize: '1.3rem', fontWeight: 700, color: NODE_COLORS[item.label] || '#333' }}>
+                {item.count}
               </div>
             </div>
           ))}
