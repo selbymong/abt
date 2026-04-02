@@ -117,6 +117,18 @@ export const getBudgetsByEntity = (entityId: string, fiscalYear?: number) => {
   return request<{ budgets: any[] }>(`/budgeting/budgets/by-entity/${entityId}${qs ? `?${qs}` : ''}`);
 };
 
+export const getProjectionTimeSeries = (
+  entityId: string,
+  budgetIds?: string[],
+  economicCategory?: string,
+) => {
+  const params = new URLSearchParams();
+  if (budgetIds && budgetIds.length > 0) params.set('budgetIds', budgetIds.join(','));
+  if (economicCategory) params.set('economicCategory', economicCategory);
+  const qs = params.toString();
+  return request<any>(`/budgeting/projections/${entityId}${qs ? `?${qs}` : ''}`);
+};
+
 // Forecast Snapshots
 export const createForecastSnapshot = (data: any) =>
   request<any>('/forecast-snapshots', { method: 'POST', body: JSON.stringify(data) });

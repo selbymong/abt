@@ -128,11 +128,11 @@ function interpolate(a: TierCosts, b: TierCosts, t: number): TierCosts {
 }
 
 const YEARLY_TIERS: { year: number; label: string; tier: TierCosts }[] = [
-  { year: 1, label: 'FY2027 — Startup (1K users)', tier: TIERS.startup },
-  { year: 2, label: 'FY2028 — Growth (10K users)', tier: TIERS.growth },
-  { year: 3, label: 'FY2029 — Scale-Early (25K users)', tier: interpolate(TIERS.growth, TIERS.scale, 0.375) },
-  { year: 4, label: 'FY2030 — Scale (50K users)', tier: TIERS.scale },
-  { year: 5, label: 'FY2031 — Enterprise-Early (100K users)', tier: interpolate(TIERS.scale, TIERS.enterprise, 0.25) },
+  { year: 1, label: 'FY2027', tier: TIERS.startup },
+  { year: 2, label: 'FY2028', tier: TIERS.growth },
+  { year: 3, label: 'FY2029', tier: interpolate(TIERS.growth, TIERS.scale, 0.375) },
+  { year: 4, label: 'FY2030', tier: TIERS.scale },
+  { year: 5, label: 'FY2031', tier: interpolate(TIERS.scale, TIERS.enterprise, 0.25) },
 ];
 
 // ── Revenue Model (CRA T1 2023 data + platform economics) ────
@@ -278,47 +278,36 @@ async function main() {
   }
 
   // User acquisition channels (Activities)
+  // Clean single-funnel model: 3 channels → 1 Platform Visitors → 1 Registered Users → 1 Converted Donors
   console.log('\nCreating user acquisition channels...');
 
-  let charityIntelId = '';
-  try {
-    const result = await api<any>('/graph/activities', {
-      method: 'POST',
-      body: JSON.stringify({
-        entityId,
-        label: 'Charity Intelligence Traffic',
-        description: 'Current primary user acquisition channel — organic traffic from Charity Intelligence partnership',
-        status: 'IN_PROGRESS',
-      }),
-    });
-    charityIntelId = result.id;
-    console.log(`  Activity "Charity Intelligence Traffic": ${charityIntelId}`);
-  } catch (e: any) {
-    console.log(`  Charity Intelligence failed: ${e.message}`);
-  }
+  const channelDefs = [
+    { key: 'ci', label: 'Charity Intelligence Traffic', description: 'Primary acquisition — organic traffic from Charity Intelligence partnership', status: 'IN_PROGRESS' },
+    { key: 'organic', label: 'Organic Marketing', description: 'SEO, content marketing, social media, word-of-mouth', status: 'IN_PROGRESS' },
+    { key: 'paid', label: 'Paid Media', description: 'Paid acquisition — social ads, TV, billboards, SEM', status: 'PLANNED' },
+  ];
 
-  let marketingId = '';
-  try {
-    const result = await api<any>('/graph/activities', {
-      method: 'POST',
-      body: JSON.stringify({
-        entityId,
-        label: 'Marketing & Growth',
-        description: 'Future user acquisition — paid + organic marketing efforts',
-        status: 'PLANNED',
-      }),
-    });
-    marketingId = result.id;
-    console.log(`  Activity "Marketing & Growth": ${marketingId}`);
-  } catch (e: any) {
-    console.log(`  Marketing failed: ${e.message}`);
+  const channelIds: Record<string, string> = {};
+  for (const ch of channelDefs) {
+    try {
+      const result = await api<any>('/graph/activities', {
+        method: 'POST',
+        body: JSON.stringify({ entityId, label: ch.label, description: ch.description, status: ch.status }),
+      });
+      channelIds[ch.key] = result.id;
+      console.log(`  Activity "${ch.label}": ${result.id}`);
+    } catch (e: any) {
+      console.log(`  ${ch.label} failed: ${e.message}`);
+    }
   }
 
   // Acquisition channels CONTRIBUTES_TO Give product
-  for (const [label, sourceId, weight] of [
-    ['Charity Intelligence', charityIntelId, 0.85],
-    ['Marketing & Growth', marketingId, 0.15],
-  ] as [string, string, number][]) {
+  const channelToGiveWeights: [string, string, number][] = [
+    ['Charity Intelligence Traffic', channelIds.ci, 0.70],
+    ['Organic Marketing', channelIds.organic, 0.15],
+    ['Paid Media', channelIds.paid, 0.15],
+  ];
+  for (const [label, sourceId, weight] of channelToGiveWeights) {
     if (!sourceId || !giveProductId) continue;
     try {
       await api<any>('/graph/edges/contributes-to', {
@@ -337,174 +326,107 @@ async function main() {
     }
   }
 
-  // Platform Users & Converted Donors metrics per year
-  // These represent the funnel: Platform Users (from traffic) → Converted Donors (subset who donate)
-  console.log('\nCreating user funnel metrics per year...');
+  // Single funnel metrics (NOT per-year copies — avoids parallel scenario subgraphs)
+  // Budgets handle the per-year numbers; the graph has one clean funnel path.
+  console.log('\nCreating single-funnel metrics...');
 
-  // Conversion assumptions per tier:
-  // Platform users = total visitors driven by acquisition channels
-  // Converted donors = activeDonorPct of registered users (a further subset)
-  // Visitor-to-registration rate: ~8-15% depending on maturity
-  const FUNNEL_ASSUMPTIONS = [
-    { year: 1, platformVisitors: 12_500,  registeredUsers: 1_000,   convertedDonors: 120 },   // 8% reg, 12% donor
-    { year: 2, platformVisitors: 80_000,  registeredUsers: 10_000,  convertedDonors: 1_600 },  // 12.5% reg, 16% donor
-    { year: 3, platformVisitors: 180_000, registeredUsers: 25_000,  convertedDonors: 4_500 },  // 13.9% reg, 18% donor
-    { year: 4, platformVisitors: 350_000, registeredUsers: 50_000,  convertedDonors: 10_000 }, // 14.3% reg, 20% donor
-    { year: 5, platformVisitors: 650_000, registeredUsers: 100_000, convertedDonors: 22_000 }, // 15.4% reg, 22% donor
+  const funnelMetricIds: Record<string, string> = {};
+  const funnelMetrics = [
+    { key: 'visitors', label: 'Platform Visitors', unit: 'users', target: 650_000 },
+    { key: 'registered', label: 'Registered Users', unit: 'users', target: 100_000 },
+    { key: 'donors', label: 'Converted Donors', unit: 'donors', target: 22_000 },
   ];
 
-  const platformUserMetricIds: string[] = [];
-  const registeredUserMetricIds: string[] = [];
-  const convertedDonorMetricIds: string[] = [];
-
-  for (let i = 0; i < FUNNEL_ASSUMPTIONS.length; i++) {
-    const f = FUNNEL_ASSUMPTIONS[i];
-    const label = YEARLY_TIERS[i].label;
-    const regRate = ((f.registeredUsers / f.platformVisitors) * 100).toFixed(1);
-    const donorRate = ((f.convertedDonors / f.registeredUsers) * 100).toFixed(0);
-
-    // Platform Visitors metric
+  for (const m of funnelMetrics) {
     try {
       const result = await api<any>('/graph/metrics', {
         method: 'POST',
         body: JSON.stringify({
           entityId,
-          label: `Platform Visitors — ${label}`,
+          label: m.label,
           metricType: 'OBSERVED',
-          unit: 'users',
-          currentValue: f.platformVisitors,
-          targetValue: f.platformVisitors,
+          unit: m.unit,
+          currentValue: 0,
+          targetValue: m.target,
         }),
       });
-      platformUserMetricIds.push(result.id);
-      console.log(`  Metric "Platform Visitors ${label}": ${f.platformVisitors.toLocaleString()}`);
+      funnelMetricIds[m.key] = result.id;
+      console.log(`  Metric "${m.label}": ${result.id} (target: ${m.target.toLocaleString()})`);
     } catch (e: any) {
-      platformUserMetricIds.push('');
-      console.log(`  Platform visitors metric failed: ${e.message}`);
-    }
-
-    // Registered Users metric
-    try {
-      const result = await api<any>('/graph/metrics', {
-        method: 'POST',
-        body: JSON.stringify({
-          entityId,
-          label: `Registered Users — ${label}`,
-          metricType: 'OBSERVED',
-          unit: 'users',
-          currentValue: f.registeredUsers,
-          targetValue: f.registeredUsers,
-        }),
-      });
-      registeredUserMetricIds.push(result.id);
-      console.log(`  Metric "Registered Users ${label}": ${f.registeredUsers.toLocaleString()} (${regRate}% reg rate)`);
-    } catch (e: any) {
-      registeredUserMetricIds.push('');
-      console.log(`  Registered users metric failed: ${e.message}`);
-    }
-
-    // Converted Donors metric
-    try {
-      const result = await api<any>('/graph/metrics', {
-        method: 'POST',
-        body: JSON.stringify({
-          entityId,
-          label: `Converted Donors — ${label}`,
-          metricType: 'OBSERVED',
-          unit: 'donors',
-          currentValue: f.convertedDonors,
-          targetValue: f.convertedDonors,
-        }),
-      });
-      convertedDonorMetricIds.push(result.id);
-      console.log(`  Metric "Converted Donors ${label}": ${f.convertedDonors.toLocaleString()} (${donorRate}% of registered)`);
-    } catch (e: any) {
-      convertedDonorMetricIds.push('');
-      console.log(`  Converted donors metric failed: ${e.message}`);
+      console.log(`  Metric "${m.label}" failed: ${e.message}`);
     }
   }
 
-  // Wire funnel edges:
-  // Acquisition channels → Platform Visitors (each year)
-  // Platform Visitors → Registered Users (CONTRIBUTES_TO with conversion weight)
-  // Registered Users → Converted Donors (CONTRIBUTES_TO with donor conversion weight)
-  // Converted Donors → User Growth outcome
+  // Wire funnel edges (single clean graph):
+  // 3 channels → Platform Visitors → Registered Users → Converted Donors
+  // Industry benchmarks: registration 1.8%, donation 0.35%
   console.log('\nWiring funnel edges...');
 
-  for (let i = 0; i < FUNNEL_ASSUMPTIONS.length; i++) {
-    const f = FUNNEL_ASSUMPTIONS[i];
-    const pvId = platformUserMetricIds[i];
-    const ruId = registeredUserMetricIds[i];
-    const cdId = convertedDonorMetricIds[i];
-
-    // Charity Intelligence → Platform Visitors (primary current channel)
-    if (charityIntelId && pvId) {
-      try {
-        await api<any>('/graph/edges/contributes-to', {
-          method: 'POST',
-          body: JSON.stringify({
-            sourceId: charityIntelId,
-            targetId: pvId,
-            weight: i < 2 ? 0.90 : i < 4 ? 0.70 : 0.50, // decreasing as marketing ramps up
-            confidence: 0.85,
-            contributionFunction: 'LINEAR',
-          }),
-        });
-      } catch (e: any) { /* silent */ }
+  // Channels → Platform Visitors
+  const channelToVisitorWeights: [string, string, number][] = [
+    ['CI Traffic', channelIds.ci, 0.70],
+    ['Organic Marketing', channelIds.organic, 0.15],
+    ['Paid Media', channelIds.paid, 0.15],
+  ];
+  for (const [label, sourceId, weight] of channelToVisitorWeights) {
+    if (!sourceId || !funnelMetricIds.visitors) continue;
+    try {
+      await api<any>('/graph/edges/contributes-to', {
+        method: 'POST',
+        body: JSON.stringify({
+          sourceId,
+          targetId: funnelMetricIds.visitors,
+          weight,
+          confidence: 0.85,
+          contributionFunction: 'LINEAR',
+        }),
+      });
+      console.log(`  ${label} → Platform Visitors (${weight})`);
+    } catch (e: any) {
+      console.log(`  Edge ${label}→Visitors failed: ${e.message}`);
     }
-
-    // Marketing → Platform Visitors (growing channel)
-    if (marketingId && pvId) {
-      try {
-        await api<any>('/graph/edges/contributes-to', {
-          method: 'POST',
-          body: JSON.stringify({
-            sourceId: marketingId,
-            targetId: pvId,
-            weight: i < 2 ? 0.10 : i < 4 ? 0.30 : 0.50, // increasing over time
-            confidence: 0.6,
-            contributionFunction: 'LINEAR',
-          }),
-        });
-      } catch (e: any) { /* silent */ }
-    }
-
-    // Platform Visitors → Registered Users (registration conversion)
-    if (pvId && ruId) {
-      const regRate = f.registeredUsers / f.platformVisitors;
-      try {
-        await api<any>('/graph/edges/contributes-to', {
-          method: 'POST',
-          body: JSON.stringify({
-            sourceId: pvId,
-            targetId: ruId,
-            weight: regRate,
-            confidence: 0.8,
-            contributionFunction: 'LINEAR',
-          }),
-        });
-      } catch (e: any) { /* silent */ }
-    }
-
-    // Registered Users → Converted Donors (donor conversion)
-    if (ruId && cdId) {
-      const donorRate = f.convertedDonors / f.registeredUsers;
-      try {
-        await api<any>('/graph/edges/contributes-to', {
-          method: 'POST',
-          body: JSON.stringify({
-            sourceId: ruId,
-            targetId: cdId,
-            weight: donorRate,
-            confidence: 0.75,
-            contributionFunction: 'LINEAR',
-          }),
-        });
-      } catch (e: any) { /* silent */ }
-    }
-
-    console.log(`  Year ${i + 1}: ${f.platformVisitors.toLocaleString()} visitors → ${f.registeredUsers.toLocaleString()} registered → ${f.convertedDonors.toLocaleString()} donors`);
   }
+
+  // Platform Visitors → Registered Users (1.8% industry avg registration rate)
+  if (funnelMetricIds.visitors && funnelMetricIds.registered) {
+    try {
+      await api<any>('/graph/edges/contributes-to', {
+        method: 'POST',
+        body: JSON.stringify({
+          sourceId: funnelMetricIds.visitors,
+          targetId: funnelMetricIds.registered,
+          weight: 0.018,
+          confidence: 0.8,
+          contributionFunction: 'LINEAR',
+        }),
+      });
+      console.log(`  Platform Visitors → Registered Users (1.8%)`);
+    } catch (e: any) {
+      console.log(`  Edge Visitors→Registered failed: ${e.message}`);
+    }
+  }
+
+  // Registered Users → Converted Donors (0.35% industry avg donation rate)
+  if (funnelMetricIds.registered && funnelMetricIds.donors) {
+    try {
+      await api<any>('/graph/edges/contributes-to', {
+        method: 'POST',
+        body: JSON.stringify({
+          sourceId: funnelMetricIds.registered,
+          targetId: funnelMetricIds.donors,
+          weight: 0.0035,
+          confidence: 0.75,
+          contributionFunction: 'LINEAR',
+        }),
+      });
+      console.log(`  Registered Users → Converted Donors (0.35%)`);
+    } catch (e: any) {
+      console.log(`  Edge Registered→Donors failed: ${e.message}`);
+    }
+  }
+
+  // Platform Visitors → User Growth (0.6 weight)
+  // Give → User Growth (0.85 weight) — wired later after outcomes are created
 
   // 3. Create Accounting Periods (FY2027-FY2031)
   console.log('\nCreating accounting periods...');
@@ -609,46 +531,94 @@ async function main() {
     }
   }
 
-  // 5. Create CONTRIBUTES_TO edges (activities → outcomes)
+  // 5. Create CONTRIBUTES_TO edges
+  // Harness Platform is the sole intermediary for all infrastructure costs:
+  //   cost activities → Harness Platform → Platform Infrastructure outcome
+  // Compliance activities → Compliance & Security outcome directly
   console.log('\nCreating CONTRIBUTES_TO edges...');
   const infraOutcome = outcomeIds['Platform Infrastructure'];
-  const aiOutcome = outcomeIds['AI & Intelligence'];
   const complianceOutcome = outcomeIds['Compliance & Security'];
 
-  const edgeMappings: Record<string, string> = {
-    compute: infraOutcome,
-    database: infraOutcome,
-    redis: infraOutcome,
-    kafka: infraOutcome,
-    cdn: infraOutcome,
-    monitoring: infraOutcome,
-    search: infraOutcome,
-    domain: infraOutcome,
-    llm: aiOutcome,
-    email: infraOutcome,
-    sms: infraOutcome,
-    'PCI-DSS Compliance': complianceOutcome,
-    'Penetration Testing': complianceOutcome,
-    'SOC 2 Type II Audit': complianceOutcome,
-    'Apple Developer': infraOutcome,
-  };
-
-  for (const [cat, outcomeId] of Object.entries(edgeMappings)) {
-    if (!activityIds[cat] || !outcomeId) continue;
+  // All infrastructure cost activities → Harness Platform (sole intermediary)
+  const infraCostActivities = [
+    'compute', 'database', 'redis', 'kafka', 'cdn', 'monitoring',
+    'search', 'domain', 'llm', 'email', 'sms', 'Apple Developer',
+  ];
+  for (const cat of infraCostActivities) {
+    if (!activityIds[cat] || !platformId) continue;
     try {
       await api<any>('/graph/edges/contributes-to', {
         method: 'POST',
         body: JSON.stringify({
           sourceId: activityIds[cat],
-          targetId: outcomeId,
+          targetId: platformId,
           weight: cat === 'compute' || cat === 'database' || cat === 'llm' ? 0.8 : 0.4,
           confidence: 0.9,
           contributionFunction: 'LINEAR',
         }),
       });
-      console.log(`  ${cat} → ${outcomeId.slice(0, 8)}...`);
+      console.log(`  ${cat} → Harness Platform`);
     } catch (e: any) {
-      console.log(`  Edge ${cat} failed: ${e.message}`);
+      console.log(`  Edge ${cat}→Platform failed: ${e.message}`);
+    }
+  }
+
+  // Harness Platform → Platform Infrastructure outcome
+  if (platformId && infraOutcome) {
+    try {
+      await api<any>('/graph/edges/contributes-to', {
+        method: 'POST',
+        body: JSON.stringify({
+          sourceId: platformId,
+          targetId: infraOutcome,
+          weight: 1.0,
+          confidence: 0.95,
+          contributionFunction: 'LINEAR',
+        }),
+      });
+      console.log(`  Harness Platform → Platform Infrastructure`);
+    } catch (e: any) {
+      console.log(`  Edge Platform→Infra failed: ${e.message}`);
+    }
+  }
+
+  // Compliance activities → Compliance & Security outcome directly
+  for (const cat of ['PCI-DSS Compliance', 'Penetration Testing', 'SOC 2 Type II Audit']) {
+    if (!activityIds[cat] || !complianceOutcome) continue;
+    try {
+      await api<any>('/graph/edges/contributes-to', {
+        method: 'POST',
+        body: JSON.stringify({
+          sourceId: activityIds[cat],
+          targetId: complianceOutcome,
+          weight: 0.6,
+          confidence: 0.9,
+          contributionFunction: 'LINEAR',
+        }),
+      });
+      console.log(`  ${cat} → Compliance & Security`);
+    } catch (e: any) {
+      console.log(`  Edge ${cat}→Compliance failed: ${e.message}`);
+    }
+  }
+
+  // Platform Visitors → User Growth outcome
+  const userGrowthOutcomeEarly = outcomeIds['User Growth'];
+  if (funnelMetricIds.visitors && userGrowthOutcomeEarly) {
+    try {
+      await api<any>('/graph/edges/contributes-to', {
+        method: 'POST',
+        body: JSON.stringify({
+          sourceId: funnelMetricIds.visitors,
+          targetId: userGrowthOutcomeEarly,
+          weight: 0.6,
+          confidence: 0.8,
+          contributionFunction: 'LINEAR',
+        }),
+      });
+      console.log(`  Platform Visitors → User Growth`);
+    } catch (e: any) {
+      console.log(`  Edge Visitors→UserGrowth failed: ${e.message}`);
     }
   }
 
@@ -782,26 +752,23 @@ async function main() {
     }
   }
 
-  // Link Converted Donors (each year) → Transaction Fee Revenue
-  // This closes the loop: acquisition → visitors → registered → donors → revenue
-  console.log('\nLinking converted donors to revenue...');
-  for (let i = 0; i < convertedDonorMetricIds.length; i++) {
-    const cdId = convertedDonorMetricIds[i];
-    if (!cdId || !revenueActivities['txn-fees']) continue;
+  // Link single Converted Donors metric → Transaction Fee Revenue
+  // This closes the loop: channels → visitors → registered → donors → revenue
+  if (funnelMetricIds.donors && revenueActivities['txn-fees']) {
     try {
       await api<any>('/graph/edges/contributes-to', {
         method: 'POST',
         body: JSON.stringify({
-          sourceId: cdId,
+          sourceId: funnelMetricIds.donors,
           targetId: revenueActivities['txn-fees'],
           weight: 0.95,
           confidence: 0.9,
           contributionFunction: 'LINEAR',
         }),
       });
-      console.log(`  Converted Donors Yr${i + 1} → Transaction Fee Revenue`);
+      console.log(`  Converted Donors → Transaction Fee Revenue`);
     } catch (e: any) {
-      console.log(`  Edge donors→revenue yr${i + 1} failed: ${e.message}`);
+      console.log(`  Edge donors→revenue failed: ${e.message}`);
     }
   }
 

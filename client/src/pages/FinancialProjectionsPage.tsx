@@ -295,7 +295,15 @@ export function FinancialProjectionsPage() {
             >
               <option value="">None</option>
               {periods
-                .filter((p) => p.id !== selectedPeriod)
+                .filter((p) => {
+                  if (p.id === selectedPeriod) return false;
+                  if (!selectedPeriod) return true;
+                  const sel = periods.find((x: any) => x.id === selectedPeriod);
+                  if (!sel) return true;
+                  const pStart = typeof p.start_date === 'string' ? p.start_date : JSON.stringify(p.start_date);
+                  const selStart = typeof sel.start_date === 'string' ? sel.start_date : JSON.stringify(sel.start_date);
+                  return pStart < selStart;
+                })
                 .map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.label || p.name || p.id?.slice(0, 8)} ({p.status})

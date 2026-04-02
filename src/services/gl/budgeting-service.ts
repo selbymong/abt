@@ -479,3 +479,179 @@ export async function generateRollingForecast(
 
   return forecasts;
 }
+
+// ============================================================
+// Projection Time-Series
+// ============================================================
+
+export interface ProjectionRow {
+  periodId: string;
+  periodLabel: string;
+  startDate: string;
+  endDate: string;
+  revenue: number;
+  expense: number;
+  net: number;
+  breakdown: Record<string, number>;   // notes-category → amount
+}
+
+export interface ProjectionResult {
+  entityId: string;
+  budgetIds: string[];
+  groupBy: 'MONTH' | 'YEAR';
+  currency: string;
+  rows: ProjectionRow[];
+  categories: string[];
+  totals: { revenue: number; expense: number; net: number };
+}
+
+/**
+ * Aggregate budget lines across multiple budgets into a time-series
+ * suitable for charting revenue vs expenses over time.
+ *
+ * Joins PG budget_lines with Neo4j AccountingPeriod nodes to get dates.
+ */
+export async function getProjectionTimeSeries(
+  entityId: string,
+  budgetIds?: string[],
+  economicCategory?: 'REVENUE' | 'EXPENSE',
+): Promise<ProjectionResult> {
+  // 1. Resolve which budgets to include
+  let budgets: Budget[];
+  if (budgetIds && budgetIds.length > 0) {
+    const all = await listBudgets(entityId);
+    budgets = all.filter((b) => budgetIds.includes(b.id));
+  } else {
+    budgets = await listBudgets(entityId);
+  }
+
+  if (budgets.length === 0) {
+    return {
+      entityId,
+      budgetIds: [],
+      groupBy: 'MONTH',
+      currency: 'CAD',
+      rows: [],
+      categories: [],
+      totals: { revenue: 0, expense: 0, net: 0 },
+    };
+  }
+
+  const ids = budgets.map((b) => b.id);
+  const currency = budgets[0].currency;
+
+  // 2. Fetch all budget lines for these budgets
+  let linesSql = `SELECT * FROM budget_lines WHERE budget_id = ANY($1)`;
+  const linesParams: unknown[] = [ids];
+  if (economicCategory) {
+    linesSql += ` AND economic_category = $2`;
+    linesParams.push(economicCategory);
+  }
+  const linesResult = await query(linesSql, linesParams);
+  const lines = linesResult.rows as BudgetLine[];
+
+  // 3. Fetch all periods for this entity from Neo4j with dates
+  const periodResults = await runCypher<{
+    p: { id: string; label: string; start_date: any; end_date: any };
+  }>(
+    `MATCH (p:AccountingPeriod {entity_id: $entityId})
+     RETURN properties(p) AS p ORDER BY p.start_date`,
+    { entityId },
+  );
+
+  // Build period lookup: id → {label, startDate, endDate}
+  const periodMap = new Map<string, { label: string; startDate: string; endDate: string }>();
+  for (const r of periodResults) {
+    const sd = r.p.start_date;
+    const ed = r.p.end_date;
+    const startDate = typeof sd === 'string' ? sd
+      : sd.year != null ? `${sd.year.low ?? sd.year}-${String(sd.month.low ?? sd.month).padStart(2, '0')}-${String(sd.day.low ?? sd.day).padStart(2, '0')}`
+      : String(sd);
+    const endDate = typeof ed === 'string' ? ed
+      : ed.year != null ? `${ed.year.low ?? ed.year}-${String(ed.month.low ?? ed.month).padStart(2, '0')}-${String(ed.day.low ?? ed.day).padStart(2, '0')}`
+      : String(ed);
+    periodMap.set(r.p.id, { label: r.p.label, startDate, endDate });
+  }
+
+  // 4. Aggregate lines by calendar month (startDate YYYY-MM)
+  // Multiple period nodes may map to the same calendar month (per-budget periods).
+  const monthAgg = new Map<string, {
+    startDate: string; endDate: string; label: string;
+    revenue: number; expense: number; breakdown: Record<string, number>;
+  }>();
+  const categorySet = new Set<string>();
+
+  for (const line of lines) {
+    const pid = line.period_id;
+    const period = periodMap.get(pid);
+    if (!period) continue;
+
+    // Key by YYYY-MM to merge per-budget periods for the same month
+    const monthKey = period.startDate.slice(0, 7); // "2026-04"
+    if (!monthAgg.has(monthKey)) {
+      // Generate clean label: "Apr 2026"
+      const d = new Date(period.startDate + 'T00:00:00');
+      const label = d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+      monthAgg.set(monthKey, {
+        startDate: period.startDate,
+        endDate: period.endDate,
+        label,
+        revenue: 0,
+        expense: 0,
+        breakdown: {},
+      });
+    }
+    const agg = monthAgg.get(monthKey)!;
+    const amount = Number(line.amount);
+
+    if (line.economic_category === 'REVENUE') {
+      agg.revenue += amount;
+    } else {
+      agg.expense += amount;
+    }
+
+    // Extract category: for expenses use note prefix; for revenue use generic label
+    let cat: string;
+    if (line.economic_category === 'REVENUE') {
+      cat = 'Revenue';
+    } else {
+      const noteParts = line.notes?.split(':');
+      cat = noteParts && noteParts[0] && !noteParts[0].startsWith('+')
+        ? noteParts[0].trim()
+        : 'Other Expense';
+    }
+    categorySet.add(cat);
+    agg.breakdown[cat] = (agg.breakdown[cat] || 0) + amount;
+  }
+
+  // 5. Build sorted rows
+  const rows: ProjectionRow[] = [];
+  for (const [monthKey, agg] of monthAgg.entries()) {
+    rows.push({
+      periodId: monthKey,
+      periodLabel: agg.label,
+      startDate: agg.startDate,
+      endDate: agg.endDate,
+      revenue: Math.round(agg.revenue),
+      expense: Math.round(agg.expense),
+      net: Math.round(agg.revenue - agg.expense),
+      breakdown: agg.breakdown,
+    });
+  }
+  rows.sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+  const totals = rows.reduce(
+    (acc, r) => ({ revenue: acc.revenue + r.revenue, expense: acc.expense + r.expense, net: acc.net + r.net }),
+    { revenue: 0, expense: 0, net: 0 },
+  );
+
+  return {
+    entityId,
+    budgetIds: ids,
+    groupBy: 'MONTH',
+    currency,
+    rows,
+    categories: [...categorySet].sort(),
+    totals,
+  };
+}

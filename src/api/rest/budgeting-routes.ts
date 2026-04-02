@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import {
   createBudget, getBudget, listBudgets, approveBudget, lockBudget,
   addBudgetLine, getBudgetLines, updateBudgetLine, deleteBudgetLine, deleteBudget,
-  getVarianceReport, generateRollingForecast,
+  getVarianceReport, generateRollingForecast, getProjectionTimeSeries,
 } from '../../services/gl/budgeting-service.js';
 import {
   validateBody,
@@ -71,6 +71,20 @@ budgetingRouter.delete('/lines/:id', wrap(async (req, res) => {
 budgetingRouter.delete('/budgets/:id', wrap(async (req, res) => {
   await deleteBudget(req.params.id as string);
   res.json({ status: 'deleted' });
+}));
+
+// --- Projection Time-Series ---
+budgetingRouter.get('/projections/:entityId', wrap(async (req, res) => {
+  const budgetIds = req.query.budgetIds
+    ? (req.query.budgetIds as string).split(',')
+    : undefined;
+  const economicCategory = req.query.economicCategory as 'REVENUE' | 'EXPENSE' | undefined;
+  const result = await getProjectionTimeSeries(
+    req.params.entityId as string,
+    budgetIds,
+    economicCategory,
+  );
+  res.json(result);
 }));
 
 // --- Variance Report ---
