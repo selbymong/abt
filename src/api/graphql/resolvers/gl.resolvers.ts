@@ -266,9 +266,9 @@ export const glResolvers = {
       } catch (err) { throw wrapError(err); }
     },
 
-    segmentDetail: async (_: unknown, { entityId, periodId, initiativeId, fundId }: { entityId: string; periodId: string; initiativeId: string; fundId?: string }) => {
+    segmentDetail: async (_: unknown, { entityId, periodId, productId, fundId }: { entityId: string; periodId: string; productId: string; fundId?: string }) => {
       try {
-        return await getSegmentDetail(entityId, periodId, initiativeId, fundId);
+        return await getSegmentDetail(entityId, periodId, productId, fundId);
       } catch (err) { throw wrapError(err); }
     },
   },

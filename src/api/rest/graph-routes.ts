@@ -31,12 +31,12 @@ import {
   listProjects,
   updateProject,
   deleteProject,
-  // Initiative
-  createInitiative,
-  getInitiative,
-  listInitiatives,
-  updateInitiative,
-  deleteInitiative,
+  // Product
+  createProduct,
+  getProduct,
+  listProducts,
+  updateProduct,
+  deleteProduct,
   // Metric
   createMetric,
   getMetric,
@@ -212,7 +212,7 @@ addCrudRoutes('/outcomes', createOutcome, getOutcome, listOutcomes, updateOutcom
 addCrudRoutes('/resources', createResource, getResource, listResources, updateResource, deleteResource);
 addCrudRoutes('/activities', createActivity, getActivity, listActivities, updateActivity, deleteActivity);
 addCrudRoutes('/projects', createProject, getProject, listProjects, updateProject, deleteProject);
-addCrudRoutes('/initiatives', createInitiative, getInitiative, listInitiatives, updateInitiative, deleteInitiative);
+addCrudRoutes('/products', createProduct, getProduct, listProducts, updateProduct, deleteProduct);
 addCrudRoutes('/metrics', createMetric, getMetric, listMetrics, updateMetric, deleteMetric);
 addCrudRoutes('/capabilities', createCapability, getCapability, listCapabilities, updateCapability, deleteCapability);
 addCrudRoutes('/assets', createAsset, getAsset, listAssets, updateAsset, deleteAsset);

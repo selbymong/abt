@@ -99,6 +99,26 @@ export class ClaimWrittenOffError extends EBGError {
   }
 }
 
+export class FloatApiError extends EBGError {
+  constructor(entityId: string, endpoint: string, status: number, body: string) {
+    super(
+      `Float API ${endpoint} returned ${status} for entity ${entityId}: ${body}`,
+      'FLOAT_API_ERROR',
+      502,
+    );
+  }
+}
+
+export class FloatSyncError extends EBGError {
+  constructor(entityId: string, syncType: string, message: string) {
+    super(
+      `Float sync (${syncType}) for entity ${entityId}: ${message}`,
+      'FLOAT_SYNC_ERROR',
+      500,
+    );
+  }
+}
+
 export class ConfigNotFoundError extends EBGError {
   constructor(key: string, scope: string) {
     super(

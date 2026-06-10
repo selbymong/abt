@@ -82,6 +82,15 @@ These are non-negotiable:
 
 8. **Social constraints are pre-filters.** PROHIBITS edges checked before optimization.
 
+9. **Three canonical outcomes per entity.** Each entity has exactly ONE Outcome node per
+   outcome type — no more. FOR_PROFIT: Improve Revenue (IMPROVE_REVENUE), New Revenue
+   (NEW_REVENUE), Mitigate Expense (MITIGATE_EXPENSE). NOT_FOR_PROFIT: one each of
+   DELIVER_MISSION, SUSTAIN_FUNDING, STEWARD_RESOURCES. Every other node in the graph
+   must connect to one or more of these three outcomes either directly or indirectly via
+   CONTRIBUTES_TO edges. Never create additional Outcome nodes — use Activity, Resource,
+   or Metric nodes as intermediaries. Enforced by Neo4j uniqueness constraint on
+   (entity_id, outcome_type) and MERGE in createOutcome service.
+
 ## Technology Stack
 
 | Component | Technology | Purpose |

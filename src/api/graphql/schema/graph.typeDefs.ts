@@ -69,7 +69,7 @@ export const graphTypeDefs = `
     start_date: String
     end_date: String
     project_id: String
-    initiative_id: String
+    product_id: String
     created_at: DateTime
     updated_at: DateTime
   }

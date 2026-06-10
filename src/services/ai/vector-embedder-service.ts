@@ -137,7 +137,7 @@ export async function embedEntityNodes(entityId: string): Promise<{
 }> {
   // Fetch all embeddable nodes for this entity
   const nodeTypes = [
-    'Activity', 'Resource', 'Project', 'Initiative', 'Metric',
+    'Activity', 'Resource', 'Project', 'Product', 'Metric',
     'Capability', 'Asset', 'Outcome', 'CashFlowEvent', 'Obligation',
   ];
 

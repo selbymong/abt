@@ -4,7 +4,7 @@ import {
   declassifyHeldForSale,
   recordDisposal,
   getDiscontinuedOpsPnL,
-  listHeldForSaleInitiatives,
+  listHeldForSaleProducts,
 } from '../../services/gl/discontinued-ops-service.js';
 import {
   validateBody,
@@ -66,12 +66,12 @@ discontinuedOpsRouter.get('/pnl', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/discontinued-ops/initiatives — list held-for-sale initiatives
-discontinuedOpsRouter.get('/initiatives', async (req: Request, res: Response) => {
+// GET /api/discontinued-ops/products — list held-for-sale products
+discontinuedOpsRouter.get('/products', async (req: Request, res: Response) => {
   try {
     const entityId = req.query.entityId as string;
     if (!entityId) return res.status(400).json({ error: 'Required: entityId' });
-    const result = await listHeldForSaleInitiatives(entityId);
+    const result = await listHeldForSaleProducts(entityId);
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

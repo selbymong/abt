@@ -5,35 +5,9 @@
 // Run AFTER 07-v1.2-constraints-indexes.cypher
 // ============================================================
 
-// --- Four Entity Nodes (MERGE to be idempotent) ---
-
-MERGE (e:Entity {label: 'CA ForProfit Corp'})
-ON CREATE SET e.id = randomUUID(), e.entity_type = 'FOR_PROFIT', e.tax_status = 'TAXABLE',
-  e.reporting_framework = 'ASPE', e.jurisdiction = 'CA',
-  e.functional_currency = 'CAD', e.outcome_ontology = 'FINANCIAL',
-  e.fund_accounting_enabled = false, e.fiscal_year_end = '12-31',
-  e.legal_name = 'CA ForProfit Corp';
-
-MERGE (e:Entity {label: 'CA NotForProfit'})
-ON CREATE SET e.id = randomUUID(), e.entity_type = 'NOT_FOR_PROFIT', e.tax_status = 'EXEMPT',
-  e.reporting_framework = 'ASNFPO', e.jurisdiction = 'CA',
-  e.functional_currency = 'CAD', e.outcome_ontology = 'MISSION',
-  e.fund_accounting_enabled = true, e.fiscal_year_end = '12-31',
-  e.legal_name = 'CA NotForProfit';
-
-MERGE (e:Entity {label: 'US ForProfit Corp'})
-ON CREATE SET e.id = randomUUID(), e.entity_type = 'FOR_PROFIT', e.tax_status = 'TAXABLE',
-  e.reporting_framework = 'US_GAAP', e.jurisdiction = 'US',
-  e.functional_currency = 'USD', e.outcome_ontology = 'FINANCIAL',
-  e.fund_accounting_enabled = false, e.fiscal_year_end = '12-31',
-  e.legal_name = 'US ForProfit Corp';
-
-MERGE (e:Entity {label: 'US NotForProfit'})
-ON CREATE SET e.id = randomUUID(), e.entity_type = 'NOT_FOR_PROFIT', e.tax_status = 'EXEMPT',
-  e.reporting_framework = 'ASC_958', e.jurisdiction = 'US',
-  e.functional_currency = 'USD', e.outcome_ontology = 'MISSION',
-  e.fund_accounting_enabled = true, e.fiscal_year_end = '12-31',
-  e.legal_name = 'US NotForProfit';
+// --- Entity Nodes ---
+// Real entities are created by seed scripts (seed-intercompany-graph.ts).
+// Template entities removed — they were scaffolding with no graph data.
 
 // --- CCA Classes (Canada) ---
 

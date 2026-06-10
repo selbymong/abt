@@ -10,6 +10,7 @@ const TOPICS = [
   'ebg.scenarios',
   'ebg.tax',
   'ebg.config',
+  'ebg.integrations',
 ] as const;
 
 export type EBGTopic = typeof TOPICS[number];

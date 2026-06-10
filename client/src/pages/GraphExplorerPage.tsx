@@ -33,7 +33,7 @@ const NODE_COLORS: Record<string, string> = {
   Activity: '#4caf50',
   Resource: '#2196f3',
   Project: '#9c27b0',
-  Initiative: '#00bcd4',
+  Product: '#00bcd4',
   Metric: '#ff5722',
   Capability: '#607d8b',
   Asset: '#795548',
@@ -48,7 +48,7 @@ const NODE_COLORS: Record<string, string> = {
 };
 
 const NODE_LABELS = [
-  'outcomes', 'activities', 'resources', 'projects', 'initiatives',
+  'outcomes', 'activities', 'resources', 'projects', 'products',
   'metrics', 'capabilities', 'assets', 'obligations', 'cash-flow-events',
   'funds',
 ];
@@ -58,7 +58,7 @@ const NODE_TYPE_FROM_PATH: Record<string, string> = {
   activities: 'Activity',
   resources: 'Resource',
   projects: 'Project',
-  initiatives: 'Initiative',
+  products: 'Product',
   metrics: 'Metric',
   capabilities: 'Capability',
   assets: 'Asset',
@@ -83,10 +83,19 @@ export function GraphExplorerPage() {
   const svgRef = useRef<SVGSVGElement>(null);
   const simRef = useRef<d3.Simulation<GraphNode, GraphEdge> | null>(null);
 
-  // Load entities on mount
+  // Load entities on mount — filter to those with graph nodes
   useEffect(() => {
     getEntities()
-      .then((data) => setEntities(data.entities))
+      .then(async (data) => {
+        const withNodes: any[] = [];
+        for (const ent of data.entities) {
+          try {
+            const acts = await getNodesByEntity('activities', ent.id);
+            if (acts.items?.length > 0) withNodes.push(ent);
+          } catch { /* skip */ }
+        }
+        setEntities(withNodes.length > 0 ? withNodes : data.entities);
+      })
       .catch((e) => setError(e.message));
   }, []);
 

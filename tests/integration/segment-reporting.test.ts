@@ -2,7 +2,7 @@
  * Segment Reporting (IFRS 8) — Integration Tests
  *
  * Tests the segment reporting service that aggregates P&L and assets
- * by Initiative (segment) using data from TimescaleDB and Neo4j.
+ * by Product (segment) using data from TimescaleDB and Neo4j.
  *
  * Uses mocked database modules for isolation.
  */
@@ -50,13 +50,13 @@ describe('P7-SEGMENT-REPORTING', () => {
 
     // Step 2: Activities query
     mockRunCypher.mockResolvedValueOnce([
-      { initiative_id: INIT_A_ID, id: ACTIVITY_1 },
-      { initiative_id: INIT_B_ID, id: ACTIVITY_2 },
+      { product_id: INIT_A_ID, id: ACTIVITY_1 },
+      { product_id: INIT_B_ID, id: ACTIVITY_2 },
     ]);
 
     // Step 3: Projects query
     mockRunCypher.mockResolvedValueOnce([
-      { initiative_id: INIT_A_ID, id: PROJECT_1 },
+      { product_id: INIT_A_ID, id: PROJECT_1 },
     ]);
 
     // Step 4: gl_period_balances query
@@ -150,7 +150,7 @@ describe('P7-SEGMENT-REPORTING', () => {
       { id: INIT_A_ID, label: 'Segment A', entity_id: ENTITY_ID, status: 'IN_PROGRESS', budget: 100000 },
     ]);
     mockRunCypher.mockResolvedValueOnce([
-      { initiative_id: INIT_A_ID, id: ACTIVITY_1 },
+      { product_id: INIT_A_ID, id: ACTIVITY_1 },
     ]);
     mockRunCypher.mockResolvedValueOnce([]); // No projects
 
@@ -183,8 +183,8 @@ describe('P7-SEGMENT-REPORTING', () => {
       { id: INIT_B_ID, label: 'Seg B', entity_id: ENTITY_ID, status: 'IN_PROGRESS', budget: 50000 },
     ]);
     mockRunCypher.mockResolvedValueOnce([
-      { initiative_id: INIT_A_ID, id: ACTIVITY_1 },
-      { initiative_id: INIT_B_ID, id: ACTIVITY_2 },
+      { product_id: INIT_A_ID, id: ACTIVITY_1 },
+      { product_id: INIT_B_ID, id: ACTIVITY_2 },
     ]);
     mockRunCypher.mockResolvedValueOnce([]); // No projects
 
@@ -223,7 +223,7 @@ describe('P7-SEGMENT-REPORTING', () => {
     mockRunCypher.mockResolvedValueOnce([
       { id: ACTIVITY_1, label: 'Dev Sprint', node_type: 'Activity' },
       { id: PROJECT_1, label: 'Cloud Migration', node_type: 'Project' },
-      { id: INIT_A_ID, label: 'Digital Transformation', node_type: 'Initiative' },
+      { id: INIT_A_ID, label: 'Digital Transformation', node_type: 'Product' },
     ]);
 
     // Balances per node
@@ -293,7 +293,7 @@ describe('P7-SEGMENT-REPORTING', () => {
     mockRunCypher.mockResolvedValueOnce([
       { id: INIT_A_ID, label: 'Segment A', entity_id: ENTITY_ID, status: 'IN_PROGRESS', budget: 0 },
     ]);
-    mockRunCypher.mockResolvedValueOnce([{ initiative_id: INIT_A_ID, id: ACTIVITY_1 }]);
+    mockRunCypher.mockResolvedValueOnce([{ product_id: INIT_A_ID, id: ACTIVITY_1 }]);
     mockRunCypher.mockResolvedValueOnce([]); // No projects
 
     mockQuery.mockResolvedValueOnce({

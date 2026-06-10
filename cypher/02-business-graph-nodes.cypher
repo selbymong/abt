@@ -34,7 +34,7 @@
 //   status: 'PLANNED',  // PLANNED|IN_PROGRESS|COMPLETED|CANCELLED
 //   cost_monetary: 0, cost_time_hours: null,
 //   start_date: null, end_date: null,
-//   project_id: $project_id, initiative_id: $initiative_id,
+//   project_id: $project_id, product_id: $product_id,
 //   // Epistemic + Control properties (same as Resource)
 //   value_state: 'FORECASTED', uncertainty_type: 'EPISTEMIC',
 //   uncertainty_score: 0.7, calibration_factor: 1.0,
@@ -46,15 +46,15 @@
 // CREATE (p:Project {
 //   id: randomUUID(), label: $label, entity_id: $entity_id,
 //   status: 'PLANNED', budget: $budget, spent_to_date: 0,
-//   initiative_id: $initiative_id,
+//   product_id: $product_id,
 //   value_state: 'FORECASTED', uncertainty_score: 0.6,
 //   calibration_factor: 1.0,
 //   control_class: 'DIRECT', control_score: 1.0,
 //   created_at: datetime(), updated_at: datetime()
 // })
 
-// --- Initiative creation template ---
-// CREATE (i:Initiative {
+// --- Product creation template ---
+// CREATE (i:Product {
 //   id: randomUUID(), label: $label, entity_id: $entity_id,
 //   status: 'PLANNED', budget: $budget, time_horizon_months: $months,
 //   value_state: 'FORECASTED', uncertainty_score: 0.7,

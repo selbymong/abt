@@ -733,13 +733,13 @@ glRouter.get('/segment-report', async (req: Request, res: Response) => {
 
 glRouter.get('/segment-detail', async (req: Request, res: Response) => {
   try {
-    const { entityId, periodId, initiativeId, fundId } = req.query;
-    if (!entityId || !periodId || !initiativeId) {
-      res.status(400).json({ error: 'Required: entityId, periodId, initiativeId' });
+    const { entityId, periodId, productId, fundId } = req.query;
+    if (!entityId || !periodId || !productId) {
+      res.status(400).json({ error: 'Required: entityId, periodId, productId' });
       return;
     }
     const detail = await getSegmentDetail(
-      entityId as string, periodId as string, initiativeId as string, fundId as string | undefined,
+      entityId as string, periodId as string, productId as string, fundId as string | undefined,
     );
     res.json(detail);
   } catch (err: any) { res.status(500).json({ error: err.message }); }

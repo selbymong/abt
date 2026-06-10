@@ -117,13 +117,24 @@ export const getBudgetsByEntity = (entityId: string, fiscalYear?: number) => {
   return request<{ budgets: any[] }>(`/budgeting/budgets/by-entity/${entityId}${qs ? `?${qs}` : ''}`);
 };
 
+export const getScenariosByEntity = (entityId: string) =>
+  request<{ scenarios: string[] }>(`/budgeting/scenarios/by-entity/${entityId}`);
+
+export const getProjectionAssumptions = async (): Promise<string> => {
+  const res = await fetch(`${BASE_URL}/budgeting/assumptions`);
+  if (!res.ok) throw new Error('Failed to load assumptions');
+  return res.text();
+};
+
 export const getProjectionTimeSeries = (
   entityId: string,
   budgetIds?: string[],
   economicCategory?: string,
+  scenarios?: string[],
 ) => {
   const params = new URLSearchParams();
   if (budgetIds && budgetIds.length > 0) params.set('budgetIds', budgetIds.join(','));
+  if (scenarios && scenarios.length > 0) params.set('scenarios', scenarios.join(','));
   if (economicCategory) params.set('economicCategory', economicCategory);
   const qs = params.toString();
   return request<any>(`/budgeting/projections/${entityId}${qs ? `?${qs}` : ''}`);

@@ -1095,7 +1095,7 @@ const coaMappingSchema = z.object({
   coaLabel: z.string().min(1),
   nodeRefId: z.string().uuid(),
   nodeRefType: z.enum([
-    'ACTIVITY', 'PROJECT', 'INITIATIVE', 'OUTCOME',
+    'ACTIVITY', 'PROJECT', 'PRODUCT', 'OUTCOME',
     'CASHFLOWEVENT', 'TEMPORAL_CLAIM', 'FIXED_ASSET',
     'GOODWILL', 'PROVISION', 'WORKFORCE_ASSET',
     'CUSTOMER_RELATIONSHIP_ASSET', 'FUND', 'TAX_CREDIT_CLAIM', 'OCI',
@@ -1239,7 +1239,7 @@ export const ceaseCapitalizationSchema = z.object({
 // ============================================================
 
 export const classifyHeldForSaleSchema = z.object({
-  initiativeId: z.string().uuid(),
+  productId: z.string().uuid(),
   entityId: z.string().uuid(),
   classificationDate: z.string().min(1),
   fairValueLessCostsToSell: z.number().nonnegative(),
@@ -1382,6 +1382,7 @@ export const createBudgetSchema = z.object({
   currency: z.string().length(3),
   createdBy: z.string().min(1),
   description: z.string().optional(),
+  scenario: z.string().optional(),
 });
 
 export const addBudgetLineSchema = z.object({
@@ -1392,6 +1393,7 @@ export const addBudgetLineSchema = z.object({
   economicCategory: z.string().min(1),
   amount: z.number(),
   notes: z.string().optional(),
+  seasonalityProfile: z.string().optional(),
 });
 
 export const updateBudgetLineSchema = z.object({
@@ -1525,4 +1527,22 @@ export const createForecastSnapshotSchema = z.object({
   remainingPeriodIds: z.array(z.string().uuid()),
   snapshotType: z.enum(['ROLLING', 'MANUAL', 'PERIOD_CLOSE']).optional(),
   notes: z.string().optional(),
+});
+
+// --- Float sync schemas ---
+
+export const floatSyncSchema = z.object({
+  entityId: z.string().uuid(),
+  periodId: z.string().uuid(),
+  fromDate: z.string().optional(),
+  toDate: z.string().optional(),
+});
+
+export const floatFullSyncSchema = z.object({
+  entityId: z.string().uuid(),
+  periodId: z.string().uuid(),
+});
+
+export const floatPushSchema = z.object({
+  entityId: z.string().uuid(),
 });

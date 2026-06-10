@@ -734,6 +734,6 @@ export const glTypeDefs = `
 
   extend type Query {
     segmentReport(entityId: String!, periodId: String!, fundId: String): SegmentReportResult!
-    segmentDetail(entityId: String!, periodId: String!, initiativeId: String!, fundId: String): SegmentDetailResult!
+    segmentDetail(entityId: String!, periodId: String!, productId: String!, fundId: String): SegmentDetailResult!
   }
 `;

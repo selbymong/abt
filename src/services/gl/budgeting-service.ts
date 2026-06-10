@@ -2,7 +2,7 @@
  * Budgeting & Variance Analysis Service
  *
  * Implements:
- * - Budget entry by node (Activity, Project, Initiative, Fund) per period
+ * - Budget entry by node (Activity, Project, Product, Fund) per period
  * - Budget versioning (DRAFT → APPROVED → LOCKED)
  * - Actual vs budget comparison from TimescaleDB gl_period_balances
  * - Variance reports: favorable/unfavorable, amount and percentage
@@ -29,6 +29,7 @@ export interface CreateBudgetInput {
   currency: string;
   createdBy: string;
   description?: string;
+  scenario?: string;
 }
 
 export interface Budget {
@@ -41,6 +42,7 @@ export interface Budget {
   created_by: string;
   approved_by?: string;
   description?: string;
+  scenario?: string;
   total_amount: number;
   created_at: string;
   updated_at: string;
@@ -54,6 +56,7 @@ export interface BudgetLineInput {
   economicCategory: string;
   amount: number;
   notes?: string;
+  seasonalityProfile?: string;
 }
 
 export interface BudgetLine {
@@ -65,8 +68,29 @@ export interface BudgetLine {
   economic_category: string;
   amount: number;
   notes?: string;
+  seasonality_profile?: string;
   created_at: string;
 }
+
+// ============================================================
+// Seasonality Profiles
+// ============================================================
+// Monthly weights by calendar month (1=Jan, 12=Dec). Must sum to 1.0.
+// Sources: Blackbaud Institute "Charitable Giving Report" (2023),
+// M+R Benchmarks 2024, Network for Good "Digital Giving Trends".
+
+export const SEASONALITY_PROFILES: Record<string, Record<number, number>> = {
+  // Giving season: ~31% in Dec, ~13% in Nov, ~9% in Oct, ~8% in Jan
+  GIVING_SEASON: {
+    1: 0.08, 2: 0.05, 3: 0.06, 4: 0.05, 5: 0.05, 6: 0.05,
+    7: 0.04, 8: 0.04, 9: 0.05, 10: 0.09, 11: 0.13, 12: 0.31,
+  },
+  // Marketing spend leads donations — ramp up Sep/Oct to capture Nov/Dec intent
+  GIVING_SEASON_MARKETING: {
+    1: 0.06, 2: 0.04, 3: 0.05, 4: 0.04, 5: 0.04, 6: 0.05,
+    7: 0.05, 8: 0.06, 9: 0.11, 10: 0.15, 11: 0.18, 12: 0.17,
+  },
+};
 
 export interface VarianceItem {
   periodId: string;
@@ -109,14 +133,15 @@ export interface ForecastItem {
 export async function createBudget(input: CreateBudgetInput): Promise<string> {
   const id = uuid();
 
-  await runCypher(
-    `CREATE (b:Budget {
-      id: $id, entity_id: $entityId, name: $name,
-      fiscal_year: $fiscalYear, currency: $currency,
-      status: 'DRAFT', created_by: $createdBy,
-      description: $description, total_amount: 0,
-      created_at: datetime(), updated_at: datetime()
-    })`,
+  const result = await runCypher<{ bid: string }>(
+    `MERGE (b:Budget {entity_id: $entityId, name: $name, scenario: $scenario, fiscal_year: $fiscalYear})
+     ON CREATE SET
+      b.id = $id, b.currency = $currency,
+      b.status = 'DRAFT', b.created_by = $createdBy,
+      b.description = $description, b.total_amount = 0,
+      b.created_at = datetime(), b.updated_at = datetime()
+     ON MATCH SET b.updated_at = datetime()
+     RETURN b.id AS bid`,
     {
       id,
       entityId: input.entityId,
@@ -125,10 +150,11 @@ export async function createBudget(input: CreateBudgetInput): Promise<string> {
       currency: input.currency,
       createdBy: input.createdBy,
       description: input.description ?? null,
+      scenario: input.scenario ?? null,
     },
   );
 
-  return id;
+  return result[0]?.bid ?? id;
 }
 
 export async function getBudget(id: string): Promise<Budget | null> {
@@ -143,6 +169,7 @@ export async function listBudgets(
   entityId: string,
   fiscalYear?: number,
   status?: BudgetStatus,
+  scenario?: string,
 ): Promise<Budget[]> {
   let where = 'b.entity_id = $entityId';
   const params: Record<string, unknown> = { entityId };
@@ -155,6 +182,10 @@ export async function listBudgets(
     where += ' AND b.status = $status';
     params.status = status;
   }
+  if (scenario) {
+    where += ' AND b.scenario = $scenario';
+    params.scenario = scenario;
+  }
 
   const results = await runCypher<{ b: Budget }>(
     `MATCH (b:Budget) WHERE ${where}
@@ -162,6 +193,16 @@ export async function listBudgets(
     params,
   );
   return results.map((r) => r.b);
+}
+
+export async function listScenarios(entityId: string): Promise<string[]> {
+  const results = await runCypher<{ scenario: string }>(
+    `MATCH (b:Budget {entity_id: $entityId})
+     WHERE b.scenario IS NOT NULL
+     RETURN DISTINCT b.scenario AS scenario ORDER BY scenario`,
+    { entityId },
+  );
+  return results.map((r) => r.scenario);
 }
 
 export async function approveBudget(budgetId: string, approvedBy: string): Promise<Budget> {
@@ -201,14 +242,27 @@ export async function addBudgetLine(input: BudgetLineInput): Promise<string> {
   if (!budget) throw new Error(`Budget ${input.budgetId} not found`);
   if (budget.status === 'LOCKED') throw new Error(`Budget ${input.budgetId} is LOCKED, cannot modify`);
 
+  // Check for existing line with same business key
+  const existing = await query(
+    `SELECT id FROM budget_lines
+     WHERE budget_id = $1 AND period_id = $2
+       AND economic_category = $3 AND COALESCE(notes, '') = COALESCE($4, '')`,
+    [input.budgetId, input.periodId, input.economicCategory, input.notes ?? null],
+  );
+
+  if (existing.rows.length > 0) {
+    return (existing.rows[0] as any).id;
+  }
+
   const id = uuid();
 
   await query(
     `INSERT INTO budget_lines (id, budget_id, period_id, node_ref_id, node_ref_type,
-      economic_category, amount, notes, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+      economic_category, amount, notes, seasonality_profile, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())`,
     [id, input.budgetId, input.periodId, input.nodeRefId, input.nodeRefType,
-     input.economicCategory, input.amount, input.notes ?? null],
+     input.economicCategory, input.amount, input.notes ?? null,
+     input.seasonalityProfile ?? null],
   );
 
   // Update budget total
@@ -505,52 +559,44 @@ export interface ProjectionResult {
   totals: { revenue: number; expense: number; net: number };
 }
 
-/**
- * Aggregate budget lines across multiple budgets into a time-series
- * suitable for charting revenue vs expenses over time.
- *
- * Joins PG budget_lines with Neo4j AccountingPeriod nodes to get dates.
- */
-export async function getProjectionTimeSeries(
-  entityId: string,
-  budgetIds?: string[],
-  economicCategory?: 'REVENUE' | 'EXPENSE',
-): Promise<ProjectionResult> {
-  // 1. Resolve which budgets to include
-  let budgets: Budget[];
-  if (budgetIds && budgetIds.length > 0) {
-    const all = await listBudgets(entityId);
-    budgets = all.filter((b) => budgetIds.includes(b.id));
-  } else {
-    budgets = await listBudgets(entityId);
+export interface ScenarioSeries {
+  scenario: string;
+  rows: ProjectionRow[];
+  categories: string[];
+  totals: { revenue: number; expense: number; net: number };
+}
+
+export interface MultiScenarioResult {
+  entityId: string;
+  currency: string;
+  groupBy: 'MONTH' | 'YEAR';
+  series: ScenarioSeries[];
+}
+
+// ── Shared helpers ──────────────────────────────────────────
+
+function enumerateMonths(startDate: string, endDate: string): string[] {
+  const months: string[] = [];
+  const [sy, sm] = startDate.split('-').map(Number);
+  const [ey, em] = endDate.split('-').map(Number);
+  let y = sy, m = sm;
+  while (y < ey || (y === ey && m <= em)) {
+    months.push(`${y}-${String(m).padStart(2, '0')}`);
+    m++;
+    if (m > 12) { m = 1; y++; }
   }
+  return months;
+}
 
-  if (budgets.length === 0) {
-    return {
-      entityId,
-      budgetIds: [],
-      groupBy: 'MONTH',
-      currency: 'CAD',
-      rows: [],
-      categories: [],
-      totals: { revenue: 0, expense: 0, net: 0 },
-    };
+function parsePeriodDate(d: any): string {
+  if (typeof d === 'string') return d;
+  if (d.year != null) {
+    return `${d.year.low ?? d.year}-${String(d.month.low ?? d.month).padStart(2, '0')}-${String(d.day.low ?? d.day).padStart(2, '0')}`;
   }
+  return String(d);
+}
 
-  const ids = budgets.map((b) => b.id);
-  const currency = budgets[0].currency;
-
-  // 2. Fetch all budget lines for these budgets
-  let linesSql = `SELECT * FROM budget_lines WHERE budget_id = ANY($1)`;
-  const linesParams: unknown[] = [ids];
-  if (economicCategory) {
-    linesSql += ` AND economic_category = $2`;
-    linesParams.push(economicCategory);
-  }
-  const linesResult = await query(linesSql, linesParams);
-  const lines = linesResult.rows as BudgetLine[];
-
-  // 3. Fetch all periods for this entity from Neo4j with dates
+async function fetchPeriodMap(entityId: string): Promise<Map<string, { label: string; startDate: string; endDate: string }>> {
   const periodResults = await runCypher<{
     p: { id: string; label: string; start_date: any; end_date: any };
   }>(
@@ -558,59 +604,46 @@ export async function getProjectionTimeSeries(
      RETURN properties(p) AS p ORDER BY p.start_date`,
     { entityId },
   );
-
-  // Build period lookup: id → {label, startDate, endDate}
   const periodMap = new Map<string, { label: string; startDate: string; endDate: string }>();
   for (const r of periodResults) {
-    const sd = r.p.start_date;
-    const ed = r.p.end_date;
-    const startDate = typeof sd === 'string' ? sd
-      : sd.year != null ? `${sd.year.low ?? sd.year}-${String(sd.month.low ?? sd.month).padStart(2, '0')}-${String(sd.day.low ?? sd.day).padStart(2, '0')}`
-      : String(sd);
-    const endDate = typeof ed === 'string' ? ed
-      : ed.year != null ? `${ed.year.low ?? ed.year}-${String(ed.month.low ?? ed.month).padStart(2, '0')}-${String(ed.day.low ?? ed.day).padStart(2, '0')}`
-      : String(ed);
-    periodMap.set(r.p.id, { label: r.p.label, startDate, endDate });
+    periodMap.set(r.p.id, {
+      label: r.p.label,
+      startDate: parsePeriodDate(r.p.start_date),
+      endDate: parsePeriodDate(r.p.end_date),
+    });
   }
+  return periodMap;
+}
 
-  // 4. Aggregate lines by calendar month (startDate YYYY-MM)
-  // Multiple period nodes may map to the same calendar month (per-budget periods).
+function aggregateLinesToRows(
+  lines: BudgetLine[],
+  periodMap: Map<string, { label: string; startDate: string; endDate: string }>,
+): { rows: ProjectionRow[]; categories: string[]; totals: { revenue: number; expense: number; net: number } } {
   const monthAgg = new Map<string, {
     startDate: string; endDate: string; label: string;
     revenue: number; expense: number; breakdown: Record<string, number>;
   }>();
   const categorySet = new Set<string>();
 
-  for (const line of lines) {
-    const pid = line.period_id;
-    const period = periodMap.get(pid);
-    if (!period) continue;
-
-    // Key by YYYY-MM to merge per-budget periods for the same month
-    const monthKey = period.startDate.slice(0, 7); // "2026-04"
+  function ensureMonth(monthKey: string) {
     if (!monthAgg.has(monthKey)) {
-      // Generate clean label: "Apr 2026"
-      const d = new Date(period.startDate + 'T00:00:00');
+      const [y, m] = monthKey.split('-').map(Number);
+      const d = new Date(y, m - 1, 1);
       const label = d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+      const lastDay = new Date(y, m, 0).getDate();
       monthAgg.set(monthKey, {
-        startDate: period.startDate,
-        endDate: period.endDate,
-        label,
-        revenue: 0,
-        expense: 0,
-        breakdown: {},
+        startDate: `${monthKey}-01`,
+        endDate: `${monthKey}-${String(lastDay).padStart(2, '0')}`,
+        label, revenue: 0, expense: 0, breakdown: {},
       });
     }
-    const agg = monthAgg.get(monthKey)!;
+  }
+
+  for (const line of lines) {
+    const period = periodMap.get(line.period_id);
+    if (!period) continue;
+
     const amount = Number(line.amount);
-
-    if (line.economic_category === 'REVENUE') {
-      agg.revenue += amount;
-    } else {
-      agg.expense += amount;
-    }
-
-    // Extract category: for expenses use note prefix; for revenue use generic label
     let cat: string;
     if (line.economic_category === 'REVENUE') {
       cat = 'Revenue';
@@ -621,20 +654,51 @@ export async function getProjectionTimeSeries(
         : 'Other Expense';
     }
     categorySet.add(cat);
-    agg.breakdown[cat] = (agg.breakdown[cat] || 0) + amount;
+
+    const months = enumerateMonths(period.startDate, period.endDate);
+    const profile = line.seasonality_profile
+      ? SEASONALITY_PROFILES[line.seasonality_profile]
+      : null;
+
+    // If a seasonality profile exists, distribute by calendar-month weights;
+    // otherwise spread uniformly.
+    let monthWeights: number[];
+    if (profile) {
+      const rawWeights = months.map((mk) => {
+        const calMonth = Number(mk.split('-')[1]);
+        return profile[calMonth] ?? (1 / 12);
+      });
+      // Normalise so the subset of months in this period sums to 1.0
+      const wSum = rawWeights.reduce((s, w) => s + w, 0);
+      monthWeights = rawWeights.map((w) => w / wSum);
+    } else {
+      monthWeights = months.map(() => 1 / months.length);
+    }
+
+    for (let mi = 0; mi < months.length; mi++) {
+      const monthKey = months[mi];
+      const monthlyAmount = amount * monthWeights[mi];
+      ensureMonth(monthKey);
+      const agg = monthAgg.get(monthKey)!;
+      if (line.economic_category === 'REVENUE') {
+        agg.revenue += monthlyAmount;
+      } else {
+        agg.expense += monthlyAmount;
+      }
+      agg.breakdown[cat] = (agg.breakdown[cat] || 0) + monthlyAmount;
+    }
   }
 
-  // 5. Build sorted rows
   const rows: ProjectionRow[] = [];
-  for (const [monthKey, agg] of monthAgg.entries()) {
+  for (const [, agg] of monthAgg.entries()) {
     rows.push({
-      periodId: monthKey,
+      periodId: agg.startDate.slice(0, 7),
       periodLabel: agg.label,
       startDate: agg.startDate,
       endDate: agg.endDate,
-      revenue: Math.round(agg.revenue),
-      expense: Math.round(agg.expense),
-      net: Math.round(agg.revenue - agg.expense),
+      revenue: agg.revenue,
+      expense: agg.expense,
+      net: agg.revenue - agg.expense,
       breakdown: agg.breakdown,
     });
   }
@@ -644,14 +708,69 @@ export async function getProjectionTimeSeries(
     (acc, r) => ({ revenue: acc.revenue + r.revenue, expense: acc.expense + r.expense, net: acc.net + r.net }),
     { revenue: 0, expense: 0, net: 0 },
   );
+  totals.revenue = Math.round(totals.revenue);
+  totals.expense = Math.round(totals.expense);
+  totals.net = Math.round(totals.net);
 
-  return {
-    entityId,
-    budgetIds: ids,
-    groupBy: 'MONTH',
-    currency,
-    rows,
-    categories: [...categorySet].sort(),
-    totals,
-  };
+  return { rows, categories: [...categorySet].sort(), totals };
+}
+
+/**
+ * Returns per-scenario projection series. Each selected scenario is its own
+ * independent data set — they are never summed together.
+ */
+export async function getProjectionTimeSeries(
+  entityId: string,
+  budgetIds?: string[],
+  economicCategory?: 'REVENUE' | 'EXPENSE',
+  scenarios?: string[],
+): Promise<MultiScenarioResult> {
+  const allBudgets = await listBudgets(entityId);
+  const currency = allBudgets[0]?.currency ?? 'CAD';
+
+  // Determine which scenarios to include
+  let targetScenarios: string[];
+  if (scenarios && scenarios.length > 0) {
+    targetScenarios = scenarios;
+  } else if (budgetIds && budgetIds.length > 0) {
+    // Legacy: group selected budgets by their scenario
+    const selected = allBudgets.filter((b) => budgetIds.includes(b.id));
+    const scenarioNames = [...new Set(selected.map((b) => b.scenario || 'Untagged'))];
+    targetScenarios = scenarioNames;
+  } else {
+    // All distinct scenarios
+    const scenarioNames = [...new Set(allBudgets.map((b) => b.scenario || 'Untagged'))];
+    targetScenarios = scenarioNames;
+  }
+
+  if (allBudgets.length === 0) {
+    return { entityId, currency, groupBy: 'MONTH', series: [] };
+  }
+
+  const periodMap = await fetchPeriodMap(entityId);
+
+  // Build one series per scenario
+  const series: ScenarioSeries[] = [];
+  for (const scenarioName of targetScenarios) {
+    const scenarioBudgets = allBudgets.filter((b) =>
+      (b.scenario || 'Untagged') === scenarioName &&
+      (!budgetIds || budgetIds.length === 0 || budgetIds.includes(b.id)),
+    );
+    if (scenarioBudgets.length === 0) continue;
+
+    const ids = scenarioBudgets.map((b) => b.id);
+    let linesSql = `SELECT * FROM budget_lines WHERE budget_id = ANY($1)`;
+    const linesParams: unknown[] = [ids];
+    if (economicCategory) {
+      linesSql += ` AND economic_category = $2`;
+      linesParams.push(economicCategory);
+    }
+    const linesResult = await query(linesSql, linesParams);
+    const lines = linesResult.rows as BudgetLine[];
+
+    const { rows, categories, totals } = aggregateLinesToRows(lines, periodMap);
+    series.push({ scenario: scenarioName, rows, categories, totals });
+  }
+
+  return { entityId, currency, groupBy: 'MONTH', series };
 }

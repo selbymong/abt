@@ -2,7 +2,7 @@
  * Procurement Service
  *
  * Implements purchase order lifecycle:
- * - PO creation with budget check against Initiative/Project nodes
+ * - PO creation with budget check against Product/Project nodes
  * - PO approval workflow (DRAFT → APPROVED → ISSUED → RECEIVED → MATCHED → CLOSED)
  * - Goods receipt processing
  * - 3-way matching: PO amount vs receipt quantity vs AP invoice amount

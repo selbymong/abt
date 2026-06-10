@@ -10,7 +10,7 @@ import type {
 // --- Whitelisted Neo4j labels and edge types (Cypher injection prevention) ---
 
 const VALID_NODE_LABELS = new Set([
-  'Entity', 'Outcome', 'Activity', 'Resource', 'Project', 'Initiative',
+  'Entity', 'Outcome', 'Activity', 'Resource', 'Project', 'Product',
   'Metric', 'Capability', 'Asset', 'CustomerRelationshipAsset',
   'WorkforceAsset', 'StakeholderAsset', 'SocialConstraint', 'Obligation',
   'CashFlowEvent', 'AccountingPeriod', 'Fund',
@@ -73,8 +73,10 @@ const CONTROL_DEFAULTS = {
 };
 
 /**
- * Generic node creation helper. Builds a CREATE statement with
- * user-supplied properties + epistemic + control defaults + timestamps.
+ * Generic node creation helper. Uses MERGE on {entity_id, label} for
+ * idempotency — re-running with the same entity + label returns the
+ * existing node's id instead of creating a duplicate.
+ * ON CREATE sets all properties; ON MATCH only bumps updated_at.
  */
 async function createNode(
   label: string,
@@ -106,18 +108,35 @@ async function createNode(
     updated_at: null,
   };
 
-  // Build property assignment string and params
+  // Build ON CREATE SET parts (all properties)
   const paramKeys = Object.keys(allProps).filter((k) => k !== 'created_at' && k !== 'updated_at');
-  const setParts = paramKeys.map((k) => `${k}: $${k}`);
-  setParts.push('created_at: datetime()', 'updated_at: datetime()');
+  const createSetParts = paramKeys.map((k) => `n.${k} = $${k}`);
+  createSetParts.push('n.created_at = datetime()', 'n.updated_at = datetime()');
 
   const params = Object.fromEntries(paramKeys.map((k) => [k, allProps[k]]));
 
+  // MERGE on the natural business key {entity_id, label}
+  const entityId = props.entity_id;
+  const nodeLabel = props.label;
+
+  if (entityId && nodeLabel) {
+    const result = await runCypher<{ nid: string }>(
+      `MERGE (n:${label} {entity_id: $entity_id, label: $label})
+       ON CREATE SET ${createSetParts.join(', ')}
+       ON MATCH SET n.updated_at = datetime()
+       RETURN n.id AS nid`,
+      params,
+    );
+    return result[0]?.nid ?? id;
+  }
+
+  // Fallback for nodes without entity_id+label (shouldn't happen in practice)
+  const setParts = paramKeys.map((k) => `${k}: $${k}`);
+  setParts.push('created_at: datetime()', 'updated_at: datetime()');
   await runCypher(
     `CREATE (n:${label} {${setParts.join(', ')}})`,
     params,
   );
-
   return id;
 }
 
@@ -234,25 +253,28 @@ export async function createOutcome(params: {
     );
   }
 
+  // Enforce: exactly one Outcome per outcome_type per entity.
+  // MERGE on (entity_id, outcome_type) so duplicates are structurally impossible.
   const id = uuid();
-  await runCypher(
-    `CREATE (o:Outcome {
-      id: $id, label: $label, entity_id: $entityId,
-      ontology: $ontology, outcome_type: $outcomeType,
-      measurement_unit: $measurementUnit, stream_id: $streamId,
-      target_delta: $targetDelta, realized_delta: 0,
-      currency: $currency,
-      period_start: date($periodStart), period_end: date($periodEnd),
-      value_state: 'FORECASTED', uncertainty_type: 'EPISTEMIC',
-      uncertainty_score: 0.7, calibration_factor: 1.0,
-      ci_point_estimate: 0, ci_lower_bound: 0, ci_upper_bound: 0,
-      ci_confidence_pct: 0.8, ci_distribution: 'NORMAL',
-      ci_estimation_method: 'ANALOGICAL', epistemic_priority: 0,
-      control_class: 'PROXIMATE_EXT', control_score: 0.6,
-      effective_control: 0.6, observability_score: 0.7,
-      response_window_days: 30, volatility: 0.5,
-      created_at: datetime(), updated_at: datetime()
-    })`,
+  const result = await runCypher<{ nid: string }>(
+    `MERGE (o:Outcome {entity_id: $entityId, outcome_type: $outcomeType})
+     ON CREATE SET
+      o.id = $id, o.label = $label, o.ontology = $ontology,
+      o.measurement_unit = $measurementUnit, o.stream_id = $streamId,
+      o.target_delta = $targetDelta, o.realized_delta = 0,
+      o.currency = $currency,
+      o.period_start = date($periodStart), o.period_end = date($periodEnd),
+      o.value_state = 'FORECASTED', o.uncertainty_type = 'EPISTEMIC',
+      o.uncertainty_score = 0.7, o.calibration_factor = 1.0,
+      o.ci_point_estimate = 0, o.ci_lower_bound = 0, o.ci_upper_bound = 0,
+      o.ci_confidence_pct = 0.8, o.ci_distribution = 'NORMAL',
+      o.ci_estimation_method = 'ANALOGICAL', o.epistemic_priority = 0,
+      o.control_class = 'PROXIMATE_EXT', o.control_score = 0.6,
+      o.effective_control = 0.6, o.observability_score = 0.7,
+      o.response_window_days = 30, o.volatility = 0.5,
+      o.created_at = datetime(), o.updated_at = datetime()
+     ON MATCH SET o.label = $label, o.updated_at = datetime()
+     RETURN o.id AS nid`,
     {
       id,
       label: params.label,
@@ -268,7 +290,7 @@ export async function createOutcome(params: {
     },
   );
 
-  return id;
+  return result[0]?.nid ?? id;
 }
 
 export async function getOutcome(id: string): Promise<Outcome | null> {
@@ -324,7 +346,7 @@ export async function createActivity(params: {
   startDate?: string;
   endDate?: string;
   projectId?: string;
-  initiativeId?: string;
+  productId?: string;
   status?: NodeStatus;
 }): Promise<string> {
   return createNode('Activity', {
@@ -336,7 +358,7 @@ export async function createActivity(params: {
     start_date: params.startDate ?? null,
     end_date: params.endDate ?? null,
     project_id: params.projectId ?? null,
-    initiative_id: params.initiativeId ?? null,
+    product_id: params.productId ?? null,
   });
 }
 
@@ -353,7 +375,7 @@ export async function createProject(params: {
   entityId: string;
   label: string;
   budget: number;
-  initiativeId?: string;
+  productId?: string;
   status?: NodeStatus;
 }): Promise<string> {
   return createNode('Project', {
@@ -362,7 +384,7 @@ export async function createProject(params: {
     status: params.status ?? 'PLANNED',
     budget: params.budget,
     spent_to_date: 0,
-    initiative_id: params.initiativeId ?? null,
+    product_id: params.productId ?? null,
   });
 }
 
@@ -372,17 +394,17 @@ export async function updateProject(id: string, u: Record<string, unknown>) { re
 export async function deleteProject(id: string) { return deleteNode('Project', id); }
 
 // ============================================================
-// Initiative CRUD
+// Product CRUD
 // ============================================================
 
-export async function createInitiative(params: {
+export async function createProduct(params: {
   entityId: string;
   label: string;
   budget: number;
   timeHorizonMonths: number;
   status?: NodeStatus;
 }): Promise<string> {
-  return createNode('Initiative', {
+  return createNode('Product', {
     entity_id: params.entityId,
     label: params.label,
     status: params.status ?? 'PLANNED',
@@ -391,10 +413,10 @@ export async function createInitiative(params: {
   });
 }
 
-export async function getInitiative(id: string) { return getNode('Initiative', id); }
-export async function listInitiatives(entityId: string) { return listNodesByEntity('Initiative', entityId); }
-export async function updateInitiative(id: string, u: Record<string, unknown>) { return updateNode('Initiative', id, u); }
-export async function deleteInitiative(id: string) { return deleteNode('Initiative', id); }
+export async function getProduct(id: string) { return getNode('Product', id); }
+export async function listProducts(entityId: string) { return listNodesByEntity('Product', entityId); }
+export async function updateProduct(id: string, u: Record<string, unknown>) { return updateNode('Product', id, u); }
+export async function deleteProduct(id: string) { return deleteNode('Product', id); }
 
 // ============================================================
 // Metric CRUD
@@ -589,17 +611,18 @@ export async function createSocialConstraint(params: {
   rationale: string;
 }): Promise<string> {
   const id = uuid();
-  await runCypher(
-    `CREATE (n:SocialConstraint {
-      id: $id, entity_id: $entityId, label: $label,
-      constraint_type: $constraintType,
-      violation_risk_score: $violationRiskScore,
-      rationale: $rationale,
-      created_at: datetime(), updated_at: datetime()
-    })`,
+  const result = await runCypher<{ nid: string }>(
+    `MERGE (n:SocialConstraint {entity_id: $entityId, label: $label})
+     ON CREATE SET
+      n.id = $id, n.constraint_type = $constraintType,
+      n.violation_risk_score = $violationRiskScore,
+      n.rationale = $rationale,
+      n.created_at = datetime(), n.updated_at = datetime()
+     ON MATCH SET n.updated_at = datetime()
+     RETURN n.id AS nid`,
     { id, entityId: params.entityId, label: params.label, constraintType: params.constraintType, violationRiskScore: params.violationRiskScore, rationale: params.rationale },
   );
-  return id;
+  return result[0]?.nid ?? id;
 }
 
 export async function getSocialConstraint(id: string) { return getNode('SocialConstraint', id); }
@@ -621,21 +644,22 @@ export async function createObligation(params: {
   recurrence?: string;
 }): Promise<string> {
   const id = uuid();
-  await runCypher(
-    `CREATE (n:Obligation {
-      id: $id, entity_id: $entityId, label: $label,
-      must_do: true,
-      obligation_type: $obligationType,
-      due_date: date($dueDate),
-      recurrence: $recurrence,
-      non_compliance_risk: $nonComplianceRisk,
-      penalty_exposure: $penaltyExposure,
-      status: 'PENDING',
-      created_at: datetime(), updated_at: datetime()
-    })`,
+  const result = await runCypher<{ nid: string }>(
+    `MERGE (n:Obligation {entity_id: $entityId, label: $label})
+     ON CREATE SET
+      n.id = $id, n.must_do = true,
+      n.obligation_type = $obligationType,
+      n.due_date = date($dueDate),
+      n.recurrence = $recurrence,
+      n.non_compliance_risk = $nonComplianceRisk,
+      n.penalty_exposure = $penaltyExposure,
+      n.status = 'PENDING',
+      n.created_at = datetime(), n.updated_at = datetime()
+     ON MATCH SET n.updated_at = datetime()
+     RETURN n.id AS nid`,
     { id, entityId: params.entityId, label: params.label, obligationType: params.obligationType, dueDate: params.dueDate, recurrence: params.recurrence ?? null, nonComplianceRisk: params.nonComplianceRisk, penaltyExposure: params.penaltyExposure },
   );
-  return id;
+  return result[0]?.nid ?? id;
 }
 
 export async function getObligation(id: string) { return getNode('Obligation', id); }
@@ -805,17 +829,19 @@ export async function createContributesToEdge(params: {
   await runCypher(
     `MATCH (source {id: $sourceId})
      MATCH (target {id: $targetId})
-     CREATE (source)-[:CONTRIBUTES_TO {
-       weight: $weight, confidence: $confidence,
-       lag_days: $lagDays,
-       temporal_value_pct: $temporalValuePct,
-       ai_inferred: $aiInferred,
-       contribution_function: $contributionFunction,
-       threshold_value: $thresholdValue,
-       elasticity: $elasticity,
-       is_cross_asset_edge: $isCrossAssetEdge,
-       ontology_bridge: false
-     }]->(target)`,
+     MERGE (source)-[r:CONTRIBUTES_TO]->(target)
+     ON CREATE SET
+       r.weight = $weight, r.confidence = $confidence,
+       r.lag_days = $lagDays,
+       r.temporal_value_pct = $temporalValuePct,
+       r.ai_inferred = $aiInferred,
+       r.contribution_function = $contributionFunction,
+       r.threshold_value = $thresholdValue,
+       r.elasticity = $elasticity,
+       r.is_cross_asset_edge = $isCrossAssetEdge,
+       r.ontology_bridge = false
+     ON MATCH SET
+       r.weight = $weight, r.confidence = $confidence`,
     {
       sourceId: params.sourceId,
       targetId: params.targetId,
@@ -868,10 +894,10 @@ export async function createDependsOnEdge(params: {
   await runCypher(
     `MATCH (source {id: $sourceId})
      MATCH (target {id: $targetId})
-     CREATE (source)-[:DEPENDS_ON {
-       dependency_class: $dependencyClass,
-       dependency_description: $description
-     }]->(target)`,
+     MERGE (source)-[r:DEPENDS_ON]->(target)
+     ON CREATE SET
+       r.dependency_class = $dependencyClass,
+       r.dependency_description = $description`,
     { sourceId: params.sourceId, targetId: params.targetId, dependencyClass: params.dependencyClass, description: params.description },
   );
 }
@@ -903,10 +929,10 @@ export async function createDelegatesToEdge(params: {
   await runCypher(
     `MATCH (source {id: $sourceId})
      MATCH (target {id: $targetId})
-     CREATE (source)-[:DELEGATES_TO {
-       control_attenuation: $controlAttenuation,
-       sla_reference: $slaReference
-     }]->(target)`,
+     MERGE (source)-[r:DELEGATES_TO]->(target)
+     ON CREATE SET
+       r.control_attenuation = $controlAttenuation,
+       r.sla_reference = $slaReference`,
     { sourceId: params.sourceId, targetId: params.targetId, controlAttenuation: params.controlAttenuation, slaReference: params.slaReference ?? null },
   );
 }
@@ -937,7 +963,8 @@ export async function createProhibitsEdge(params: {
   await runCypher(
     `MATCH (sc:SocialConstraint {id: $constraintId})
      MATCH (a:Activity {id: $activityId})
-     CREATE (sc)-[:PROHIBITS {severity: $severity}]->(a)`,
+     MERGE (sc)-[r:PROHIBITS]->(a)
+     ON CREATE SET r.severity = $severity`,
     { constraintId: params.constraintId, activityId: params.activityId, severity: params.severity },
   );
 }
@@ -962,16 +989,18 @@ export async function createAccountingPeriod(params: {
 }): Promise<string> {
   // UUIDv7 required for TimescaleDB hypertable time-based chunking
   const id = uuidv7();
-  await runCypher(
-    `CREATE (p:AccountingPeriod {
-      id: $id, entity_id: $entityId, label: $label,
-      start_date: date($startDate), end_date: date($endDate),
-      status: 'OPEN',
-      created_at: datetime(), updated_at: datetime()
-    })`,
+  const result = await runCypher<{ nid: string }>(
+    `MERGE (p:AccountingPeriod {entity_id: $entityId, label: $label})
+     ON CREATE SET
+      p.id = $id,
+      p.start_date = date($startDate), p.end_date = date($endDate),
+      p.status = 'OPEN',
+      p.created_at = datetime(), p.updated_at = datetime()
+     ON MATCH SET p.updated_at = datetime()
+     RETURN p.id AS nid`,
     { id, entityId: params.entityId, label: params.label, startDate: params.startDate, endDate: params.endDate },
   );
-  return id;
+  return result[0]?.nid ?? id;
 }
 
 export async function getAccountingPeriod(id: string) { return getNode('AccountingPeriod', id); }
@@ -995,16 +1024,17 @@ export async function createFund(params: {
   }
 
   const id = uuid();
-  await runCypher(
-    `CREATE (f:Fund {
-      id: $id, entity_id: $entityId,
-      fund_type: $fundType, label: $label,
-      restriction_description: $restrictionDescription,
-      created_at: datetime(), updated_at: datetime()
-    })`,
+  const result = await runCypher<{ nid: string }>(
+    `MERGE (f:Fund {entity_id: $entityId, label: $label})
+     ON CREATE SET
+      f.id = $id, f.fund_type = $fundType,
+      f.restriction_description = $restrictionDescription,
+      f.created_at = datetime(), f.updated_at = datetime()
+     ON MATCH SET f.updated_at = datetime()
+     RETURN f.id AS nid`,
     { id, entityId: params.entityId, fundType: params.fundType, label: params.label, restrictionDescription: params.restrictionDescription ?? null },
   );
-  return id;
+  return result[0]?.nid ?? id;
 }
 
 export async function getFund(id: string) { return getNode('Fund', id); }

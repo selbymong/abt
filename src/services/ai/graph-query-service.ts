@@ -179,7 +179,7 @@ export function parseQuery(queryText: string): QueryIntent {
 
   // "Find activities matching X" → NODE_SEARCH
   if (lower.includes('find') || lower.includes('search') || lower.includes('list')) {
-    const typeMatch = lower.match(/(activit|outcome|project|initiative|metric|resource)/);
+    const typeMatch = lower.match(/(activit|outcome|project|product|metric|resource)/);
     return {
       type: 'NODE_SEARCH',
       nodeType: typeMatch ? typeMatch[1] : undefined,

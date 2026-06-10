@@ -1,9 +1,9 @@
 /**
  * Segment Reporting Service (IFRS 8)
  *
- * Segments map to Initiative nodes. Activities and Projects belong to
- * Initiatives via initiative_id. This service aggregates P&L and assets
- * per segment (Initiative) for CODM reporting.
+ * Segments map to Product nodes. Activities and Projects belong to
+ * Products via product_id. This service aggregates P&L and assets
+ * per segment (Product) for CODM reporting.
  *
  * CQRS: P&L/asset data from TimescaleDB gl_period_balances,
  * segment hierarchy from Neo4j.
@@ -64,7 +64,7 @@ export interface SegmentReportResult {
  * Generate IFRS 8 segment report for an entity/period.
  *
  * Steps:
- * 1. Fetch all Initiative (segment) nodes for the entity
+ * 1. Fetch all Product (segment) nodes for the entity
  * 2. For each segment, find child Activity/Project node_ref_ids
  * 3. Aggregate gl_period_balances by segment
  * 4. Compute unallocated (balances not tied to any segment)
@@ -77,58 +77,58 @@ export async function getSegmentReport(
 ): Promise<SegmentReportResult> {
   const fundFilter = fundId ?? NULL_FUND;
 
-  // Step 1: Get all Initiative segments for this entity
-  const initiatives = await runCypher<{
+  // Step 1: Get all Product segments for this entity
+  const products = await runCypher<{
     id: string;
     label: string;
     entity_id: string;
     status: string;
     budget: number;
   }>(
-    `MATCH (i:Initiative {entity_id: $entityId})
+    `MATCH (i:Product {entity_id: $entityId})
      RETURN i.id AS id, i.label AS label, i.entity_id AS entity_id,
             i.status AS status, COALESCE(i.budget, 0) AS budget
      ORDER BY i.label`,
     { entityId },
   );
 
-  // Step 2: For each initiative, find child Activity and Project node_ref_ids
+  // Step 2: For each product, find child Activity and Project node_ref_ids
   const segmentNodeMap = new Map<string, string[]>();
 
-  if (initiatives.length > 0) {
-    const initiativeIds = initiatives.map((i) => i.id);
+  if (products.length > 0) {
+    const productIds = products.map((i) => i.id);
 
-    // Activities with initiative_id
-    const activityNodes = await runCypher<{ initiative_id: string; id: string }>(
+    // Activities with product_id
+    const activityNodes = await runCypher<{ product_id: string; id: string }>(
       `MATCH (a:Activity)
-       WHERE a.initiative_id IN $initiativeIds AND a.entity_id = $entityId
-       RETURN a.initiative_id AS initiative_id, a.id AS id`,
-      { initiativeIds, entityId },
+       WHERE a.product_id IN $productIds AND a.entity_id = $entityId
+       RETURN a.product_id AS product_id, a.id AS id`,
+      { productIds, entityId },
     );
 
-    // Projects with initiative_id
-    const projectNodes = await runCypher<{ initiative_id: string; id: string }>(
+    // Projects with product_id
+    const projectNodes = await runCypher<{ product_id: string; id: string }>(
       `MATCH (p:Project)
-       WHERE p.initiative_id IN $initiativeIds AND p.entity_id = $entityId
-       RETURN p.initiative_id AS initiative_id, p.id AS id`,
-      { initiativeIds, entityId },
+       WHERE p.product_id IN $productIds AND p.entity_id = $entityId
+       RETURN p.product_id AS product_id, p.id AS id`,
+      { productIds, entityId },
     );
 
-    // Also include the initiative nodes themselves (direct postings)
-    for (const init of initiatives) {
+    // Also include the product nodes themselves (direct postings)
+    for (const init of products) {
       segmentNodeMap.set(init.id, [init.id]);
     }
 
     for (const a of activityNodes) {
-      const existing = segmentNodeMap.get(a.initiative_id) ?? [];
+      const existing = segmentNodeMap.get(a.product_id) ?? [];
       existing.push(a.id);
-      segmentNodeMap.set(a.initiative_id, existing);
+      segmentNodeMap.set(a.product_id, existing);
     }
 
     for (const p of projectNodes) {
-      const existing = segmentNodeMap.get(p.initiative_id) ?? [];
+      const existing = segmentNodeMap.get(p.product_id) ?? [];
       existing.push(p.id);
-      segmentNodeMap.set(p.initiative_id, existing);
+      segmentNodeMap.set(p.product_id, existing);
     }
   }
 
@@ -175,7 +175,7 @@ export async function getSegmentReport(
   const allocatedNodeIds = new Set<string>();
   const segments: SegmentPnL[] = [];
 
-  for (const init of initiatives) {
+  for (const init of products) {
     const nodeIds = segmentNodeMap.get(init.id) ?? [];
     const segBalances = aggregateBalances(nodeIds, nodeBalanceMap);
 
@@ -211,7 +211,7 @@ export async function getSegmentReport(
     ...unallocatedBalances,
   };
 
-  // Step 6: Inter-segment eliminations (INTER_SEGMENT edges between initiatives)
+  // Step 6: Inter-segment eliminations (INTER_SEGMENT edges between products)
   const interSegment = await getInterSegmentEliminations(entityId, periodId, fundFilter);
 
   // Consolidated totals
@@ -240,12 +240,12 @@ export async function getSegmentReport(
 // ============================================================
 
 /**
- * Get detailed P&L for a single segment (Initiative) with node-level breakdown.
+ * Get detailed P&L for a single segment (Product) with node-level breakdown.
  */
 export async function getSegmentDetail(
   entityId: string,
   periodId: string,
-  initiativeId: string,
+  productId: string,
   fundId?: string,
 ): Promise<{
   segment: SegmentInfo;
@@ -263,25 +263,25 @@ export async function getSegmentDetail(
 
   // Get segment info
   const [init] = await runCypher<SegmentInfo>(
-    `MATCH (i:Initiative {id: $id, entity_id: $entityId})
+    `MATCH (i:Product {id: $id, entity_id: $entityId})
      RETURN i.id AS id, i.label AS label, i.entity_id AS entity_id,
             i.status AS status, COALESCE(i.budget, 0) AS budget`,
-    { id: initiativeId, entityId },
+    { id: productId, entityId },
   );
 
   if (!init) {
-    throw new Error(`Initiative ${initiativeId} not found`);
+    throw new Error(`Product ${productId} not found`);
   }
 
   // Get child nodes
   const childNodes = await runCypher<{ id: string; label: string; node_type: string }>(
     `MATCH (n)
-     WHERE (n:Activity OR n:Project) AND n.initiative_id = $initiativeId AND n.entity_id = $entityId
+     WHERE (n:Activity OR n:Project) AND n.product_id = $productId AND n.entity_id = $entityId
      RETURN n.id AS id, n.label AS label, labels(n)[0] AS node_type
      UNION ALL
-     MATCH (i:Initiative {id: $initiativeId, entity_id: $entityId})
-     RETURN i.id AS id, i.label AS label, 'Initiative' AS node_type`,
-    { initiativeId, entityId },
+     MATCH (i:Product {id: $productId, entity_id: $entityId})
+     RETURN i.id AS id, i.label AS label, 'Product' AS node_type`,
+    { productId, entityId },
   );
 
   const nodeIds = childNodes.map((n) => n.id);

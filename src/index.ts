@@ -43,7 +43,9 @@ import { authRouter } from './api/rest/auth-routes.js';
 import { financialStatementsRouter } from './api/rest/financial-statements-routes.js';
 import { auditTrailRouter } from './api/rest/audit-trail-routes.js';
 import { forecastSnapshotRouter } from './api/rest/forecast-snapshot-routes.js';
+import { floatRouter } from './api/rest/float-routes.js';
 import { startReconciliationScheduler, stopReconciliationScheduler } from './services/reconciliation/nightly-reconciliation-service.js';
+import { startFloatSyncScheduler, stopFloatSyncScheduler } from './services/float/float-sync-scheduler.js';
 import { startConsumers, stopConsumers } from './projectors/index.js';
 import { getConsumerManager } from './projectors/consumer-manager.js';
 
@@ -68,7 +70,7 @@ async function main() {
   app.use(helmet());
 
   // CORS — restrict to known origins (override with CORS_ORIGIN env var)
-  const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173').split(',');
+  const allowedOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:5173,http://localhost:5174').split(',');
   app.use(cors({
     origin: allowedOrigins,
     credentials: true,
@@ -165,6 +167,7 @@ async function main() {
   app.use('/api/financial-statements', financialStatementsRouter);
   app.use('/api/audit', auditTrailRouter);
   app.use('/api/forecast-snapshots', forecastSnapshotRouter);
+  app.use('/api/float', floatRouter);
 
   // --- Consumer Status ---
   app.get('/api/consumers/status', (_req, res) => {
@@ -200,6 +203,12 @@ async function main() {
       const intervalMs = Number(process.env.RECONCILIATION_INTERVAL_MS) || 24 * 60 * 60 * 1000;
       startReconciliationScheduler(intervalMs);
     }
+
+    // Start Float sync scheduler (default: every 24h)
+    if (process.env.DISABLE_FLOAT_SYNC !== 'true') {
+      const floatIntervalMs = Number(process.env.FLOAT_SYNC_INTERVAL_MS) || 24 * 60 * 60 * 1000;
+      startFloatSyncScheduler(floatIntervalMs);
+    }
   });
 
   // Graceful shutdown with timeout
@@ -223,6 +232,7 @@ async function main() {
 
     try {
       stopReconciliationScheduler();
+      stopFloatSyncScheduler();
       await stopConsumers();
       await apollo.stop();
       await Promise.all([closeNeo4j(), closePg(), closeKafka()]);

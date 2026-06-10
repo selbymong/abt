@@ -1,6 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import {
-  createBudget, getBudget, listBudgets, approveBudget, lockBudget,
+  createBudget, getBudget, listBudgets, listScenarios, approveBudget, lockBudget,
   addBudgetLine, getBudgetLines, updateBudgetLine, deleteBudgetLine, deleteBudget,
   getVarianceReport, generateRollingForecast, getProjectionTimeSeries,
 } from '../../services/gl/budgeting-service.js';
@@ -31,8 +34,14 @@ budgetingRouter.get('/budgets/:id', wrap(async (req, res) => {
 budgetingRouter.get('/budgets/by-entity/:entityId', wrap(async (req, res) => {
   const fiscalYear = req.query.fiscalYear ? Number(req.query.fiscalYear) : undefined;
   const status = req.query.status as string | undefined;
-  const budgets = await listBudgets(req.params.entityId as string, fiscalYear, status as any);
+  const scenario = req.query.scenario as string | undefined;
+  const budgets = await listBudgets(req.params.entityId as string, fiscalYear, status as any, scenario);
   res.json({ budgets });
+}));
+
+budgetingRouter.get('/scenarios/by-entity/:entityId', wrap(async (req, res) => {
+  const scenarios = await listScenarios(req.params.entityId as string);
+  res.json({ scenarios });
 }));
 
 budgetingRouter.post('/budgets/:id/approve', wrap(async (req, res) => {
@@ -78,14 +87,30 @@ budgetingRouter.get('/projections/:entityId', wrap(async (req, res) => {
   const budgetIds = req.query.budgetIds
     ? (req.query.budgetIds as string).split(',')
     : undefined;
+  const scenarios = req.query.scenarios
+    ? (req.query.scenarios as string).split(',')
+    : undefined;
   const economicCategory = req.query.economicCategory as 'REVENUE' | 'EXPENSE' | undefined;
   const result = await getProjectionTimeSeries(
     req.params.entityId as string,
     budgetIds,
     economicCategory,
+    scenarios,
   );
   res.json(result);
 }));
+
+// --- Projection Assumptions ---
+budgetingRouter.get('/assumptions', (_req: Request, res: Response) => {
+  try {
+    const dir = dirname(fileURLToPath(import.meta.url));
+    const mdPath = resolve(dir, '../../../docs/projection-assumptions.md');
+    const content = readFileSync(mdPath, 'utf-8');
+    res.type('text/markdown').send(content);
+  } catch {
+    res.status(404).json({ error: 'Assumptions document not found' });
+  }
+});
 
 // --- Variance Report ---
 budgetingRouter.get('/variance/:budgetId', wrap(async (req, res) => {

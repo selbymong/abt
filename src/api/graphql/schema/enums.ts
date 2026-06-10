@@ -266,7 +266,7 @@ export const enumTypeDefs = `
   enum NodeRefType {
     ACTIVITY
     PROJECT
-    INITIATIVE
+    PRODUCT
     OUTCOME
     CASHFLOWEVENT
     TEMPORAL_CLAIM

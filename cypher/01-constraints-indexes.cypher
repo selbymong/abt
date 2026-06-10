@@ -47,12 +47,12 @@ FOR (p:Project) ON (p.entity_id);
 CREATE INDEX project_status_idx IF NOT EXISTS
 FOR (p:Project) ON (p.status);
 
-// --- Initiative ---
-CREATE CONSTRAINT initiative_id_unique IF NOT EXISTS
-FOR (i:Initiative) REQUIRE i.id IS UNIQUE;
+// --- Product ---
+CREATE CONSTRAINT product_id_unique IF NOT EXISTS
+FOR (i:Product) REQUIRE i.id IS UNIQUE;
 
-CREATE INDEX initiative_entity_idx IF NOT EXISTS
-FOR (i:Initiative) ON (i.entity_id);
+CREATE INDEX product_entity_idx IF NOT EXISTS
+FOR (i:Product) ON (i.entity_id);
 
 // --- Metric ---
 CREATE CONSTRAINT metric_id_unique IF NOT EXISTS
@@ -189,3 +189,61 @@ FOR (h:HedgeRelationship) REQUIRE h.id IS UNIQUE;
 
 CREATE INDEX hr_entity_idx IF NOT EXISTS
 FOR (h:HedgeRelationship) ON (h.entity_id);
+
+// ============================================================
+// Composite uniqueness constraints for idempotent MERGE
+// These prevent duplicate nodes when seed scripts re-run.
+// Keyed on (entity_id, label) — the natural business key.
+// ============================================================
+
+CREATE CONSTRAINT activity_entity_label_unique IF NOT EXISTS
+FOR (a:Activity) REQUIRE (a.entity_id, a.label) IS UNIQUE;
+
+// One Outcome per outcome_type per entity (3 canonical outcomes only).
+CREATE CONSTRAINT outcome_entity_type_unique IF NOT EXISTS
+FOR (o:Outcome) REQUIRE (o.entity_id, o.outcome_type) IS UNIQUE;
+
+CREATE CONSTRAINT resource_entity_label_unique IF NOT EXISTS
+FOR (r:Resource) REQUIRE (r.entity_id, r.label) IS UNIQUE;
+
+CREATE CONSTRAINT project_entity_label_unique IF NOT EXISTS
+FOR (p:Project) REQUIRE (p.entity_id, p.label) IS UNIQUE;
+
+CREATE CONSTRAINT product_entity_label_unique IF NOT EXISTS
+FOR (i:Product) REQUIRE (i.entity_id, i.label) IS UNIQUE;
+
+CREATE CONSTRAINT metric_entity_label_unique IF NOT EXISTS
+FOR (m:Metric) REQUIRE (m.entity_id, m.label) IS UNIQUE;
+
+CREATE CONSTRAINT capability_entity_label_unique IF NOT EXISTS
+FOR (c:Capability) REQUIRE (c.entity_id, c.label) IS UNIQUE;
+
+CREATE CONSTRAINT asset_entity_label_unique IF NOT EXISTS
+FOR (a:Asset) REQUIRE (a.entity_id, a.label) IS UNIQUE;
+
+CREATE CONSTRAINT cra_entity_label_unique IF NOT EXISTS
+FOR (c:CustomerRelationshipAsset) REQUIRE (c.entity_id, c.label) IS UNIQUE;
+
+CREATE CONSTRAINT wa_entity_label_unique IF NOT EXISTS
+FOR (w:WorkforceAsset) REQUIRE (w.entity_id, w.label) IS UNIQUE;
+
+CREATE CONSTRAINT sa_entity_label_unique IF NOT EXISTS
+FOR (s:StakeholderAsset) REQUIRE (s.entity_id, s.label) IS UNIQUE;
+
+CREATE CONSTRAINT sc_entity_label_unique IF NOT EXISTS
+FOR (s:SocialConstraint) REQUIRE (s.entity_id, s.label) IS UNIQUE;
+
+CREATE CONSTRAINT obligation_entity_label_unique IF NOT EXISTS
+FOR (o:Obligation) REQUIRE (o.entity_id, o.label) IS UNIQUE;
+
+CREATE CONSTRAINT cfe_entity_label_unique IF NOT EXISTS
+FOR (c:CashFlowEvent) REQUIRE (c.entity_id, c.label) IS UNIQUE;
+
+CREATE CONSTRAINT period_entity_label_unique IF NOT EXISTS
+FOR (p:AccountingPeriod) REQUIRE (p.entity_id, p.label) IS UNIQUE;
+
+CREATE CONSTRAINT fund_entity_label_unique IF NOT EXISTS
+FOR (f:Fund) REQUIRE (f.entity_id, f.label) IS UNIQUE;
+
+CREATE CONSTRAINT budget_entity_name_scenario_fy_unique IF NOT EXISTS
+FOR (b:Budget) REQUIRE (b.entity_id, b.name, b.scenario, b.fiscal_year) IS UNIQUE;

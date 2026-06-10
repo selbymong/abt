@@ -24,7 +24,7 @@ import {
   declassifyHeldForSale,
   recordDisposal,
   getDiscontinuedOpsPnL,
-  listHeldForSaleInitiatives,
+  listHeldForSaleProducts,
 } from '../../src/services/gl/discontinued-ops-service.js';
 
 const mockRunCypher = vi.mocked(runCypher);
@@ -63,7 +63,7 @@ describe('P7-DISCONTINUED-OPS', () => {
     mockRunCypher.mockResolvedValueOnce([]);
 
     const result = await classifyAsHeldForSale({
-      initiativeId: INIT_ID,
+      productId: INIT_ID,
       entityId: ENTITY_ID,
       classificationDate: '2026-03-01',
       fairValueLessCostsToSell: 400000,
@@ -96,7 +96,7 @@ describe('P7-DISCONTINUED-OPS', () => {
     mockRunCypher.mockResolvedValueOnce([]);
 
     const result = await classifyAsHeldForSale({
-      initiativeId: INIT_ID,
+      productId: INIT_ID,
       entityId: ENTITY_ID,
       classificationDate: '2026-03-01',
       fairValueLessCostsToSell: 350000, // Higher than carrying
@@ -115,7 +115,7 @@ describe('P7-DISCONTINUED-OPS', () => {
     }]);
 
     await expect(classifyAsHeldForSale({
-      initiativeId: INIT_ID,
+      productId: INIT_ID,
       entityId: ENTITY_ID,
       classificationDate: '2026-03-01',
       fairValueLessCostsToSell: 100000,
@@ -128,7 +128,7 @@ describe('P7-DISCONTINUED-OPS', () => {
     mockRunCypher.mockResolvedValueOnce([]);
 
     await expect(classifyAsHeldForSale({
-      initiativeId: 'nonexistent',
+      productId: 'nonexistent',
       entityId: ENTITY_ID,
       classificationDate: '2026-03-01',
       fairValueLessCostsToSell: 100000,
@@ -279,7 +279,7 @@ describe('P7-DISCONTINUED-OPS', () => {
       },
     ]);
 
-    const result = await listHeldForSaleInitiatives(ENTITY_ID);
+    const result = await listHeldForSaleProducts(ENTITY_ID);
 
     expect(result).toHaveLength(1);
     expect(result[0].label).toBe('Legacy Division');

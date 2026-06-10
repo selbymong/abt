@@ -2,13 +2,13 @@
  * Discontinued Operations Service (IFRS 5)
  *
  * Implements IFRS 5 classification and presentation:
- * - Classify Initiative (segment/disposal group) as held-for-sale
+ * - Classify Product (segment/disposal group) as held-for-sale
  * - Measure at lower of carrying amount and fair value less costs to sell
  * - Present discontinued operations separately in P&L
  * - Cease depreciation on held-for-sale assets
  * - Track expected disposal date and buyer
  *
- * An Initiative classified as held-for-sale represents a disposal group
+ * An Product classified as held-for-sale represents a disposal group
  * or a major line of business (component of an entity).
  */
 import { v4 as uuid } from 'uuid';
@@ -26,7 +26,7 @@ const NULL_FUND = '00000000-0000-0000-0000-000000000000';
 export type HeldForSaleStatus = 'CONTINUING' | 'HELD_FOR_SALE' | 'DISPOSED';
 
 export interface ClassifyHeldForSaleInput {
-  initiativeId: string;
+  productId: string;
   entityId: string;
   classificationDate: string;
   fairValueLessCostsToSell: number;
@@ -38,7 +38,7 @@ export interface ClassifyHeldForSaleInput {
 }
 
 export interface ClassificationResult {
-  initiativeId: string;
+  productId: string;
   previousStatus: string;
   newStatus: HeldForSaleStatus;
   carryingAmount: number;
@@ -66,7 +66,7 @@ export interface DiscontinuedOpsPnL {
   total_profit: number;
 }
 
-export interface HeldForSaleInitiative {
+export interface HeldForSaleProduct {
   id: string;
   label: string;
   entity_id: string;
@@ -86,7 +86,7 @@ export interface HeldForSaleInitiative {
 // ============================================================
 
 /**
- * Classify an Initiative as held-for-sale (IFRS 5.6-14).
+ * Classify an Product as held-for-sale (IFRS 5.6-14).
  *
  * Criteria (must be met):
  * - Management committed to a plan to sell
@@ -103,33 +103,33 @@ export interface HeldForSaleInitiative {
 export async function classifyAsHeldForSale(
   input: ClassifyHeldForSaleInput,
 ): Promise<ClassificationResult> {
-  // Get the initiative and its current carrying amount (from segment assets)
-  const initiatives = await runCypher<{
+  // Get the product and its current carrying amount (from segment assets)
+  const products = await runCypher<{
     id: string;
     status: string;
     held_for_sale_status: string | null;
   }>(
-    `MATCH (i:Initiative {id: $id, entity_id: $entityId})
+    `MATCH (i:Product {id: $id, entity_id: $entityId})
      RETURN i.id AS id, i.status AS status,
             i.held_for_sale_status AS held_for_sale_status`,
-    { id: input.initiativeId, entityId: input.entityId },
+    { id: input.productId, entityId: input.entityId },
   );
 
-  if (initiatives.length === 0) {
-    throw new Error(`Initiative ${input.initiativeId} not found`);
+  if (products.length === 0) {
+    throw new Error(`Product ${input.productId} not found`);
   }
 
-  const init = initiatives[0];
+  const init = products[0];
   if (init.held_for_sale_status === 'HELD_FOR_SALE') {
-    throw new Error('Initiative is already classified as held-for-sale');
+    throw new Error('Product is already classified as held-for-sale');
   }
   if (init.held_for_sale_status === 'DISPOSED') {
-    throw new Error('Initiative has already been disposed');
+    throw new Error('Product has already been disposed');
   }
 
   // Compute carrying amount from segment assets
   const carryingAmount = await getSegmentCarryingAmount(
-    input.entityId, input.periodId, input.initiativeId,
+    input.entityId, input.periodId, input.productId,
   );
 
   // IFRS 5.15: Measure at lower of carrying amount and FVLCTS
@@ -143,24 +143,24 @@ export async function classifyAsHeldForSale(
       entityId: input.entityId,
       periodId: input.periodId,
       entryType: 'IMPAIRMENT',
-      reference: `DISC-IMP-${input.initiativeId.slice(0, 8)}`,
-      narrative: `IFRS 5 impairment on held-for-sale classification: ${input.initiativeId}`,
+      reference: `DISC-IMP-${input.productId.slice(0, 8)}`,
+      narrative: `IFRS 5 impairment on held-for-sale classification: ${input.productId}`,
       currency: input.currency,
       validDate: input.classificationDate,
       lines: [
         {
           side: 'DEBIT' as const,
           amount: impairmentLoss,
-          nodeRefId: input.initiativeId,
-          nodeRefType: 'INITIATIVE' as NodeRefType,
+          nodeRefId: input.productId,
+          nodeRefType: 'PRODUCT' as NodeRefType,
           economicCategory: 'EXPENSE',
           fundId: input.fundId,
         },
         {
           side: 'CREDIT' as const,
           amount: impairmentLoss,
-          nodeRefId: input.initiativeId,
-          nodeRefType: 'INITIATIVE' as NodeRefType,
+          nodeRefId: input.productId,
+          nodeRefType: 'PRODUCT' as NodeRefType,
           economicCategory: 'ASSET',
           fundId: input.fundId,
         },
@@ -168,9 +168,9 @@ export async function classifyAsHeldForSale(
     });
   }
 
-  // Update initiative with held-for-sale classification
+  // Update product with held-for-sale classification
   await runCypher(
-    `MATCH (i:Initiative {id: $id})
+    `MATCH (i:Product {id: $id})
      SET i.held_for_sale_status = 'HELD_FOR_SALE',
          i.classification_date = $classificationDate,
          i.expected_disposal_date = $expectedDisposalDate,
@@ -179,7 +179,7 @@ export async function classifyAsHeldForSale(
          i.buyer = $buyer,
          i.updated_at = datetime()`,
     {
-      id: input.initiativeId,
+      id: input.productId,
       classificationDate: input.classificationDate,
       expectedDisposalDate: input.expectedDisposalDate ?? null,
       fvlcts: input.fairValueLessCostsToSell,
@@ -189,7 +189,7 @@ export async function classifyAsHeldForSale(
   );
 
   return {
-    initiativeId: input.initiativeId,
+    productId: input.productId,
     previousStatus: init.status,
     newStatus: 'HELD_FOR_SALE',
     carryingAmount,
@@ -200,43 +200,43 @@ export async function classifyAsHeldForSale(
 }
 
 /**
- * Declassify an Initiative from held-for-sale back to continuing.
+ * Declassify an Product from held-for-sale back to continuing.
  * IFRS 5.26-29: Reverse impairment (up to original carrying amount).
  */
 export async function declassifyHeldForSale(
-  initiativeId: string,
+  productId: string,
   entityId: string,
 ): Promise<void> {
   const result = await runCypher<{ held_for_sale_status: string | null }>(
-    `MATCH (i:Initiative {id: $id, entity_id: $entityId})
+    `MATCH (i:Product {id: $id, entity_id: $entityId})
      RETURN i.held_for_sale_status AS held_for_sale_status`,
-    { id: initiativeId, entityId },
+    { id: productId, entityId },
   );
 
   if (result.length === 0) {
-    throw new Error(`Initiative ${initiativeId} not found`);
+    throw new Error(`Product ${productId} not found`);
   }
   if (result[0].held_for_sale_status !== 'HELD_FOR_SALE') {
-    throw new Error('Initiative is not currently held-for-sale');
+    throw new Error('Product is not currently held-for-sale');
   }
 
   await runCypher(
-    `MATCH (i:Initiative {id: $id})
+    `MATCH (i:Product {id: $id})
      SET i.held_for_sale_status = 'CONTINUING',
          i.classification_date = null,
          i.expected_disposal_date = null,
          i.fair_value_less_costs_to_sell = null,
          i.buyer = null,
          i.updated_at = datetime()`,
-    { id: initiativeId },
+    { id: productId },
   );
 }
 
 /**
- * Record disposal of a held-for-sale Initiative.
+ * Record disposal of a held-for-sale Product.
  */
 export async function recordDisposal(
-  initiativeId: string,
+  productId: string,
   entityId: string,
   disposalDate: string,
   proceedsAmount: number,
@@ -248,17 +248,17 @@ export async function recordDisposal(
     held_for_sale_status: string | null;
     fair_value_less_costs_to_sell: number;
   }>(
-    `MATCH (i:Initiative {id: $id, entity_id: $entityId})
+    `MATCH (i:Product {id: $id, entity_id: $entityId})
      RETURN i.held_for_sale_status AS held_for_sale_status,
             COALESCE(i.fair_value_less_costs_to_sell, 0) AS fair_value_less_costs_to_sell`,
-    { id: initiativeId, entityId },
+    { id: productId, entityId },
   );
 
   if (inits.length === 0) {
-    throw new Error(`Initiative ${initiativeId} not found`);
+    throw new Error(`Product ${productId} not found`);
   }
   if (inits[0].held_for_sale_status !== 'HELD_FOR_SALE') {
-    throw new Error('Initiative must be held-for-sale before disposal');
+    throw new Error('Product must be held-for-sale before disposal');
   }
 
   const carryingAtDisposal = inits[0].fair_value_less_costs_to_sell;
@@ -267,21 +267,21 @@ export async function recordDisposal(
   // Post gain/loss journal entry
   const lines = gainLoss >= 0
     ? [
-        { side: 'DEBIT' as const, amount: proceedsAmount, nodeRefId: initiativeId, nodeRefType: 'INITIATIVE' as NodeRefType, economicCategory: 'ASSET' as const, fundId },
-        { side: 'CREDIT' as const, amount: carryingAtDisposal, nodeRefId: initiativeId, nodeRefType: 'INITIATIVE' as NodeRefType, economicCategory: 'ASSET' as const, fundId },
-        { side: 'CREDIT' as const, amount: gainLoss, nodeRefId: initiativeId, nodeRefType: 'INITIATIVE' as NodeRefType, economicCategory: 'REVENUE' as const, fundId },
+        { side: 'DEBIT' as const, amount: proceedsAmount, nodeRefId: productId, nodeRefType: 'PRODUCT' as NodeRefType, economicCategory: 'ASSET' as const, fundId },
+        { side: 'CREDIT' as const, amount: carryingAtDisposal, nodeRefId: productId, nodeRefType: 'PRODUCT' as NodeRefType, economicCategory: 'ASSET' as const, fundId },
+        { side: 'CREDIT' as const, amount: gainLoss, nodeRefId: productId, nodeRefType: 'PRODUCT' as NodeRefType, economicCategory: 'REVENUE' as const, fundId },
       ]
     : [
-        { side: 'DEBIT' as const, amount: proceedsAmount, nodeRefId: initiativeId, nodeRefType: 'INITIATIVE' as NodeRefType, economicCategory: 'ASSET' as const, fundId },
-        { side: 'DEBIT' as const, amount: Math.abs(gainLoss), nodeRefId: initiativeId, nodeRefType: 'INITIATIVE' as NodeRefType, economicCategory: 'EXPENSE' as const, fundId },
-        { side: 'CREDIT' as const, amount: carryingAtDisposal, nodeRefId: initiativeId, nodeRefType: 'INITIATIVE' as NodeRefType, economicCategory: 'ASSET' as const, fundId },
+        { side: 'DEBIT' as const, amount: proceedsAmount, nodeRefId: productId, nodeRefType: 'PRODUCT' as NodeRefType, economicCategory: 'ASSET' as const, fundId },
+        { side: 'DEBIT' as const, amount: Math.abs(gainLoss), nodeRefId: productId, nodeRefType: 'PRODUCT' as NodeRefType, economicCategory: 'EXPENSE' as const, fundId },
+        { side: 'CREDIT' as const, amount: carryingAtDisposal, nodeRefId: productId, nodeRefType: 'PRODUCT' as NodeRefType, economicCategory: 'ASSET' as const, fundId },
       ];
 
   const journalEntryId = await postJournalEntry({
     entityId,
     periodId,
     entryType: 'ADJUSTMENT',
-    reference: `DISC-DISP-${initiativeId.slice(0, 8)}`,
+    reference: `DISC-DISP-${productId.slice(0, 8)}`,
     narrative: `Disposal of discontinued operation`,
     currency,
     validDate: disposalDate,
@@ -289,12 +289,12 @@ export async function recordDisposal(
   });
 
   await runCypher(
-    `MATCH (i:Initiative {id: $id})
+    `MATCH (i:Product {id: $id})
      SET i.held_for_sale_status = 'DISPOSED',
          i.disposal_date = $disposalDate,
          i.gain_loss_on_disposal = $gainLoss,
          i.updated_at = datetime()`,
-    { id: initiativeId, disposalDate, gainLoss },
+    { id: productId, disposalDate, gainLoss },
   );
 
   return { gainLoss, journalEntryId };
@@ -314,9 +314,9 @@ export async function getDiscontinuedOpsPnL(
 ): Promise<DiscontinuedOpsPnL> {
   const fundFilter = fundId ?? NULL_FUND;
 
-  // Get all held-for-sale and disposed initiative IDs
+  // Get all held-for-sale and disposed product IDs
   const discontinuedInits = await runCypher<{ id: string; impairment: number; gain_loss: number }>(
-    `MATCH (i:Initiative {entity_id: $entityId})
+    `MATCH (i:Product {entity_id: $entityId})
      WHERE i.held_for_sale_status IN ['HELD_FOR_SALE', 'DISPOSED']
      RETURN i.id AS id,
             COALESCE(i.impairment_on_classification, 0) AS impairment,
@@ -326,13 +326,13 @@ export async function getDiscontinuedOpsPnL(
 
   const discontinuedIds = new Set(discontinuedInits.map((d) => d.id));
 
-  // Get child node IDs for discontinued initiatives
+  // Get child node IDs for discontinued products
   const discontinuedNodeIds = new Set<string>();
   if (discontinuedIds.size > 0) {
     const children = await runCypher<{ id: string }>(
       `MATCH (n)
        WHERE (n:Activity OR n:Project) AND n.entity_id = $entityId
-         AND n.initiative_id IN $initIds
+         AND n.product_id IN $initIds
        RETURN n.id AS id`,
       { entityId, initIds: [...discontinuedIds] },
     );
@@ -401,13 +401,13 @@ export async function getDiscontinuedOpsPnL(
 }
 
 /**
- * List all held-for-sale initiatives for an entity.
+ * List all held-for-sale products for an entity.
  */
-export async function listHeldForSaleInitiatives(
+export async function listHeldForSaleProducts(
   entityId: string,
-): Promise<HeldForSaleInitiative[]> {
-  const results = await runCypher<HeldForSaleInitiative>(
-    `MATCH (i:Initiative {entity_id: $entityId})
+): Promise<HeldForSaleProduct[]> {
+  const results = await runCypher<HeldForSaleProduct>(
+    `MATCH (i:Product {entity_id: $entityId})
      WHERE i.held_for_sale_status IN ['HELD_FOR_SALE', 'DISPOSED']
      RETURN i.id AS id, i.label AS label, i.entity_id AS entity_id,
             i.status AS status,
@@ -433,15 +433,15 @@ export async function listHeldForSaleInitiatives(
 async function getSegmentCarryingAmount(
   entityId: string,
   periodId: string,
-  initiativeId: string,
+  productId: string,
 ): Promise<number> {
   // Get child node IDs
   const children = await runCypher<{ id: string }>(
     `MATCH (n)
-     WHERE (n:Activity OR n:Project OR n:Initiative) AND n.entity_id = $entityId
-       AND (n.initiative_id = $initiativeId OR n.id = $initiativeId)
+     WHERE (n:Activity OR n:Project OR n:Product) AND n.entity_id = $entityId
+       AND (n.product_id = $productId OR n.id = $productId)
      RETURN n.id AS id`,
-    { entityId, initiativeId },
+    { entityId, productId },
   );
 
   const nodeIds = children.map((c) => c.id);

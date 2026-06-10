@@ -30,8 +30,8 @@ import {
   listProjects,
   updateProject,
   deleteProject,
-  createInitiative,
-  getInitiative,
+  createProduct,
+  getProduct,
   createMetric,
   getMetric,
   createCapability,
@@ -211,11 +211,11 @@ describe('Graph CRUD — Activity', () => {
   });
 });
 
-describe('Graph CRUD — Project & Initiative', () => {
-  it('creates Project and Initiative', async () => {
-    const initId = track('Initiative', await createInitiative({
+describe('Graph CRUD — Project & Product', () => {
+  it('creates Project and Product', async () => {
+    const initId = track('Product', await createProduct({
       entityId: testEntityId,
-      label: 'Test Initiative',
+      label: 'Test Product',
       budget: 500000,
       timeHorizonMonths: 12,
     }));
@@ -224,11 +224,11 @@ describe('Graph CRUD — Project & Initiative', () => {
       entityId: testEntityId,
       label: 'Test Project',
       budget: 100000,
-      initiativeId: initId,
+      productId: initId,
     }));
 
-    const initiative = await getInitiative(initId);
-    expect(initiative).not.toBeNull();
+    const product = await getProduct(initId);
+    expect(product).not.toBeNull();
 
     const project = await getProject(projId);
     expect(project).not.toBeNull();

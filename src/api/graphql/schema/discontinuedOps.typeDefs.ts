@@ -1,6 +1,6 @@
 export const discontinuedOpsTypeDefs = `
   type ClassificationResult {
-    initiativeId: String!
+    productId: String!
     previousStatus: String!
     newStatus: String!
     carryingAmount: Float!
@@ -32,7 +32,7 @@ export const discontinuedOpsTypeDefs = `
     total_profit: Float!
   }
 
-  type HeldForSaleInitiative {
+  type HeldForSaleProduct {
     id: ID!
     label: String!
     entity_id: String!
@@ -53,7 +53,7 @@ export const discontinuedOpsTypeDefs = `
   }
 
   input ClassifyHeldForSaleInput {
-    initiativeId: String!
+    productId: String!
     entityId: String!
     classificationDate: String!
     fairValueLessCostsToSell: Float!
@@ -66,12 +66,12 @@ export const discontinuedOpsTypeDefs = `
 
   extend type Query {
     discontinuedOpsPnL(entityId: String!, periodId: String!, fundId: String): DiscontinuedOpsPnLResult!
-    heldForSaleInitiatives(entityId: String!): [HeldForSaleInitiative!]!
+    heldForSaleProducts(entityId: String!): [HeldForSaleProduct!]!
   }
 
   extend type Mutation {
     classifyAsHeldForSale(input: ClassifyHeldForSaleInput!): ClassificationResult!
-    declassifyHeldForSale(initiativeId: String!, entityId: String!): Boolean!
-    recordDisposal(initiativeId: String!, entityId: String!, disposalDate: String!, proceedsAmount: Float!, periodId: String!, currency: String!, fundId: String): DisposalResult!
+    declassifyHeldForSale(productId: String!, entityId: String!): Boolean!
+    recordDisposal(productId: String!, entityId: String!, disposalDate: String!, proceedsAmount: Float!, periodId: String!, currency: String!, fundId: String): DisposalResult!
   }
 `;

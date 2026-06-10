@@ -200,6 +200,46 @@ const CATEGORY_LABELS: Record<string, string> = {
   domain: 'Domain + SSL',
 };
 
+// Group labels for budget breakdown categories
+const EXPENSE_GROUPS: Record<string, string> = {
+  // Infrastructure
+  compute: 'Infrastructure',
+  database: 'Infrastructure',
+  redis: 'Infrastructure',
+  kafka: 'Infrastructure',
+  llm: 'Infrastructure',
+  email: 'Infrastructure',
+  sms: 'Infrastructure',
+  cdn: 'Infrastructure',
+  monitoring: 'Infrastructure',
+  search: 'Infrastructure',
+  domain: 'Infrastructure',
+  // Compliance & Security
+  'PCI-DSS Compliance': 'Compliance & Security',
+  'Penetration Testing': 'Compliance & Security',
+  'SOC 2 Type II Audit': 'Compliance & Security',
+  'Apple Developer': 'Compliance & Security',
+};
+
+// ── Organizational Costs (per entity per year) ────────────────
+// Source: docs/projection-assumptions.md Section 5
+
+const ORG_COSTS: Record<string, number[]> = {
+  // Harness Exchange (CA FP) — [yr1, yr2, yr3, yr4, yr5]
+  'Annual filings & registrations':   [50,     50,     50,     50,     50],
+  'Tax return preparation (T2)':      [1_200,  1_500,  2_000,  2_500,  3_000],
+  'HST/GST filing':                   [1_200,  1_200,  2_000,  2_000,  2_000],
+  'Bookkeeping':                      [3_600,  6_000,  9_600,  12_000, 18_000],
+  'Financial review/audit':           [0,      5_000,  10_000, 15_000, 20_000],
+  'D&O insurance':                    [3_000,  3_000,  5_000,  7_000,  10_000],
+  'Commercial general liability':     [800,    800,    1_200,  1_500,  2_000],
+  'Cyber / tech E&O insurance':       [2_000,  3_000,  5_000,  8_000,  12_000],
+  'Legal retainer':                   [5_000,  8_000,  12_000, 15_000, 20_000],
+  'Board of Directors':               [0,      0,      5_000,  10_000, 20_000],
+  'Registered agent / corp secretary':[500,    500,    500,    500,    500],
+  'Business banking fees':            [0,      600,    1_200,  1_500,  1_500],
+};
+
 // ── Main ───────────────────────────────────────────────────────
 
 async function main() {
@@ -238,10 +278,10 @@ async function main() {
     console.log(`  Harness Platform failed: ${e.message}`);
   }
 
-  // Give Product (Initiative — the donation product built on Harness Platform)
+  // Give Product (Product — the donation product built on Harness Platform)
   let giveProductId = '';
   try {
-    const result = await api<any>('/graph/initiatives', {
+    const result = await api<any>('/graph/products', {
       method: 'POST',
       body: JSON.stringify({
         entityId,
@@ -253,7 +293,7 @@ async function main() {
       }),
     });
     giveProductId = result.id;
-    console.log(`  Initiative "Give": ${giveProductId}`);
+    console.log(`  Product "Give": ${giveProductId}`);
   } catch (e: any) {
     console.log(`  Give product failed: ${e.message}`);
   }
@@ -425,8 +465,8 @@ async function main() {
     }
   }
 
-  // Platform Visitors → User Growth (0.6 weight)
-  // Give → User Growth (0.85 weight) — wired later after outcomes are created
+  // Platform Visitors → Improve Revenue (0.6 weight)
+  // Give → Improve Revenue (0.85 weight) — wired later after outcomes are created
 
   // 3. Create Accounting Periods (FY2027-FY2031)
   console.log('\nCreating accounting periods...');
@@ -459,15 +499,14 @@ async function main() {
     }
   }
 
-  // 3. Create Outcome nodes for cost tracking
-  console.log('\nCreating Outcome nodes...');
+  // 3. Create the 3 canonical Outcome nodes (one per outcome_type — no others allowed)
+  console.log('\nCreating canonical Outcome nodes...');
   const outcomeIds: Record<string, string> = {};
 
   const outcomes = [
-    { label: 'Platform Infrastructure', type: 'MITIGATE_EXPENSE' },
-    { label: 'AI & Intelligence', type: 'MITIGATE_EXPENSE' },
-    { label: 'User Growth', type: 'IMPROVE_REVENUE' },
-    { label: 'Compliance & Security', type: 'MITIGATE_EXPENSE' },
+    { label: 'Improve Revenue', type: 'IMPROVE_REVENUE' },
+    { label: 'New Revenue', type: 'NEW_REVENUE' },
+    { label: 'Mitigate Expense', type: 'MITIGATE_EXPENSE' },
   ];
 
   for (const outcome of outcomes) {
@@ -532,12 +571,11 @@ async function main() {
   }
 
   // 5. Create CONTRIBUTES_TO edges
-  // Harness Platform is the sole intermediary for all infrastructure costs:
-  //   cost activities → Harness Platform → Platform Infrastructure outcome
-  // Compliance activities → Compliance & Security outcome directly
+  // All paths must terminate at one of the 3 canonical outcomes.
+  // Infrastructure costs → Harness Platform → Mitigate Expense
+  // Compliance costs → Mitigate Expense (directly)
   console.log('\nCreating CONTRIBUTES_TO edges...');
-  const infraOutcome = outcomeIds['Platform Infrastructure'];
-  const complianceOutcome = outcomeIds['Compliance & Security'];
+  const mitigateExpenseOutcome = outcomeIds['Mitigate Expense'];
 
   // All infrastructure cost activities → Harness Platform (sole intermediary)
   const infraCostActivities = [
@@ -563,62 +601,62 @@ async function main() {
     }
   }
 
-  // Harness Platform → Platform Infrastructure outcome
-  if (platformId && infraOutcome) {
+  // Harness Platform → Mitigate Expense outcome
+  if (platformId && mitigateExpenseOutcome) {
     try {
       await api<any>('/graph/edges/contributes-to', {
         method: 'POST',
         body: JSON.stringify({
           sourceId: platformId,
-          targetId: infraOutcome,
-          weight: 1.0,
-          confidence: 0.95,
+          targetId: mitigateExpenseOutcome,
+          weight: 0.7,
+          confidence: 0.9,
           contributionFunction: 'LINEAR',
         }),
       });
-      console.log(`  Harness Platform → Platform Infrastructure`);
+      console.log(`  Harness Platform → Mitigate Expense`);
     } catch (e: any) {
-      console.log(`  Edge Platform→Infra failed: ${e.message}`);
+      console.log(`  Edge Platform→MitigateExpense failed: ${e.message}`);
     }
   }
 
-  // Compliance activities → Compliance & Security outcome directly
+  // Compliance activities → Mitigate Expense outcome directly
   for (const cat of ['PCI-DSS Compliance', 'Penetration Testing', 'SOC 2 Type II Audit']) {
-    if (!activityIds[cat] || !complianceOutcome) continue;
+    if (!activityIds[cat] || !mitigateExpenseOutcome) continue;
     try {
       await api<any>('/graph/edges/contributes-to', {
         method: 'POST',
         body: JSON.stringify({
           sourceId: activityIds[cat],
-          targetId: complianceOutcome,
+          targetId: mitigateExpenseOutcome,
           weight: 0.6,
           confidence: 0.9,
           contributionFunction: 'LINEAR',
         }),
       });
-      console.log(`  ${cat} → Compliance & Security`);
+      console.log(`  ${cat} → Mitigate Expense`);
     } catch (e: any) {
-      console.log(`  Edge ${cat}→Compliance failed: ${e.message}`);
+      console.log(`  Edge ${cat}→MitigateExpense failed: ${e.message}`);
     }
   }
 
-  // Platform Visitors → User Growth outcome
-  const userGrowthOutcomeEarly = outcomeIds['User Growth'];
-  if (funnelMetricIds.visitors && userGrowthOutcomeEarly) {
+  // Platform Visitors → Improve Revenue outcome
+  const improveRevenueEarly = outcomeIds['Improve Revenue'];
+  if (funnelMetricIds.visitors && improveRevenueEarly) {
     try {
       await api<any>('/graph/edges/contributes-to', {
         method: 'POST',
         body: JSON.stringify({
           sourceId: funnelMetricIds.visitors,
-          targetId: userGrowthOutcomeEarly,
+          targetId: improveRevenueEarly,
           weight: 0.6,
           confidence: 0.8,
           contributionFunction: 'LINEAR',
         }),
       });
-      console.log(`  Platform Visitors → User Growth`);
+      console.log(`  Platform Visitors → Improve Revenue`);
     } catch (e: any) {
-      console.log(`  Edge Visitors→UserGrowth failed: ${e.message}`);
+      console.log(`  Edge Visitors→ImproveRevenue failed: ${e.message}`);
     }
   }
 
@@ -644,6 +682,7 @@ async function main() {
           fiscalYear: fyYear,
           currency: 'CAD',
           createdBy: 'seed-script',
+          scenario: 'Harness Platform',
         }),
       });
       const budgetId = budget.id;
@@ -665,7 +704,7 @@ async function main() {
               nodeRefType: 'ACTIVITY',
               economicCategory: 'EXPENSE',
               amount: annualCost,
-              notes: `${CATEGORY_LABELS[cat]}: $${monthlyCost}/mo × 12 = $${annualCost}/yr (${tier.users.toLocaleString()} users)`,
+              notes: `${EXPENSE_GROUPS[cat] || 'Other'} > ${CATEGORY_LABELS[cat]}: $${monthlyCost}/mo × 12 = $${annualCost}/yr (${tier.users.toLocaleString()} users)`,
             }),
           });
           console.log(`    ${CATEGORY_LABELS[cat]}: $${annualCost.toLocaleString()}/yr`);
@@ -689,7 +728,31 @@ async function main() {
               nodeRefType: 'ACTIVITY',
               economicCategory: 'EXPENSE',
               amount,
-              notes: `${costName}: $${amount.toLocaleString()}/yr`,
+              notes: `${EXPENSE_GROUPS[costName] || 'Other'} > ${costName}: $${amount.toLocaleString()}/yr`,
+            }),
+          });
+          console.log(`    ${costName}: $${amount.toLocaleString()}/yr`);
+        } catch (e: any) {
+          console.log(`    Line ${costName} failed: ${e.message}`);
+        }
+      }
+
+      // Add organizational costs
+      for (const [costName, yearlyAmounts] of Object.entries(ORG_COSTS)) {
+        const amount = yearlyAmounts[i];
+        if (amount === 0) continue;
+
+        try {
+          await api<any>(`/budgeting/lines`, {
+            method: 'POST',
+            body: JSON.stringify({
+              budgetId,
+              periodId,
+              nodeRefId: periodId,
+              nodeRefType: 'ACTIVITY',
+              economicCategory: 'EXPENSE',
+              amount,
+              notes: `Organizational > ${costName}: $${amount.toLocaleString()}/yr`,
             }),
           });
           console.log(`    ${costName}: $${amount.toLocaleString()}/yr`);
@@ -702,6 +765,7 @@ async function main() {
       let yearTotal = 0;
       for (const cat of COST_CATEGORIES) yearTotal += tier[cat] * 12;
       for (const [, amounts] of Object.entries(ANNUAL_COSTS)) yearTotal += amounts[i];
+      for (const [, amounts] of Object.entries(ORG_COSTS)) yearTotal += amounts[i];
       console.log(`  ── Year ${year} Total: $${yearTotal.toLocaleString()}/yr ($${Math.round(yearTotal / 12).toLocaleString()}/mo)`);
 
     } catch (e: any) {
@@ -731,24 +795,94 @@ async function main() {
     }
   }
 
-  // Link revenue activities to User Growth outcome
-  const userGrowthOutcome = outcomeIds['User Growth'];
-  for (const [key, actId] of Object.entries(revenueActivities)) {
-    if (!actId || !userGrowthOutcome) continue;
+  // Create "Charity SaaS Offerings" activity (Give's SaaS vertical → New Revenue)
+  let charitySaasOfferingsId = '';
+  try {
+    const result = await api<any>('/graph/activities', {
+      method: 'POST',
+      body: JSON.stringify({ entityId, label: 'Charity SaaS Offerings', status: 'IN_PROGRESS' }),
+    });
+    charitySaasOfferingsId = result.id;
+    console.log(`  Activity "Charity SaaS Offerings": ${charitySaasOfferingsId}`);
+  } catch (e: any) {
+    console.log(`  Activity "Charity SaaS Offerings" failed: ${e.message}`);
+  }
+
+  // Link Transaction Fee Revenue → Improve Revenue (existing platform revenue)
+  const improveRevenueOutcome = outcomeIds['Improve Revenue'];
+  if (revenueActivities['txn-fees'] && improveRevenueOutcome) {
     try {
       await api<any>('/graph/edges/contributes-to', {
         method: 'POST',
         body: JSON.stringify({
-          sourceId: actId,
-          targetId: userGrowthOutcome,
-          weight: key === 'txn-fees' ? 0.9 : 0.6,
+          sourceId: revenueActivities['txn-fees'],
+          targetId: improveRevenueOutcome,
+          weight: 0.9,
           confidence: 0.85,
           contributionFunction: 'LINEAR',
         }),
       });
-      console.log(`  ${key} → ${userGrowthOutcome.slice(0, 8)}...`);
+      console.log(`  Transaction Fee Revenue → Improve Revenue`);
     } catch (e: any) {
-      console.log(`  Edge ${key} failed: ${e.message}`);
+      console.log(`  Edge txn-fees→ImproveRevenue failed: ${e.message}`);
+    }
+  }
+
+  // Link Charity Partner SaaS Revenue → Charity SaaS Offerings
+  if (revenueActivities['premium-saas'] && charitySaasOfferingsId) {
+    try {
+      await api<any>('/graph/edges/contributes-to', {
+        method: 'POST',
+        body: JSON.stringify({
+          sourceId: revenueActivities['premium-saas'],
+          targetId: charitySaasOfferingsId,
+          weight: 0.9,
+          confidence: 0.9,
+          contributionFunction: 'LINEAR',
+        }),
+      });
+      console.log(`  Charity Partner SaaS Revenue → Charity SaaS Offerings`);
+    } catch (e: any) {
+      console.log(`  Edge SaaS→Offerings failed: ${e.message}`);
+    }
+  }
+
+  // Link Give → Charity SaaS Offerings (Give product feeds the SaaS vertical)
+  const newRevenueOutcome = outcomeIds['New Revenue'];
+  if (giveProductId && charitySaasOfferingsId) {
+    try {
+      await api<any>('/graph/edges/contributes-to', {
+        method: 'POST',
+        body: JSON.stringify({
+          sourceId: giveProductId,
+          targetId: charitySaasOfferingsId,
+          weight: 0.7,
+          confidence: 0.85,
+          contributionFunction: 'LINEAR',
+        }),
+      });
+      console.log(`  Give → Charity SaaS Offerings`);
+    } catch (e: any) {
+      console.log(`  Edge Give→Offerings failed: ${e.message}`);
+    }
+  }
+
+  // Link Charity SaaS Offerings → New Revenue outcome
+  if (charitySaasOfferingsId && newRevenueOutcome) {
+    try {
+      await api<any>('/graph/edges/contributes-to', {
+        method: 'POST',
+        body: JSON.stringify({
+          sourceId: charitySaasOfferingsId,
+          targetId: newRevenueOutcome,
+          weight: 0.8,
+          confidence: 0.85,
+          contributionFunction: 'LINEAR',
+        }),
+      });
+      console.log(`  Charity SaaS Offerings → New Revenue`);
+    } catch (e: any) {
+      console.log(`  Edge Offerings→NewRevenue failed: ${e.message}`);
     }
   }
 
@@ -772,27 +906,26 @@ async function main() {
     }
   }
 
-  // Link Give product → User Growth outcome
-  if (giveProductId && userGrowthOutcome) {
+  // Link Give product → Improve Revenue outcome (Give drives platform adoption)
+  if (giveProductId && improveRevenueOutcome) {
     try {
       await api<any>('/graph/edges/contributes-to', {
         method: 'POST',
         body: JSON.stringify({
           sourceId: giveProductId,
-          targetId: userGrowthOutcome,
+          targetId: improveRevenueOutcome,
           weight: 0.85,
           confidence: 0.9,
           contributionFunction: 'LINEAR',
         }),
       });
-      console.log(`  Give → User Growth`);
+      console.log(`  Give → Improve Revenue`);
     } catch (e: any) {
-      console.log(`  Edge Give→UserGrowth failed: ${e.message}`);
+      console.log(`  Edge Give→ImproveRevenue failed: ${e.message}`);
     }
   }
 
   // Link Platform resource → IMPROVE_REVENUE outcome (platform enables all revenue)
-  const improveRevenueOutcome = outcomeIds['User Growth']; // same outcome
   if (platformId && improveRevenueOutcome) {
     try {
       await api<any>('/graph/edges/contributes-to', {
@@ -805,9 +938,9 @@ async function main() {
           contributionFunction: 'LINEAR',
         }),
       });
-      console.log(`  Harness Platform → User Growth`);
+      console.log(`  Harness Platform → Improve Revenue`);
     } catch (e: any) {
-      console.log(`  Edge Platform→UserGrowth failed: ${e.message}`);
+      console.log(`  Edge Platform→ImproveRevenue failed: ${e.message}`);
     }
   }
 
@@ -822,6 +955,7 @@ async function main() {
     const donationVolume = totalTransactions * rev.avgDonation;
     const txnFeeRevenue = Math.round(donationVolume * rev.platformFeePct);
     const saasRevenue = rev.premiumCharityPartners * rev.premiumAvgAnnualFee;
+    const stripeFee = Math.round(donationVolume * 0.022 + totalTransactions * 0.30);
     const totalRevenue = txnFeeRevenue + saasRevenue;
 
     console.log(`\n  ${YEARLY_TIERS[i].label}:`);
@@ -829,6 +963,7 @@ async function main() {
     console.log(`    Transactions: ${totalTransactions.toLocaleString()} @ avg $${rev.avgDonation} (CRA median $390)`);
     console.log(`    Donation volume: $${donationVolume.toLocaleString()}`);
     console.log(`    Transaction fee revenue (${(rev.platformFeePct * 100).toFixed(1)}%): $${txnFeeRevenue.toLocaleString()}`);
+    console.log(`    Stripe processing (2.2% + $0.30): -$${stripeFee.toLocaleString()}`);
     console.log(`    SaaS revenue (${rev.premiumCharityPartners} partners × $${rev.premiumAvgAnnualFee}): $${saasRevenue.toLocaleString()}`);
     console.log(`    Total revenue: $${totalRevenue.toLocaleString()}`);
 
@@ -845,6 +980,7 @@ async function main() {
         fiscalYear: fyYear,
         currency: 'CAD',
         createdBy: 'seed-script',
+        scenario: 'Harness Platform',
       }),
     });
 
@@ -861,6 +997,7 @@ async function main() {
             economicCategory: 'REVENUE',
             amount: txnFeeRevenue,
             notes: `${activeDonors.toLocaleString()} donors × ${rev.donationsPerDonor} txns × $${rev.avgDonation} avg × ${(rev.platformFeePct * 100).toFixed(1)}% fee`,
+            seasonalityProfile: 'GIVING_SEASON',
           }),
         });
       } catch (e: any) {
@@ -887,6 +1024,33 @@ async function main() {
         console.log(`    SaaS line failed: ${e.message}`);
       }
     }
+
+    // Stripe payment processing fee (cost of revenue)
+    if (stripeFee > 0) {
+      try {
+        // Add to the operating budget for this year (first budget created)
+        const budgets = await api<{ budgets: any[] }>(`/budgeting/budgets/by-entity/${entityId}?fiscalYear=${fyYear}`);
+        const opBudget = budgets.budgets.find((b: any) => b.name.includes('Operating'));
+        if (opBudget) {
+          await api<any>('/budgeting/lines', {
+            method: 'POST',
+            body: JSON.stringify({
+              budgetId: opBudget.id,
+              periodId,
+              nodeRefId: periodId,
+              nodeRefType: 'ACTIVITY',
+              economicCategory: 'EXPENSE',
+              amount: stripeFee,
+              notes: `Payment Processing > Stripe fees: ${totalTransactions.toLocaleString()} txns × (2.2% + $0.30) on $${donationVolume.toLocaleString()} volume`,
+              seasonalityProfile: 'GIVING_SEASON',
+            }),
+          });
+          console.log(`    Stripe Processing: $${stripeFee.toLocaleString()}`);
+        }
+      } catch (e: any) {
+        console.log(`    Stripe line failed: ${e.message}`);
+      }
+    }
   }
 
   // 8. Project revenue into gl_period_balances (via direct PG insert)
@@ -911,6 +1075,7 @@ async function main() {
     let yearExpense = 0;
     for (const cat of COST_CATEGORIES) yearExpense += tier[cat] * 12;
     for (const [, amounts] of Object.entries(ANNUAL_COSTS)) yearExpense += amounts[i];
+    for (const [, amounts] of Object.entries(ORG_COSTS)) yearExpense += amounts[i];
 
     // Revenue
     const activeDonors = Math.round(rev.users * rev.activeDonorPct);
@@ -918,6 +1083,8 @@ async function main() {
     const donationVol = totalTxns * rev.avgDonation;
     const txnFee = Math.round(donationVol * rev.platformFeePct);
     const saas = rev.premiumCharityPartners * rev.premiumAvgAnnualFee;
+    const stripe = Math.round(donationVol * 0.022 + totalTxns * 0.30);
+    yearExpense += stripe;
     const yearRevenue = txnFee + saas;
 
     const netIncome = yearRevenue - yearExpense;

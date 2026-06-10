@@ -17,7 +17,7 @@ import {
 
 // Whitelisted labels for generic CRUD (matches graph-crud-service)
 const VALID_NODE_LABELS = new Set([
-  'Entity', 'Outcome', 'Activity', 'Resource', 'Project', 'Initiative',
+  'Entity', 'Outcome', 'Activity', 'Resource', 'Project', 'Product',
   'Metric', 'Capability', 'Asset', 'CustomerRelationshipAsset',
   'WorkforceAsset', 'StakeholderAsset', 'SocialConstraint', 'Obligation',
   'CashFlowEvent', 'AccountingPeriod', 'Fund',
