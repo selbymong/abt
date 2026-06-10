@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 -- Primary financial reporting table. All P&L and balance sheet
 -- queries read from here, never from Neo4j LedgerLines directly.
 
-CREATE TABLE gl_period_balances (
+CREATE TABLE IF NOT EXISTS gl_period_balances (
   entity_id           UUID NOT NULL,
   period_id           UUID NOT NULL,
   fund_id             UUID,                  -- [v1.2-A] null for FOR_PROFIT, non-null for NFP
@@ -31,10 +31,10 @@ SELECT create_hypertable('gl_period_balances', 'period_id',
   chunk_time_interval => INTERVAL '3 months',
   if_not_exists => TRUE);
 
-CREATE INDEX idx_glpb_entity_period ON gl_period_balances (entity_id, period_id);
-CREATE INDEX idx_glpb_statutory ON gl_period_balances (entity_id, period_id, statutory_code);
-CREATE INDEX idx_glpb_category ON gl_period_balances (entity_id, period_id, economic_category);
-CREATE INDEX idx_glpb_fund ON gl_period_balances (entity_id, period_id, fund_id)
+CREATE INDEX IF NOT EXISTS idx_glpb_entity_period ON gl_period_balances (entity_id, period_id);
+CREATE INDEX IF NOT EXISTS idx_glpb_statutory ON gl_period_balances (entity_id, period_id, statutory_code);
+CREATE INDEX IF NOT EXISTS idx_glpb_category ON gl_period_balances (entity_id, period_id, economic_category);
+CREATE INDEX IF NOT EXISTS idx_glpb_fund ON gl_period_balances (entity_id, period_id, fund_id)
   WHERE fund_id IS NOT NULL;
 
 COMMENT ON TABLE gl_period_balances IS
@@ -45,7 +45,7 @@ COMMENT ON TABLE gl_period_balances IS
 -- --- Equity Period Balances [v1.2-E] ---
 -- Separate projection for equity components (retained earnings + OCI)
 
-CREATE TABLE equity_period_balances (
+CREATE TABLE IF NOT EXISTS equity_period_balances (
   entity_id       UUID NOT NULL,
   period_id       UUID NOT NULL,
   fund_id         UUID,                    -- for NFP net asset tracking
@@ -62,7 +62,7 @@ SELECT create_hypertable('equity_period_balances', 'period_id',
   chunk_time_interval => INTERVAL '1 year',
   if_not_exists => TRUE);
 
-CREATE INDEX idx_eqpb_entity_period ON equity_period_balances (entity_id, period_id);
+CREATE INDEX IF NOT EXISTS idx_eqpb_entity_period ON equity_period_balances (entity_id, period_id);
 
 COMMENT ON TABLE equity_period_balances IS
   'Equity component tracking: retained earnings, OCI by component,
@@ -71,7 +71,7 @@ COMMENT ON TABLE equity_period_balances IS
 
 -- --- Metric Observations (unchanged from v1.0) ---
 
-CREATE TABLE metric_observations (
+CREATE TABLE IF NOT EXISTS metric_observations (
   metric_id       UUID NOT NULL,
   entity_id       UUID NOT NULL,
   observed_at     TIMESTAMPTZ NOT NULL,
@@ -86,7 +86,7 @@ SELECT create_hypertable('metric_observations', 'observed_at',
 
 -- --- Calibration History (PostgreSQL, not TimescaleDB) ---
 
-CREATE TABLE calibration_history (
+CREATE TABLE IF NOT EXISTS calibration_history (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   entity_id       UUID NOT NULL,
   outcome_type    TEXT NOT NULL,
@@ -99,11 +99,11 @@ CREATE TABLE calibration_history (
   computed_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_cal_entity_outcome ON calibration_history (entity_id, outcome_type);
+CREATE INDEX IF NOT EXISTS idx_cal_entity_outcome ON calibration_history (entity_id, outcome_type);
 
 -- --- Audit Log (PostgreSQL) ---
 
-CREATE TABLE audit_log (
+CREATE TABLE IF NOT EXISTS audit_log (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   entity_id       UUID,
   action          TEXT NOT NULL,           -- CREATE, UPDATE, DELETE, APPROVE, REJECT
@@ -115,13 +115,13 @@ CREATE TABLE audit_log (
   sensitivity     INT DEFAULT 0            -- 0=normal, 1=financial, 2=PII, 3=restricted
 );
 
-CREATE INDEX idx_audit_entity ON audit_log (entity_id, timestamp DESC);
-CREATE INDEX idx_audit_node ON audit_log (node_id);
-CREATE INDEX idx_audit_user ON audit_log (user_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log (entity_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_node ON audit_log (node_id);
+CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log (user_id, timestamp DESC);
 
 -- --- Statutory Mappings (PostgreSQL) ---
 
-CREATE TABLE statutory_mappings (
+CREATE TABLE IF NOT EXISTS statutory_mappings (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   jurisdiction          TEXT NOT NULL,       -- CA-ASPE, CA-ASNFPO, US-GAAP, US-ASC958,
                                              -- CA-TAX-CORP, CA-TAX-EXEMPT, US-TAX-1120, US-TAX-990
@@ -136,7 +136,7 @@ CREATE TABLE statutory_mappings (
   xbrl_taxonomy         TEXT
 );
 
-CREATE INDEX idx_sm_jurisdiction ON statutory_mappings (jurisdiction, node_ref_type, economic_category);
+CREATE INDEX IF NOT EXISTS idx_sm_jurisdiction ON statutory_mappings (jurisdiction, node_ref_type, economic_category);
 
 COMMENT ON TABLE statutory_mappings IS
   'Maps graph node_ref_type × economic_category to traditional COA codes.
@@ -146,7 +146,7 @@ COMMENT ON TABLE statutory_mappings IS
 -- --- Reconciliation Runs (PostgreSQL) ---
 -- Stores results of nightly Neo4j ↔ TimescaleDB reconciliation.
 
-CREATE TABLE reconciliation_runs (
+CREATE TABLE IF NOT EXISTS reconciliation_runs (
   id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   run_date            TIMESTAMPTZ NOT NULL,
   status              TEXT NOT NULL,           -- BALANCED, DISCREPANCY, ERROR
@@ -162,8 +162,8 @@ CREATE TABLE reconciliation_runs (
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_recon_runs_date ON reconciliation_runs (created_at DESC);
-CREATE INDEX idx_recon_runs_entity ON reconciliation_runs (entity_id_filter)
+CREATE INDEX IF NOT EXISTS idx_recon_runs_date ON reconciliation_runs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_recon_runs_entity ON reconciliation_runs (entity_id_filter)
   WHERE entity_id_filter IS NOT NULL;
 
 COMMENT ON TABLE reconciliation_runs IS
@@ -187,9 +187,9 @@ CREATE TABLE IF NOT EXISTS nfp_reclassifications (
   created_at            TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_nfp_reclass_entity ON nfp_reclassifications (entity_id);
-CREATE INDEX idx_nfp_reclass_fund ON nfp_reclassifications (fund_id);
-CREATE INDEX idx_nfp_reclass_date ON nfp_reclassifications (reclassification_date DESC);
+CREATE INDEX IF NOT EXISTS idx_nfp_reclass_entity ON nfp_reclassifications (entity_id);
+CREATE INDEX IF NOT EXISTS idx_nfp_reclass_fund ON nfp_reclassifications (fund_id);
+CREATE INDEX IF NOT EXISTS idx_nfp_reclass_date ON nfp_reclassifications (reclassification_date DESC);
 
 COMMENT ON TABLE nfp_reclassifications IS
   'Tracks NFP net asset reclassifications when fund restrictions are met/expire.
@@ -208,8 +208,8 @@ CREATE TABLE IF NOT EXISTS ap_payment_runs (
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_ap_payment_runs_entity ON ap_payment_runs (entity_id);
-CREATE INDEX idx_ap_payment_runs_date ON ap_payment_runs (payment_date DESC);
+CREATE INDEX IF NOT EXISTS idx_ap_payment_runs_entity ON ap_payment_runs (entity_id);
+CREATE INDEX IF NOT EXISTS idx_ap_payment_runs_date ON ap_payment_runs (payment_date DESC);
 
 COMMENT ON TABLE ap_payment_runs IS
   'Tracks AP payment run executions. Added in P8-AP-SUBLEDGER.';
@@ -232,9 +232,9 @@ CREATE TABLE IF NOT EXISTS procurement_matches (
   matched_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_procurement_matches_po ON procurement_matches (po_id);
-CREATE INDEX idx_procurement_matches_invoice ON procurement_matches (invoice_id);
-CREATE INDEX idx_procurement_matches_status ON procurement_matches (match_status);
+CREATE INDEX IF NOT EXISTS idx_procurement_matches_po ON procurement_matches (po_id);
+CREATE INDEX IF NOT EXISTS idx_procurement_matches_invoice ON procurement_matches (invoice_id);
+CREATE INDEX IF NOT EXISTS idx_procurement_matches_status ON procurement_matches (match_status);
 
 COMMENT ON TABLE procurement_matches IS
   'Records 3-way match results between PO, goods receipt, and AP invoice.
@@ -251,17 +251,24 @@ CREATE TABLE IF NOT EXISTS budget_lines (
   economic_category TEXT NOT NULL,
   amount            NUMERIC NOT NULL DEFAULT 0,
   notes             TEXT,
+  seasonality_profile TEXT,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_budget_lines_budget ON budget_lines (budget_id);
-CREATE INDEX idx_budget_lines_period ON budget_lines (period_id);
-CREATE INDEX idx_budget_lines_node ON budget_lines (node_ref_id);
+CREATE INDEX IF NOT EXISTS idx_budget_lines_budget ON budget_lines (budget_id);
+CREATE INDEX IF NOT EXISTS idx_budget_lines_period ON budget_lines (period_id);
+CREATE INDEX IF NOT EXISTS idx_budget_lines_node ON budget_lines (node_ref_id);
 
 COMMENT ON TABLE budget_lines IS
   'Stores budget amounts by period, node, and economic category.
    Budget header is a Neo4j node; lines are in PG for efficient variance queries.
    Added in P8-BUDGETING.';
+
+-- Add seasonality_profile column for existing databases
+DO $$ BEGIN
+  ALTER TABLE budget_lines ADD COLUMN IF NOT EXISTS seasonality_profile TEXT;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
 
 -- --- FX Rates ---
 
@@ -276,7 +283,7 @@ CREATE TABLE IF NOT EXISTS fx_rates (
   UNIQUE (from_currency, to_currency, rate_date)
 );
 
-CREATE INDEX idx_fx_rates_pair ON fx_rates (from_currency, to_currency, rate_date DESC);
+CREATE INDEX IF NOT EXISTS idx_fx_rates_pair ON fx_rates (from_currency, to_currency, rate_date DESC);
 
 COMMENT ON TABLE fx_rates IS
   'Exchange rates by currency pair and date for multi-currency transactions.
@@ -295,8 +302,8 @@ CREATE TABLE IF NOT EXISTS fx_revaluation_runs (
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_fx_reval_runs_entity ON fx_revaluation_runs (entity_id);
-CREATE INDEX idx_fx_reval_runs_period ON fx_revaluation_runs (period_id);
+CREATE INDEX IF NOT EXISTS idx_fx_reval_runs_entity ON fx_revaluation_runs (entity_id);
+CREATE INDEX IF NOT EXISTS idx_fx_reval_runs_period ON fx_revaluation_runs (period_id);
 
 COMMENT ON TABLE fx_revaluation_runs IS
   'Audit trail for month-end FX revaluation runs.
@@ -317,8 +324,8 @@ CREATE TABLE IF NOT EXISTS interco_amortization (
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_interco_amort_loan ON interco_amortization (loan_id, period_number);
-CREATE INDEX idx_interco_amort_status ON interco_amortization (loan_id, status);
+CREATE INDEX IF NOT EXISTS idx_interco_amort_loan ON interco_amortization (loan_id, period_number);
+CREATE INDEX IF NOT EXISTS idx_interco_amort_status ON interco_amortization (loan_id, status);
 
 COMMENT ON TABLE interco_amortization IS
   'Amortization schedule entries for intercompany loans.
@@ -343,8 +350,8 @@ CREATE TABLE IF NOT EXISTS pay_runs (
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_pay_runs_entity ON pay_runs (entity_id);
-CREATE INDEX idx_pay_runs_date ON pay_runs (pay_date DESC);
+CREATE INDEX IF NOT EXISTS idx_pay_runs_entity ON pay_runs (entity_id);
+CREATE INDEX IF NOT EXISTS idx_pay_runs_date ON pay_runs (pay_date DESC);
 
 -- --- Pay Stubs ---
 
@@ -360,8 +367,8 @@ CREATE TABLE IF NOT EXISTS pay_stubs (
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_pay_stubs_run ON pay_stubs (pay_run_id);
-CREATE INDEX idx_pay_stubs_employee ON pay_stubs (employee_id);
+CREATE INDEX IF NOT EXISTS idx_pay_stubs_run ON pay_stubs (pay_run_id);
+CREATE INDEX IF NOT EXISTS idx_pay_stubs_employee ON pay_stubs (employee_id);
 
 -- --- Payroll Remittances ---
 
@@ -376,8 +383,8 @@ CREATE TABLE IF NOT EXISTS payroll_remittances (
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_payroll_remit_entity ON payroll_remittances (entity_id);
-CREATE INDEX idx_payroll_remit_status ON payroll_remittances (status);
+CREATE INDEX IF NOT EXISTS idx_payroll_remit_entity ON payroll_remittances (entity_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_remit_status ON payroll_remittances (status);
 
 COMMENT ON TABLE pay_runs IS 'Payroll run headers. Added in P8-PAYROLL.';
 COMMENT ON TABLE pay_stubs IS 'Individual employee pay stubs per run. Added in P8-PAYROLL.';
@@ -399,9 +406,9 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_users_email ON users (email);
-CREATE INDEX idx_users_role ON users (role);
-CREATE INDEX idx_users_status ON users (status);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users (role);
+CREATE INDEX IF NOT EXISTS idx_users_status ON users (status);
 
 COMMENT ON TABLE users IS
   'Application users with role-based access control and entity-scoped permissions.
@@ -423,9 +430,9 @@ CREATE TABLE IF NOT EXISTS forecast_snapshots (
   notes           TEXT
 );
 
-CREATE INDEX idx_forecast_snap_entity ON forecast_snapshots (entity_id);
-CREATE INDEX idx_forecast_snap_budget ON forecast_snapshots (budget_id);
-CREATE INDEX idx_forecast_snap_year ON forecast_snapshots (entity_id, fiscal_year);
+CREATE INDEX IF NOT EXISTS idx_forecast_snap_entity ON forecast_snapshots (entity_id);
+CREATE INDEX IF NOT EXISTS idx_forecast_snap_budget ON forecast_snapshots (budget_id);
+CREATE INDEX IF NOT EXISTS idx_forecast_snap_year ON forecast_snapshots (entity_id, fiscal_year);
 
 COMMENT ON TABLE forecast_snapshots IS
   'Point-in-time capture of forecast values during a budgetary cycle.
@@ -446,8 +453,8 @@ CREATE TABLE IF NOT EXISTS forecast_snapshot_lines (
   adjustment_reason TEXT
 );
 
-CREATE INDEX idx_forecast_snap_lines_snap ON forecast_snapshot_lines (snapshot_id);
-CREATE INDEX idx_forecast_snap_lines_period ON forecast_snapshot_lines (snapshot_id, period_id);
+CREATE INDEX IF NOT EXISTS idx_forecast_snap_lines_snap ON forecast_snapshot_lines (snapshot_id);
+CREATE INDEX IF NOT EXISTS idx_forecast_snap_lines_period ON forecast_snapshot_lines (snapshot_id, period_id);
 
 COMMENT ON TABLE forecast_snapshot_lines IS
   'Individual forecast line items frozen at snapshot time. Includes both

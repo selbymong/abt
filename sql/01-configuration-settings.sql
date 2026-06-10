@@ -5,7 +5,7 @@
 -- Run in PostgreSQL BEFORE any feature code
 -- ============================================================
 
-CREATE TABLE configuration_settings (
+CREATE TABLE IF NOT EXISTS configuration_settings (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   setting_key           TEXT NOT NULL,
   scope_type            TEXT NOT NULL CHECK (scope_type IN ('SYSTEM','ENTITY','ENTITY_PAIR','PROGRAM','OUTCOME')),
@@ -25,10 +25,10 @@ CREATE TABLE configuration_settings (
   UNIQUE (setting_key, scope_type, scope_id, scope_id_2, valid_from)
 );
 
-CREATE INDEX idx_config_lookup ON configuration_settings
+CREATE INDEX IF NOT EXISTS idx_config_lookup ON configuration_settings
   (setting_key, scope_type, scope_id, valid_from DESC);
 
-CREATE INDEX idx_config_scope ON configuration_settings
+CREATE INDEX IF NOT EXISTS idx_config_scope ON configuration_settings
   (scope_type, scope_id);
 
 COMMENT ON TABLE configuration_settings IS

@@ -4,7 +4,7 @@
  * Run: npx tsx scripts/pg-migrate.ts
  */
 import 'dotenv/config';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { getPool, closePg } from '../src/lib/pg.js';
@@ -12,10 +12,9 @@ import { getPool, closePg } from '../src/lib/pg.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SQL_DIR = join(__dirname, '..', 'sql');
 
-const FILES = [
-  '01-configuration-settings.sql',
-  '02-timescaledb-projections.sql',
-];
+const FILES = readdirSync(SQL_DIR)
+  .filter((f) => f.endsWith('.sql'))
+  .sort();
 
 async function main() {
   console.log('=== PostgreSQL Migration ===\n');
@@ -37,36 +36,6 @@ async function main() {
       } else {
         console.error(`  [FAIL] ${file}: ${msg}`);
       }
-    }
-  }
-
-  // Create pgvector table
-  console.log('\n  [exec] pgvector node_embeddings');
-  try {
-    await pool.query('CREATE EXTENSION IF NOT EXISTS vector');
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS node_embeddings (
-        node_id     UUID PRIMARY KEY,
-        entity_id   UUID,
-        node_label  TEXT,
-        embedding   vector(1536),
-        updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-    await pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_node_embeddings_cosine
-      ON node_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)
-    `).catch(() => {
-      // IVFFlat index requires data; skip if table is empty
-      console.log('  [skip] IVFFlat index (requires data)');
-    });
-    console.log('  [done] pgvector');
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes('could not open extension')) {
-      console.log('  [skip] pgvector extension not available (install separately)');
-    } else {
-      console.error(`  [FAIL] pgvector: ${msg}`);
     }
   }
 
